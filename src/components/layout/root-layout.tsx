@@ -8,9 +8,10 @@ interface RootLayoutProps {
     title: string
     value: string
   }[]
+  hideKnowledgeSearch?: boolean
 }
 
-export function RootLayout({ children, topMetrics }: RootLayoutProps) {
+export function RootLayout({ children, topMetrics, hideKnowledgeSearch }: RootLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden">
       <div className="hidden lg:flex lg:w-64 lg:flex-col">
@@ -24,11 +25,11 @@ export function RootLayout({ children, topMetrics }: RootLayoutProps) {
             className="floating-orb w-[500px] h-[500px] right-32 bottom-32 fixed" 
             style={{ animationDelay: '-5s' }}
           />
-          <div className="container relative z-10 max-w-screen-2xl mx-auto px-4 pt-4 pb-24">
+          <div className="relative z-10 p-4">
             {children}
           </div>
         </main>
-        <KnowledgeSearch />
+        {!hideKnowledgeSearch && <KnowledgeSearch />}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserProfile } from "@/components/layout/user-profile"
+import { Link } from "react-router-dom"
 
 const navigationItems = [
   {
@@ -73,7 +74,7 @@ export function Sidebar({ className }: SidebarProps) {
                   )}
                   asChild={!item.disabled}
                 >
-                  <a href={item.disabled ? "#" : item.href} className="flex items-center">
+                  <Link to={item.disabled ? "#" : item.href} className="flex items-center">
                     <item.icon className="mr-2 h-4 w-4" />
                     <span className="flex-1 flex items-center gap-2">
                       {item.title}
@@ -86,7 +87,7 @@ export function Sidebar({ className }: SidebarProps) {
                         </Badge>
                       )}
                     </span>
-                  </a>
+                  </Link>
                 </Button>
               </div>
             ))}

@@ -9,6 +9,7 @@ import { DateRangePicker } from '@/components/date-range-picker'
 import { AgentSelect } from '@/components/agent-select'
 import { CallsByAgent } from '@/components/metrics/calls-by-agent'
 import { generateTimeSeriesData, generateCallVolumeData } from '@/lib/data-utils'
+import { PageTransition } from "@/components/layout/page-transition"
 
 const topMetrics = [
   { title: "Total Calls", value: "12,345" },
@@ -62,41 +63,43 @@ export default function Dashboard() {
 
   return (
     <RootLayout topMetrics={topMetrics}>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-          <div className="flex gap-4">
-            <AgentSelect
-              agents={agents}
-              value={selectedAgent}
-              onValueChange={setSelectedAgent}
-            />
-            <DateRangePicker date={date} onChange={setDate} />
+      <PageTransition>
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+            <div className="flex gap-4">
+              <AgentSelect
+                agents={agents}
+                value={selectedAgent}
+                onValueChange={setSelectedAgent}
+              />
+              <DateRangePicker date={date} onChange={setDate} />
+            </div>
           </div>
-        </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {kpiData.map((item, index) => (
-            <KPICard
-              key={index}
-              title={item.title}
-              value={item.value}
-              change={item.change}
-              info={item.info}
-            />
-          ))}
-        </div>
-
-        <div className="grid gap-6 grid-cols-2">
-          <CallDispositionsChart data={dispositionsData} />
-          <div className="space-y-6">
-            <EndedByChart data={endedByData} />
-            <CallVolumeChart data={callVolumeData} />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {kpiData.map((item, index) => (
+              <KPICard
+                key={index}
+                title={item.title}
+                value={item.value}
+                change={item.change}
+                info={item.info}
+              />
+            ))}
           </div>
-        </div>
 
-        <CallsByAgent data={callsByAgentData} />
-      </div>
+          <div className="grid gap-6 grid-cols-2">
+            <CallDispositionsChart data={dispositionsData} />
+            <div className="space-y-6">
+              <EndedByChart data={endedByData} />
+              <CallVolumeChart data={callVolumeData} />
+            </div>
+          </div>
+
+          <CallsByAgent data={callsByAgentData} />
+        </div>
+      </PageTransition>
     </RootLayout>
   )
 }
