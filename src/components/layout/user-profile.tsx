@@ -8,7 +8,6 @@ import { useUser, useClerk } from '@clerk/clerk-react'
 
 export function UserProfile() {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { user } = useUser()
@@ -42,11 +41,6 @@ export function UserProfile() {
         variant: "destructive"
       })
     }
-  }
-
-  const handleOpenProfile = () => {
-    setIsExpanded(false)
-    setIsProfileOpen(true)
   }
 
   const menuItems = [

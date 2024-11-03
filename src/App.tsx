@@ -1,7 +1,7 @@
 // src/App.tsx
 import { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth, useUser, SignUp } from '@clerk/clerk-react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth, SignUp } from '@clerk/clerk-react';
 import { UIProvider } from './contexts/ui-context';
 import { AnimatePresence } from 'framer-motion';
 import { PublicRoute } from './components/auth/public-route';
@@ -16,8 +16,6 @@ const ProfilePage = lazy(() => import('./pages/user/profile'));
 
 export default function App() {
   const { isLoaded } = useAuth();
-  // const { user } = useUser();
-  // const location = useLocation();
 
   if (!isLoaded) {
     return (

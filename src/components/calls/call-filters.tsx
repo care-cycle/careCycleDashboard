@@ -6,9 +6,6 @@ import { DateRangePicker } from "@/components/date-range-picker"
 import { 
   Download, 
   Filter, 
-  X,
-  Check,
-  ChevronDown,
   Search
 } from "lucide-react"
 import {
@@ -18,7 +15,6 @@ import {
 } from "@/components/ui/popover"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -26,10 +22,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
-import { cn } from "@/lib/utils"
 
 const filterGroups = {
   "Key Metrics": [
@@ -65,8 +59,8 @@ const filterGroups = {
 }
 
 interface CallFiltersProps {
-  dateRange: DateRange
-  onDateRangeChange: (range: DateRange) => void
+  dateRange: DateRange | undefined;
+  onDateRangeChange: (date: DateRange | undefined) => void;
 }
 
 export function CallFilters({ dateRange, onDateRangeChange }: CallFiltersProps) {

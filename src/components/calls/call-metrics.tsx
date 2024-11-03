@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, Clock, Star } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 
 const metrics = [
   {

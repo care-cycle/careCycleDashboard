@@ -9,8 +9,13 @@ import {
 } from "@/components/ui/table"
 import { Play, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Call } from '@/types/calls'
 
-const callsData = [
+interface CallsTableProps {
+  onCallSelect: (call: Call) => void
+}
+
+const callsData: Call[] = [
   {
     id: "1",
     agent: "Assistant A",
@@ -39,10 +44,6 @@ const callsData = [
     endedBy: "Agent"
   }
 ]
-
-interface CallsTableProps {
-  onCallSelect: (call: any) => void
-}
 
 export function CallsTable({ onCallSelect }: CallsTableProps) {
   const [sortConfig, setSortConfig] = useState<{

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Phone, GitBranch, ChevronUp, ChevronDown, User, CreditCard } from "lucide-react"
+import { LayoutDashboard, Phone, GitBranch } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

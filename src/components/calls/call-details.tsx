@@ -2,20 +2,19 @@ import { useState } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { X, Play, Flag, User, Clock, PhoneCall, CheckCircle2, ArrowRightLeft, DollarSign } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { X, Flag, User, Clock, PhoneCall, CheckCircle2, ArrowRightLeft, DollarSign } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useUI } from "@/contexts/ui-context"
 import { AudioPlayer } from "@/components/audio/audio-player"
+import { Call } from '@/types/calls'
 
 interface CallDetailsProps {
-  call: any
-  onClose: () => void
+  call: Call;
+  onClose: () => void;
 }
 
 export function CallDetails({ call, onClose }: CallDetailsProps) {
   const [feedback, setFeedback] = useState('')
-  const [isPlaying, setIsPlaying] = useState(false)
   const { setCallDetailsOpen } = useUI()
 
   const handleClose = () => {
