@@ -21,8 +21,8 @@ export default function SignInPage() {
             }
           }}
           signUpUrl="/sign-up"
-          path="/sign-in"
           routing="path"
+          path="/sign-in"
         />
       </div>
     </div>
