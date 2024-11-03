@@ -7,6 +7,14 @@ import './index.css';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+// Add debugging
+console.log('Clerk Configuration:', {
+  publishableKey: PUBLISHABLE_KEY?.substring(0, 10) + '...',
+  domain: window.location.hostname,
+  protocol: window.location.protocol,
+  fullUrl: window.location.href
+});
+
 if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key');
 }
