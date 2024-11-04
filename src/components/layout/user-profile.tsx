@@ -55,7 +55,10 @@ export function UserProfile() {
     { 
       icon: CreditCard, 
       label: 'Billing & Usage',
-      onClick: () => navigate('/user/billing')
+      onClick: () => {
+        setIsExpanded(false)
+        navigate('/user/billing')
+      }
     },
     { 
       icon: LogOut, 

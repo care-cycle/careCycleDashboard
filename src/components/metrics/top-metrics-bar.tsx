@@ -9,18 +9,17 @@ interface TopMetricsBarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function TopMetricsBar({ metrics, className }: TopMetricsBarProps) {
   return (
-    <div className={cn("sticky top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-xl border-b", className)}>
-      <div className="container flex items-center h-12 max-w-screen-2xl mx-auto px-4">
-        <div className="flex-1 grid grid-cols-4 gap-4">
-          {metrics.map((metric, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-500">{metric.title}</span>
-              <span className="text-sm font-bold text-gray-900">
-                {metric.value}
-              </span>
-            </div>
-          ))}
-        </div>
+    <div className={cn("sticky top-0 z-20 flex w-full border-b bg-background/95 backdrop-blur", className)}>
+      <div className="flex w-full">
+        {metrics.map((metric, i) => (
+          <div 
+            key={metric.title} 
+            className="flex-1 min-w-0 px-4 py-3"
+          >
+            <p className="text-sm font-medium text-muted-foreground truncate">{metric.title}</p>
+            <p className="text-sm font-medium truncate">{metric.value}</p>
+          </div>
+        ))}
       </div>
     </div>
   )
