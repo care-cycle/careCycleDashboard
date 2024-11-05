@@ -42,15 +42,22 @@ export default function BillingPage() {
   const { 
     data: clientInfo, 
     isLoading, 
-    isAuthenticated 
+    isAuthenticated,
+    error 
   } = useAuthApi<ClientInfo>('/portal/client/info', {
     showErrorToast: true,
     onError: (error) => {
-      if (error.response?.status === 401) {
-        console.log('Authentication error:', error);
-      }
+      console.error('Billing page error:', {
+        error,
+        status: error.response?.status,
+        data: error.response?.data
+      });
     }
   });
+
+  if (error) {
+    console.error('Billing error state:', error);
+  }
 
   if (!isAuthenticated) {
     return null; // Let PrivateRoute handle the redirect

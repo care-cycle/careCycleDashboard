@@ -1,14 +1,34 @@
 import axios from 'axios';
 
+const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' 
+  ? '/api'  
+  : 'https://api.nodable.ai/api';
+
+console.log('API Base URL:', BASE_URL); // Debug log
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_NODE_ENV === 'development' 
-    ? '/api'  
-    : 'https://api.nodable.ai/api',
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
+
+// Add request logging
+apiClient.interceptors.request.use(
+  (config) => {
+    console.log('Making request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      baseURL: config.baseURL
+    });
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Request interceptor
 apiClient.interceptors.request.use(

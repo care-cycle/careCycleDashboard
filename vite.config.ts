@@ -16,7 +16,18 @@ export default defineConfig({
         target: 'https://api.nodable.ai',
         changeOrigin: true,
         secure: false,
-        ws: true
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req) => {
+            console.log('Sending Request:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req) => {
+            console.log('Got Response:', proxyRes.statusCode, req.url);
+          });
+        },
       }
     }
   }

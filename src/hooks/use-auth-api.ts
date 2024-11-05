@@ -22,6 +22,7 @@ export function useAuthApi<T>(
   const fetchData = async () => {
     try {
       if (!isLoaded || !userId) {
+        console.log('Auth not ready:', { isLoaded, userId });
         return;
       }
 
@@ -29,34 +30,35 @@ export function useAuthApi<T>(
       setError(null);
 
       const token = await getToken();
+      console.log('Got token:', !!token);
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'X-Organization-Id': organization?.id || ''
+      };
+
+      console.log('Making request to:', endpoint, { headers });
+
+      const response = await apiClient.get(endpoint, { headers });
       
-      const response = await apiClient.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-Organization-Id': organization?.id || ''
-        }
-      });
+      console.log('Got response:', response.status, response.data);
       
       setData(response.data);
       options.onSuccess?.(response.data);
     } catch (err: any) {
-      console.error(`API Error:`, {
+      console.error('API Error Details:', {
         error: err,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
         userId,
         organizationId: organization?.id,
-        endpoint
+        endpoint,
+        message: err.message
       });
       
       setError(err);
       options.onError?.(err);
-      
-      if (options.showErrorToast !== false && err.response?.status !== 401) {
-        toast({
-          title: "Error",
-          description: err.message || 'An error occurred',
-          variant: "destructive"
-        });
-      }
     } finally {
       setIsLoading(false);
     }
@@ -68,13 +70,11 @@ export function useAuthApi<T>(
     }
   }, [isLoaded, userId, organization?.id, endpoint]);
 
-  const isAuthenticated = isLoaded && !!userId;
-
   return { 
     data, 
     isLoading: !isLoaded || isLoading, 
     error,
     refetch: fetchData,
-    isAuthenticated
+    isAuthenticated: isLoaded && !!userId
   };
 } 
