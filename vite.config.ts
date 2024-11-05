@@ -9,5 +9,24 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  envPrefix: 'VITE_'
+  envPrefix: 'VITE_',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.nodable.ai',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', () => {
+          });
+          proxy.on('proxyRes', () => {
+          });
+        },
+      }
+    }
+  }
 });
