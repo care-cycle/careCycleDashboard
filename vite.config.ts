@@ -16,21 +16,7 @@ export default defineConfig({
         target: 'https://api.nodable.ai',
         changeOrigin: true,
         secure: false,
-        ws: true,
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('Origin', 'https://api.nodable.ai');
-          });
-          proxy.on('proxyRes', (proxyRes) => {
-            proxyRes.headers['Access-Control-Allow-Origin'] = 'https://app.nodable.ai';
-            proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
-            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept';
-          });
-        },
+        ws: true
       }
     }
   }
