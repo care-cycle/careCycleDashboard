@@ -27,6 +27,8 @@ export default defineConfig({
           proxy.on('proxyRes', (proxyRes) => {
             proxyRes.headers['Access-Control-Allow-Origin'] = 'https://app.nodable.ai';
             proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept';
           });
         },
       }
