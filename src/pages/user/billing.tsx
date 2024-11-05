@@ -39,14 +39,22 @@ const topMetrics = [
 ]
 
 export default function BillingPage() {
-  const { data: clientInfo, isLoading } = useAuthApi<ClientInfo>('/portal/client/info', {
+  const { 
+    data: clientInfo, 
+    isLoading, 
+    isAuthenticated 
+  } = useAuthApi<ClientInfo>('/portal/client/info', {
     showErrorToast: true,
     onError: (error) => {
       if (error.response?.status === 401) {
-        console.log('Authentication error - redirecting...');
+        console.log('Authentication error - will be handled by PrivateRoute');
       }
     }
   });
+
+  if (!isAuthenticated) {
+    return null; // Let PrivateRoute handle the redirect
+  }
 
   if (isLoading) {
     return <div>Loading...</div>;

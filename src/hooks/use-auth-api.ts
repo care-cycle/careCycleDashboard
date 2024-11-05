@@ -16,19 +16,35 @@ export function useAuthApi<T>(
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { session } = useAuth();
+  const { session, isLoaded } = useAuth();
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
+      // Wait for Clerk to load
+      if (!isLoaded) {
+        return;
+      }
+
+      // Check for session
       if (!session) {
-        throw new Error('No active session');
+        console.log('No active session - waiting for auth');
+        return;
       }
 
       const token = await session.getToken();
-      const response = await apiClient.get(endpoint);
+      if (!token) {
+        console.log('No token available - waiting for auth');
+        return;
+      }
+
+      const response = await apiClient.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
       setData(response.data);
       options.onSuccess?.(response.data);
@@ -36,14 +52,20 @@ export function useAuthApi<T>(
       console.error(`Failed to fetch ${endpoint}:`, {
         error: err,
         sessionActive: !!session,
-        hasToken: !!(await session?.getToken())
+        hasToken: !!(await session?.getToken()),
+        isLoaded
       });
       
       setError(err);
-      options.onError?.(err);
       
-      if (options.showErrorToast !== false && err.response?.status !== 401) {
-        toast.error(err.message || 'An error occurred');
+      if (options.onError) {
+        options.onError(err);
+      } else if (options.showErrorToast !== false && err.response?.status !== 401) {
+        toast({
+          title: "Error",
+          description: err.message || 'An error occurred',
+          variant: "destructive"
+        });
       }
     } finally {
       setIsLoading(false);
@@ -51,8 +73,16 @@ export function useAuthApi<T>(
   };
 
   useEffect(() => {
-    fetchData();
-  }, [session, endpoint]);
+    if (isLoaded) {
+      fetchData();
+    }
+  }, [isLoaded, session, endpoint]);
 
-  return { data, isLoading, error, refetch: fetchData };
+  return { 
+    data, 
+    isLoading: !isLoaded || isLoading, 
+    error, 
+    refetch: fetchData,
+    isAuthenticated: !!session
+  };
 } 
