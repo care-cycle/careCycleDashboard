@@ -14,17 +14,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = window.localStorage.getItem('__clerk_db_jwt');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      // Token will be added by useAuthApi hook
       return config;
     } catch (error) {
       return Promise.reject(error);
     }
-  },
-  (error) => {
-    return Promise.reject(error);
   }
 );
 
@@ -33,11 +27,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Instead of redirecting, you might want to refresh the token or handle auth error differently
-      console.error('Authentication error:', error);
-      // Optional: Clear local storage
-      // window.localStorage.removeItem('__clerk_db_jwt');
-      return Promise.reject(error);
+      console.error('Auth error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+      });
     }
     return Promise.reject(error);
   }

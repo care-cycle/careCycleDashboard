@@ -8,6 +8,7 @@ import { StripeProvider } from '@/components/billing/stripe-provider'
 import { toast } from 'sonner'
 import apiClient from '@/lib/api-client'
 import { useAuth } from '@clerk/clerk-react'
+import { useAuthApi } from '@/hooks/use-auth-api'
 
 interface PaymentMethod {
   last4: string
@@ -38,44 +39,17 @@ const topMetrics = [
 ]
 
 export default function BillingPage() {
-  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const { getToken } = useAuth();
-
-  useEffect(() => {
-    async function fetchClientInfo() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const token = await getToken();
-        if (!token) {
-          throw new Error('No authentication token available');
-        }
-
-        const response = await apiClient.get('/portal/client/info');
-        setClientInfo(response.data);
-      } catch (error) {
-        console.error('Failed to load client info:', error);
-        setError('Failed to load payment information');
-        
-        if (error.response?.status !== 401) {
-          toast.error('Failed to load payment information');
-        }
-      } finally {
-        setIsLoading(false);
+  const { data: clientInfo, isLoading } = useAuthApi<ClientInfo>('/portal/client/info', {
+    showErrorToast: true,
+    onError: (error) => {
+      if (error.response?.status === 401) {
+        console.log('Authentication error - redirecting...');
       }
     }
-    fetchClientInfo();
-  }, [getToken]);
+  });
 
   if (isLoading) {
     return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
   }
 
   return (
@@ -95,10 +69,7 @@ export default function BillingPage() {
             <BillingMethod 
               paymentMethod={clientInfo?.default_payment_method || null}
               onPaymentMethodUpdate={(newPaymentMethod) => {
-                setClientInfo(prev => prev ? {
-                  ...prev,
-                  default_payment_method: newPaymentMethod
-                } : null)
+                // Handle payment method update
               }}
             />
           </StripeProvider>
