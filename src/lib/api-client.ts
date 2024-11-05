@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_NODE_ENV === 'development' 
-    ? '/api'  // This will use Vite's proxy
+    ? '/api'  
     : 'https://api.nodable.ai/api',
   headers: {
     'Content-Type': 'application/json',
@@ -10,32 +10,34 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor for adding auth token
-apiClient.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem('__clerk_db_jwt');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor
+apiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = window.localStorage.getItem('__clerk_db_jwt');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  
-  // Remove any CORS headers if they exist
-  delete config.headers['Access-Control-Allow-Origin'];
-  delete config.headers['Access-Control-Allow-Credentials'];
-  
-  return config;
-});
+);
 
-// Response interceptor for handling errors
+// Response interceptor
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error('API Error:', {
-      status: error.response?.status,
-      message: error.message,
-      config: error.config
-    });
-
+  async (error) => {
     if (error.response?.status === 401) {
-      window.location.href = '/sign-in';
+      // Instead of redirecting, you might want to refresh the token or handle auth error differently
+      console.error('Authentication error:', error);
+      // Optional: Clear local storage
+      // window.localStorage.removeItem('__clerk_db_jwt');
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }

@@ -7,6 +7,7 @@ import { RevenueCalculator } from '@/components/billing/revenue-calculator'
 import { StripeProvider } from '@/components/billing/stripe-provider'
 import { toast } from 'sonner'
 import apiClient from '@/lib/api-client'
+import { useAuth } from '@clerk/clerk-react'
 
 interface PaymentMethod {
   last4: string
@@ -39,20 +40,43 @@ const topMetrics = [
 export default function BillingPage() {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { getToken } = useAuth();
 
   useEffect(() => {
     async function fetchClientInfo() {
       try {
-        const response = await apiClient.get('/portal/client/info')
-        setClientInfo(response.data)
+        setIsLoading(true);
+        setError(null);
+        
+        const token = await getToken();
+        if (!token) {
+          throw new Error('No authentication token available');
+        }
+
+        const response = await apiClient.get('/portal/client/info');
+        setClientInfo(response.data);
       } catch (error) {
-        toast.error('Failed to load payment information')
+        console.error('Failed to load client info:', error);
+        setError('Failed to load payment information');
+        
+        if (error.response?.status !== 401) {
+          toast.error('Failed to load payment information');
+        }
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
-    fetchClientInfo()
-  }, [])
+    fetchClientInfo();
+  }, [getToken]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <RootLayout topMetrics={topMetrics} hideKnowledgeSearch>
@@ -81,5 +105,5 @@ export default function BillingPage() {
         </div>
       </div>
     </RootLayout>
-  )
+  );
 }
