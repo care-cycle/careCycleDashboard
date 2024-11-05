@@ -5,6 +5,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // Request interceptor for adding auth token
@@ -13,6 +14,13 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Add CORS headers to the request
+  config.headers['Access-Control-Allow-Origin'] = import.meta.env.VITE_NODE_ENV === 'development' 
+    ? 'http://localhost:5173' 
+    : 'https://app.nodable.ai';
+  config.headers['Access-Control-Allow-Credentials'] = true;
+  
   return config;
 });
 
@@ -20,6 +28,13 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log the error for debugging
+    console.error('API Error:', {
+      status: error.response?.status,
+      message: error.message,
+      config: error.config
+    });
+
     if (error.response?.status === 401) {
       // Handle unauthorized access
       window.location.href = '/sign-in';
@@ -28,4 +43,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient; 
+// Add axios default settings
+axios.defaults.withCredentials = true;
+
+export default apiClient;

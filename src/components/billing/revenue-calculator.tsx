@@ -15,7 +15,7 @@ export function RevenueCalculator() {
   const [revenuePerSale, setRevenuePerSale] = useState<string>('500')
   const [closeRate, setCloseRate] = useState<string>('20')
   const [estimatedRevenue, setEstimatedRevenue] = useState<number>(0)
-  const transferCount = 1234 // This would come from your actual data
+  const transferCount = 1604 // This would come from your actual data
 
   useEffect(() => {
     const revenue = parseFloat(revenuePerSale) || 0
