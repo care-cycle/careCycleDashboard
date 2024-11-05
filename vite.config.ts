@@ -21,9 +21,12 @@ export default defineConfig({
           proxy.on('error', (err) => {
             console.log('proxy error', err);
           });
-          proxy.on('proxyReq', () => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Origin', 'https://api.nodable.ai');
           });
-          proxy.on('proxyRes', () => {
+          proxy.on('proxyRes', (proxyRes) => {
+            proxyRes.headers['Access-Control-Allow-Origin'] = 'https://app.nodable.ai';
+            proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
           });
         },
       }
