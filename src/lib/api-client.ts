@@ -16,6 +16,11 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Remove any CORS headers if they exist
+  delete config.headers['Access-Control-Allow-Origin'];
+  delete config.headers['Access-Control-Allow-Credentials'];
+  
   return config;
 });
 
