@@ -47,7 +47,7 @@ export default function BillingPage() {
     showErrorToast: true,
     onError: (error) => {
       if (error.response?.status === 401) {
-        console.log('Authentication error - will be handled by PrivateRoute');
+        console.log('Authentication error:', error);
       }
     }
   });

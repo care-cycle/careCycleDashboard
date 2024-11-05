@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useOrganization } from '@clerk/clerk-react';
 import apiClient from '@/lib/api-client';
 import { toast } from '@/hooks/use-toast';
 
@@ -13,54 +13,44 @@ export function useAuthApi<T>(
   endpoint: string, 
   options: UseAuthApiOptions = {}
 ) {
+  const { getToken, userId, isLoaded } = useAuth();
+  const { organization } = useOrganization();
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { session, isLoaded } = useAuth();
 
   const fetchData = async () => {
     try {
+      if (!isLoaded || !userId) {
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
-      // Wait for Clerk to load
-      if (!isLoaded) {
-        return;
-      }
-
-      // Check for session
-      if (!session) {
-        console.log('No active session - waiting for auth');
-        return;
-      }
-
-      const token = await session.getToken();
-      if (!token) {
-        console.log('No token available - waiting for auth');
-        return;
-      }
-
+      const token = await getToken();
+      
       const response = await apiClient.get(endpoint, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'X-Organization-Id': organization?.id || ''
         }
       });
       
       setData(response.data);
       options.onSuccess?.(response.data);
     } catch (err: any) {
-      console.error(`Failed to fetch ${endpoint}:`, {
+      console.error(`API Error:`, {
         error: err,
-        sessionActive: !!session,
-        hasToken: !!(await session?.getToken()),
-        isLoaded
+        userId,
+        organizationId: organization?.id,
+        endpoint
       });
       
       setError(err);
+      options.onError?.(err);
       
-      if (options.onError) {
-        options.onError(err);
-      } else if (options.showErrorToast !== false && err.response?.status !== 401) {
+      if (options.showErrorToast !== false && err.response?.status !== 401) {
         toast({
           title: "Error",
           description: err.message || 'An error occurred',
@@ -73,16 +63,18 @@ export function useAuthApi<T>(
   };
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && userId) {
       fetchData();
     }
-  }, [isLoaded, session, endpoint]);
+  }, [isLoaded, userId, organization?.id, endpoint]);
+
+  const isAuthenticated = isLoaded && !!userId;
 
   return { 
     data, 
     isLoading: !isLoaded || isLoading, 
-    error, 
+    error,
     refetch: fetchData,
-    isAuthenticated: !!session
+    isAuthenticated
   };
 } 
