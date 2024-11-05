@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreditCard as CardIcon } from "lucide-react"
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { toast } from 'sonner' // Assuming you're using a toast library
 import apiClient from '@/lib/api-client'
+
 interface PaymentMethod {
   last4: string
   expMonth: number
@@ -12,45 +13,25 @@ interface PaymentMethod {
   brand: string
 }
 
-export function BillingMethod() {
+interface BillingMethodProps {
+  paymentMethod: PaymentMethod | null
+  onPaymentMethodUpdate: (paymentMethod: PaymentMethod) => void
+}
+
+export function BillingMethod({ paymentMethod, onPaymentMethodUpdate }: BillingMethodProps) {
   const stripe = useStripe()
   const elements = useElements()
   const [isLoading, setIsLoading] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
-
-  // Fetch existing payment method
-  useEffect(() => {
-    async function fetchClientInfo() {
-      try {
-        const response = await apiClient.get('/portal/client/info')
-        const { stripe_customer_id, default_payment_method } = response.data
-        
-        if (default_payment_method) {
-          setPaymentMethod({
-            last4: default_payment_method.last4,
-            expMonth: default_payment_method.exp_month,
-            expYear: default_payment_method.exp_year,
-            brand: default_payment_method.brand
-          })
-        }
-      } catch (error) {
-        toast.error('Failed to load payment information')
-      }
-    }
-    fetchClientInfo()
-  }, [])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setIsLoading(true)
 
     try {
-      // Get setup intent from our API
       const response = await apiClient.post('/stripe/createIntent')
       const { clientSecret } = response.data
 
-      // Confirm card setup with Stripe
       const { setupIntent, error } = await stripe!.confirmCardSetup(clientSecret, {
         payment_method: {
           card: elements!.getElement(CardElement)!,
@@ -62,7 +43,6 @@ export function BillingMethod() {
         return
       }
 
-      // The webhook will handle saving the payment method
       setIsAdding(false)
       toast.success('Payment method added successfully')
       
@@ -71,12 +51,7 @@ export function BillingMethod() {
       const { default_payment_method } = clientResponse.data
       
       if (default_payment_method) {
-        setPaymentMethod({
-          last4: default_payment_method.last4,
-          expMonth: default_payment_method.exp_month,
-          expYear: default_payment_method.exp_year,
-          brand: default_payment_method.brand
-        })
+        onPaymentMethodUpdate(default_payment_method)
       }
     } catch (error) {
       toast.error('Something went wrong')
