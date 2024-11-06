@@ -1,7 +1,8 @@
+// use-auth-api.ts
 import { useEffect, useState } from 'react';
 import { useAuth, useOrganization } from '@clerk/clerk-react';
-import apiClient from '@/lib/api-client';
 import { toast } from '@/hooks/use-toast';
+import apiClient from '@/lib/api-client';
 
 interface UseAuthApiOptions {
   onError?: (error: any) => void;
@@ -13,68 +14,75 @@ export function useAuthApi<T>(
   endpoint: string, 
   options: UseAuthApiOptions = {}
 ) {
-  const { getToken, userId, isLoaded } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { organization } = useOrganization();
+  
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async () => {
-    try {
-      if (!isLoaded || !userId) {
-        console.log('Auth not ready:', { isLoaded, userId });
-        return;
-      }
+    if (!isLoaded || !isSignedIn) {
+      return;
+    }
 
+    try {
       setIsLoading(true);
       setError(null);
 
       const token = await getToken();
-      console.log('Got token:', !!token);
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'X-Organization-Id': organization?.id || ''
-      };
-
-      console.log('Making request to:', endpoint, { headers });
-
-      const response = await apiClient.get(endpoint, { headers });
       
-      console.log('Got response:', response.status, response.data);
+      if (!token) {
+        throw new Error('No auth token available');
+      }
+
+      // **Ensure the endpoint does NOT include '/api'**
+      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+      const response = await apiClient.get<T>(normalizedEndpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-organization-id': organization?.id || '', // Ensure this header is included
+        }
+      });
       
       setData(response.data);
       options.onSuccess?.(response.data);
-    } catch (err: any) {
-      console.error('API Error Details:', {
-        error: err,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        userId,
-        organizationId: organization?.id,
+    } catch (error: any) {
+      console.error('API Error:', {
         endpoint,
-        message: err.message
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        stack: error.stack
       });
       
-      setError(err);
-      options.onError?.(err);
+      setError(error);
+      options.onError?.(error);
+      
+      if (options.showErrorToast) {
+        toast({
+          title: "Error",
+          description: error.message || "An error occurred",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isLoaded && userId) {
+    if (isLoaded && isSignedIn) {
       fetchData();
     }
-  }, [isLoaded, userId, organization?.id, endpoint]);
+  }, [endpoint, organization?.id, isLoaded, isSignedIn]);
 
   return { 
     data, 
     isLoading: !isLoaded || isLoading, 
     error,
     refetch: fetchData,
-    isAuthenticated: isLoaded && !!userId
+    isAuthenticated: isLoaded && isSignedIn
   };
 } 

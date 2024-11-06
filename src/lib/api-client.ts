@@ -1,57 +1,64 @@
+// api-client.ts
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' 
-  ? '/api'  
-  : 'https://api.nodable.ai/api';
-
-console.log('API Base URL:', BASE_URL); // Debug log
-
 const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: '/api', // Ensures all requests are prefixed with '/api'
   headers: {
-    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
   withCredentials: true,
+  timeout: 10000,
+  validateStatus: (status) => {
+    return status >= 200 && status < 500;
+  },
 });
 
-// Add request logging
+// Request interceptor to conditionally set 'Content-Type'
 apiClient.interceptors.request.use(
   (config) => {
-    console.log('Making request:', {
+    // List of HTTP methods that typically include a body
+    const methodsWithBody = ['post', 'put', 'patch', 'delete'];
+
+    if (methodsWithBody.includes(config.method || '')) {
+      config.headers['Content-Type'] = 'application/json';
+    } else {
+      // Remove 'Content-Type' for methods that shouldn't have a body
+      delete config.headers['Content-Type'];
+    }
+
+    console.log('🚀 Request:', {
       url: config.url,
       method: config.method,
       headers: config.headers,
-      baseURL: config.baseURL
     });
     return config;
   },
   (error) => {
+    console.error('❌ Request Error:', error);
     return Promise.reject(error);
-  }
-);
-
-// Request interceptor
-apiClient.interceptors.request.use(
-  async (config) => {
-    try {
-      // Token will be added by useAuthApi hook
-      return config;
-    } catch (error) {
-      return Promise.reject(error);
-    }
   }
 );
 
 // Response interceptor
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      console.error('Auth error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-      });
-    }
+  (response) => {
+    console.log('✅ Response:', {
+      url: response.config.url,
+      status: response.status,
+      headers: response.headers,
+      data: response.data,
+    });
+    return response;
+  },
+  (error) => {
+    console.error('❌ Response Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      headers: error.response?.headers,
+      data: error.response?.data,
+      message: error.message,
+    });
     return Promise.reject(error);
   }
 );

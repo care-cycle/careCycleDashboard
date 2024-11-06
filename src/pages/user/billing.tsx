@@ -47,12 +47,12 @@ export default function BillingPage() {
   } = useAuthApi<ClientInfo>('/portal/client/info', {
     showErrorToast: true,
     onError: (error) => {
-      console.error('Billing page error:', {
-        error,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      console.error('Billing page error:', error);
     }
+  });
+
+  console.log('Billing page state:', {
+    data: clientInfo
   });
 
   if (error) {
@@ -64,7 +64,7 @@ export default function BillingPage() {
   }
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div></div>;
   }
 
   return (

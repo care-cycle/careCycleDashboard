@@ -67,7 +67,7 @@ export function BillingMethod({ paymentMethod, onPaymentMethodUpdate }: BillingM
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p>Loading...</p>
+          <p></p>
         ) : isAdding ? (
           <form onSubmit={handleSubmit}>
             <CardElement />
