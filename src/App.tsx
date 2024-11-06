@@ -13,7 +13,7 @@ import ProfilePage from './pages/user/profile';
 import BillingPage from './pages/user/billing';
 
 export default function App() {
-  const { isLoaded } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
     return (
@@ -29,6 +29,20 @@ export default function App() {
     <UIProvider>
       <AnimatePresence mode="wait">
         <Routes>
+          {/* Root redirect */}
+          <Route 
+            path="/" 
+            element={
+              isSignedIn ? (
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              ) : (
+                <Navigate to="/sign-in" replace />
+              )
+            } 
+          />
+          
           {/* Public Routes */}
           <Route 
             path="/sign-in/*" 
@@ -73,14 +87,6 @@ export default function App() {
           />
           
           {/* Private Routes */}
-          <Route 
-            path="/" 
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } 
-          />
           <Route 
             path="/calls" 
             element={
