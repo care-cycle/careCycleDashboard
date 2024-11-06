@@ -27,21 +27,27 @@ export function UserProfile() {
 
   const handleLogout = async () => {
     try {
-      await signOut()
-      setIsExpanded(false)
+      const signOutOptions = {
+        sessionId: 'all',
+        redirectUrl: import.meta.env.VITE_NODE_ENV === 'development' 
+          ? 'http://localhost:5173/sign-in'
+          : 'https://app.nodable.ai/sign-in'
+      };
+      
+      await signOut(signOutOptions);
+      setIsExpanded(false);
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account"
-      })
-      window.location.href = '/sign-in'
+      });
     } catch (error) {
       toast({
         title: "Error logging out",
         description: "There was a problem logging out of your account",
         variant: "destructive"
-      })
+      });
     }
-  }
+  };
 
   const menuItems = [
     { 
