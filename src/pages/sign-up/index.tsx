@@ -1,9 +1,13 @@
 import { useLocation } from 'react-router-dom';
 import { SignUp } from "@clerk/clerk-react";
 
+const PROD_DOMAIN = 'https://app.nodable.ai';
+const DEV_DOMAIN = 'http://10.0.0.155:5173';
+
 export default function SignUpWrapper() {
   const location = useLocation();
   const isVerificationStep = location.pathname.includes('verify-email-address');
+  const baseUrl = import.meta.env.VITE_NODE_ENV === 'development' ? DEV_DOMAIN : PROD_DOMAIN;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-emerald-50">
@@ -30,8 +34,8 @@ export default function SignUpWrapper() {
           }}
           routing="path"
           path="/sign-up"
-          signInUrl={import.meta.env.DEV ? "https://clerk.nodable.ai/sign-in" : "/sign-in"}
-          fallbackRedirectUrl={import.meta.env.DEV ? "http://10.0.0.155:5173/dashboard" : "/dashboard"}
+          signInUrl={`${baseUrl}/sign-in`}
+          fallbackRedirectUrl={`${baseUrl}/dashboard`}
         />
       </div>
     </div>
