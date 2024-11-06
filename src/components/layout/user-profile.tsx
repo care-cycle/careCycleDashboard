@@ -27,14 +27,10 @@ export function UserProfile() {
 
   const handleLogout = async () => {
     try {
-      const signOutOptions = {
+      await signOut({
         sessionId: 'all',
-        redirectUrl: import.meta.env.VITE_NODE_ENV === 'development' 
-          ? 'http://localhost:5173/sign-in'
-          : 'https://app.nodable.ai/sign-in'
-      };
-      
-      await signOut(signOutOptions);
+        redirectUrl: '/sign-in'
+      });
       setIsExpanded(false);
       toast({
         title: "Logged out successfully",

@@ -8,7 +8,7 @@ import './index.css';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const DEV_DOMAIN = 'http://10.0.0.155:5173';
-const PROD_DOMAIN = 'https://app.nodable.ai';
+const PROD_DOMAIN = 'app.nodable.ai';
 
 if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key');
@@ -19,7 +19,7 @@ createRoot(document.getElementById('root')!).render(
     <ClerkProvider 
       publishableKey={PUBLISHABLE_KEY}
       isSatellite={import.meta.env.VITE_NODE_ENV !== 'development'}
-      domain={import.meta.env.VITE_NODE_ENV === 'development' ? DEV_DOMAIN : PROD_DOMAIN}
+      domain={PROD_DOMAIN}
       proxyUrl={undefined}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
