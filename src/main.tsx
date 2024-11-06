@@ -18,13 +18,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ClerkProvider 
       publishableKey={PUBLISHABLE_KEY}
-      isSatellite={import.meta.env.VITE_NODE_ENV !== 'development'}
+      isSatellite={false}
       domain="clerk.nodable.ai"
       proxyUrl={undefined}
-      signInUrl={`${PROD_DOMAIN}/sign-in`}
-      signUpUrl={`${PROD_DOMAIN}/sign-up`}
-      afterSignOutUrl={`${PROD_DOMAIN}/sign-in`}
-      fallbackRedirectUrl={`${PROD_DOMAIN}/dashboard`}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignOutUrl="/sign-in"
+      fallbackRedirectUrl="/dashboard"
       forceRedirectUrl={true}
       cookieOptions={{
         secure: import.meta.env.VITE_NODE_ENV !== 'development',
