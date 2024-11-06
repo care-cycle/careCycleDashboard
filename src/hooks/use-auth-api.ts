@@ -1,4 +1,4 @@
-// use-auth-api.ts
+// src/hooks/use-auth-api.ts
 import { useEffect, useState } from 'react';
 import { useAuth, useOrganization } from '@clerk/clerk-react';
 import { toast } from '@/hooks/use-toast';
@@ -37,7 +37,11 @@ export function useAuthApi<T>(
       }
 
       // **Ensure the endpoint does NOT include '/api'**
-      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      const normalizedEndpoint = endpoint.startsWith('/api') 
+        ? endpoint.replace(/^\/api/, '') 
+        : endpoint.startsWith('/') 
+          ? endpoint 
+          : `/${endpoint}`;
 
       const response = await apiClient.get<T>(normalizedEndpoint, {
         headers: {

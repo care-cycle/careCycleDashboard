@@ -1,8 +1,8 @@
-// api-client.ts
+// src/lib/api-client.ts
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: '/api', // Ensures all requests are prefixed with '/api'
+  baseURL: import.meta.env.VITE_API_BASE_URL, // Dynamically set based on environment
   headers: {
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
@@ -17,20 +17,21 @@ const apiClient = axios.create({
 // Request interceptor to conditionally set 'Content-Type'
 apiClient.interceptors.request.use(
   (config) => {
-    // List of HTTP methods that typically include a body
     const methodsWithBody = ['post', 'put', 'patch', 'delete'];
 
     if (methodsWithBody.includes(config.method || '')) {
       config.headers['Content-Type'] = 'application/json';
     } else {
-      // Remove 'Content-Type' for methods that shouldn't have a body
       delete config.headers['Content-Type'];
     }
 
     console.log('🚀 Request:', {
       url: config.url,
       method: config.method,
-      headers: config.headers,
+      headers: {
+        ...config.headers,
+        Authorization: config.headers.Authorization ? 'Bearer ***' : undefined, // Mask token
+      },
     });
     return config;
   },
