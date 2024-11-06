@@ -16,24 +16,21 @@ export function PublicRoute({ children }: PublicRouteProps) {
     timestamp: new Date().toISOString(),
   });
 
-  const exemptPathPrefixes = [
-    "/sign-up",
-    "/sign-in",
-  ];
-
-  const isExemptPath = exemptPathPrefixes.some(path => location.pathname.startsWith(path));
-  const isVerificationPath = location.pathname.includes('verify-email-address');
+  // Simplified path checking
+  const isAuthPath = location.pathname.startsWith('/sign-in') || 
+                    location.pathname.startsWith('/sign-up');
 
   if (!isLoaded) {
     return <div>Loading...</div>;
   }
 
-  // Allow verification path to render without redirect
-  if (isVerificationPath) {
+  // Always render children for auth paths
+  if (isAuthPath) {
     return <>{children}</>;
   }
 
-  if (isSignedIn && !isExemptPath) {
+  // Redirect to home if signed in and trying to access other public routes
+  if (isSignedIn) {
     return <Navigate to="/" replace />;
   }
 

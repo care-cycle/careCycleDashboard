@@ -1,65 +1,55 @@
 // src/lib/api-client.ts
-import axios from 'axios';
+import axios from "axios";
+
+const isDevelopment = import.meta.env.VITE_NODE_ENV === 'development';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // Dynamically set based on environment
+  baseURL: isDevelopment
+    ? 'http://10.0.0.155:3000/api'
+    : 'https://api.nodable.ai/api',
   headers: {
     'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
+    'Content-Type': 'application/json'
   },
   withCredentials: true,
-  timeout: 10000,
-  validateStatus: (status) => {
-    return status >= 200 && status < 500;
-  },
+  timeout: 30000
 });
 
-// Request interceptor to conditionally set 'Content-Type'
+// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    const methodsWithBody = ['post', 'put', 'patch', 'delete'];
-
-    if (methodsWithBody.includes(config.method || '')) {
-      config.headers['Content-Type'] = 'application/json';
-    } else {
-      delete config.headers['Content-Type'];
+    if (isDevelopment) {
+      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
     }
-
-    console.log('🚀 Request:', {
-      url: config.url,
-      method: config.method,
-      headers: {
-        ...config.headers,
-        Authorization: config.headers.Authorization ? 'Bearer ***' : undefined, // Mask token
-      },
-    });
     return config;
   },
-  (error) => {
-    console.error('❌ Request Error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('✅ Response:', {
-      url: response.config.url,
-      status: response.status,
-      headers: response.headers,
-      data: response.data,
-    });
+    if (isDevelopment) {
+      console.log('📦 Response:', {
+        status: response.status,
+        url: response.config.url,
+        data: response.data
+      });
+    }
     return response;
   },
   (error) => {
-    console.error('❌ Response Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      headers: error.response?.headers,
-      data: error.response?.data,
-      message: error.message,
-    });
+    if (isDevelopment) {
+      if (error.code === 'ERR_NETWORK') {
+        console.error('Network error - check CORS configuration');
+      } else if (error.response) {
+        console.error('❌ Response Error:', {
+          status: error.response.status,
+          data: error.response.data,
+          url: error.config.url
+        });
+      }
+    }
     return Promise.reject(error);
   }
 );

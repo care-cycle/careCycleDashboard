@@ -23,6 +23,7 @@ export function useAuthApi<T>(
 
   const fetchData = async () => {
     if (!isLoaded || !isSignedIn) {
+      console.log('Auth not ready:', { isLoaded, isSignedIn });
       return;
     }
 
@@ -36,18 +37,32 @@ export function useAuthApi<T>(
         throw new Error('No auth token available');
       }
 
-      // **Ensure the endpoint does NOT include '/api'**
+      // Normalize endpoint without adding '/api' prefix
       const normalizedEndpoint = endpoint.startsWith('/api') 
         ? endpoint.replace(/^\/api/, '') 
         : endpoint.startsWith('/') 
           ? endpoint 
           : `/${endpoint}`;
 
+      // Log auth and request url if in development
+      if (import.meta.env.VITE_NODE_ENV === 'development') {
+        console.log('Auth details:', {
+          hasToken: !!token,
+          organizationId: organization?.id,
+          endpoint: normalizedEndpoint
+        });
+        console.log(`Making request to: ${apiClient.defaults.baseURL}${normalizedEndpoint}`);
+      }
+
       const response = await apiClient.get<T>(normalizedEndpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'x-organization-id': organization?.id || '', // Ensure this header is included
-        }
+          'x-organization-id': organization?.id || '',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        withCredentials: true,
+        timeout: 30000
       });
       
       setData(response.data);

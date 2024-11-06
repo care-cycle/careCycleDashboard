@@ -4,10 +4,6 @@ import { BillingOverview } from '@/components/billing/billing-overview'
 import { CreditBalance } from '@/components/billing/credit-balance'
 import { BillingMethod } from '@/components/billing/billing-method'
 import { RevenueCalculator } from '@/components/billing/revenue-calculator'
-import { StripeProvider } from '@/components/billing/stripe-provider'
-import { toast } from 'sonner'
-import apiClient from '@/lib/api-client'
-import { useAuth } from '@clerk/clerk-react'
 import { useAuthApi } from '@/hooks/use-auth-api'
 
 interface PaymentMethod {
@@ -51,20 +47,24 @@ export default function BillingPage() {
     }
   });
 
-  console.log('Billing page state:', {
-    data: clientInfo
-  });
-
   if (error) {
-    console.error('Billing error state:', error);
+    return (
+      <RootLayout topMetrics={topMetrics} hideKnowledgeSearch>
+        <div className="text-center py-8">
+          <p className="text-red-500">Failed to load billing information. Please try again later.</p>
+        </div>
+      </RootLayout>
+    );
   }
 
   if (!isAuthenticated) {
-    return null; // Let PrivateRoute handle the redirect
-  }
-
-  if (isLoading) {
-    return <div></div>;
+    return (
+      <RootLayout topMetrics={topMetrics} hideKnowledgeSearch>
+        <div className="text-center py-8">
+          <p>Please sign in to view billing information.</p>
+        </div>
+      </RootLayout>
+    );
   }
 
   return (
@@ -80,14 +80,12 @@ export default function BillingPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <CreditBalance />
           </div>
-          <StripeProvider>
-            <BillingMethod 
-              paymentMethod={clientInfo?.default_payment_method || null}
-              onPaymentMethodUpdate={(newPaymentMethod) => {
-                // Handle payment method update
-              }}
-            />
-          </StripeProvider>
+          <BillingMethod 
+            paymentMethod={clientInfo?.default_payment_method || null}
+            onPaymentMethodUpdate={() => {
+              // Disabled for now
+            }}
+          />
         </div>
       </div>
     </RootLayout>

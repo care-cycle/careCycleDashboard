@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/clerk-react";
+const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' ? 'http://10.0.0.155:5173' : 'https://clerk.nodable.ai';
 
 export default function SignInPage() {
   return (
@@ -20,9 +21,10 @@ export default function SignInPage() {
               card: "glass-panel shadow-xl",
             }
           }}
-          signUpUrl="/sign-up"
-          routing="path"
           path="/sign-in"
+          routing="path"
+          signUpUrl={import.meta.env.VITE_NODE_ENV === 'development' ? `${BASE_URL}/sign-up` : '/sign-up'}
+          fallbackRedirectUrl={import.meta.env.VITE_NODE_ENV === 'development' ? `${BASE_URL}/dashboard` : '/dashboard'}
         />
       </div>
     </div>

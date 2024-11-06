@@ -30,7 +30,8 @@ export default function SignUpWrapper() {
           }}
           routing="path"
           path="/sign-up"
-          signInUrl="/sign-in"
+          signInUrl={import.meta.env.DEV ? "https://clerk.nodable.ai/sign-in" : "/sign-in"}
+          fallbackRedirectUrl={import.meta.env.DEV ? "http://10.0.0.155:5173/dashboard" : "/dashboard"}
         />
       </div>
     </div>

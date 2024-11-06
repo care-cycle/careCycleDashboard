@@ -31,7 +31,7 @@ export default function App() {
         <Routes>
           {/* Public Routes */}
           <Route 
-            path="/sign-in" 
+            path="/sign-in/*" 
             element={
               <PublicRoute>
                 <SignIn />

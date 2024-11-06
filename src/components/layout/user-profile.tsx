@@ -33,7 +33,7 @@ export function UserProfile() {
         title: "Logged out successfully",
         description: "You have been logged out of your account"
       })
-      navigate('/sign-in')
+      window.location.href = '/sign-in'
     } catch (error) {
       toast({
         title: "Error logging out",
