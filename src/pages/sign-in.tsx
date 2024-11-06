@@ -1,5 +1,5 @@
 import { SignIn } from "@clerk/clerk-react";
-const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' ? 'http://10.0.0.155:5173' : 'https://clerk.nodable.ai';
+const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' ? 'http://10.0.0.155:5173' : 'https://app.nodable.ai';
 
 export default function SignInPage() {
   return (

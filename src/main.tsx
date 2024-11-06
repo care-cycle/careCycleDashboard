@@ -7,7 +7,7 @@ import App from './App';
 import './index.css';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const DEV_DOMAIN = 'http://localhost:5173';
+const DEV_DOMAIN = 'http://10.0.0.155:5173';
 const PROD_DOMAIN = 'https://app.nodable.ai';
 
 if (!PUBLISHABLE_KEY) {
@@ -21,10 +21,10 @@ createRoot(document.getElementById('root')!).render(
       isSatellite={import.meta.env.VITE_NODE_ENV !== 'development'}
       domain={import.meta.env.VITE_NODE_ENV === 'development' ? DEV_DOMAIN : PROD_DOMAIN}
       proxyUrl={undefined}
-      signInUrl={`${PROD_DOMAIN}/sign-in`}
-      signUpUrl={`${PROD_DOMAIN}/sign-up`}
-      afterSignOutUrl={`${PROD_DOMAIN}/sign-in`}
-      fallbackRedirectUrl={`${PROD_DOMAIN}/dashboard`}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignOutUrl="/sign-in"
+      fallbackRedirectUrl="/dashboard"
       forceRedirectUrl={true}
       cookieOptions={{
         secure: import.meta.env.VITE_NODE_ENV !== 'development',
