@@ -8,7 +8,7 @@ import './index.css';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const DEV_DOMAIN = 'http://10.0.0.155:5173';
-const PROD_DOMAIN = 'app.nodable.ai';
+const PROD_DOMAIN = 'clerk.nodable.ai';
 
 if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key');
