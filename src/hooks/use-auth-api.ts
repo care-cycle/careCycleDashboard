@@ -4,6 +4,7 @@ import { isAuthEnabled } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import apiClient from '@/lib/api-client';
 import { useAuth } from '@clerk/clerk-react';
+import { setAuthToken } from '@/lib/api-client';
 
 interface UseAuthApiOptions {
   onError?: (error: any) => void;
@@ -25,14 +26,26 @@ export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {})
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
+  const auth = useAuth();
+
+  // Set the auth token whenever it changes
+  useEffect(() => {
+    const updateToken = async () => {
+      if (auth.isLoaded && auth.isSignedIn) {
+        const token = await auth.getToken();
+        setAuthToken(token);
+      } else {
+        setAuthToken(null);
+      }
+    };
+    
+    updateToken();
+  }, [auth.isLoaded, auth.isSignedIn]);
 
   // Return non-auth state immediately if auth is disabled
   if (!isAuthEnabled()) {
     return nonAuthState;
   }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const auth = useAuth();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {

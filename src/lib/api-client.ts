@@ -2,7 +2,6 @@
 import axios from "axios";
 import { isAuthEnabled } from '@/lib/utils';
 import { mockData } from './mock-data';
-import { getAuth } from '@clerk/clerk-react';
 
 const isDevelopment = import.meta.env.VITE_NODE_ENV === 'development';
 
@@ -38,19 +37,19 @@ const apiClient = axios.create({
   timeout: 30000
 });
 
+let authToken: string | null = null;
+
+// Function to set the auth token
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
 // Request interceptor
 apiClient.interceptors.request.use(
   async (config) => {
-    if (isAuthEnabled()) {
-      try {
-        const auth = getAuth();
-        const token = await auth.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      } catch (error) {
-        console.error('Error getting auth token:', error);
-      }
+    // Add auth token if available
+    if (isAuthEnabled() && authToken) {
+      config.headers.Authorization = `Bearer ${authToken}`;
     }
     
     if (isDevelopment) {
