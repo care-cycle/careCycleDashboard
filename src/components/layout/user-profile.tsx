@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronUp, ChevronDown, User, CreditCard, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
+import { cn, isAuthEnabled } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useUser, useClerk } from '@clerk/clerk-react'
@@ -9,10 +9,52 @@ import { useUser, useClerk } from '@clerk/clerk-react'
 export function UserProfile() {
   const [isExpanded, setIsExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const { toast } = useToast()
-  const { user } = useUser()
-  const { signOut } = useClerk()
   const navigate = useNavigate()
+  const { toast } = useToast()
+
+  // Only call Clerk hooks when auth is enabled
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const user = isAuthEnabled() ? useUser().user : null;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const signOut = isAuthEnabled() ? useClerk().signOut : null;
+
+  const clerkHooks = { 
+    user, 
+    signOut 
+  };
+
+  // Use the values conditionally
+  const userData = {
+    fullName: isAuthEnabled() && clerkHooks.user?.fullName || 'Demo User',
+    email: isAuthEnabled() && clerkHooks.user?.primaryEmailAddress?.emailAddress || 'demo@example.com',
+    imageUrl: isAuthEnabled() && clerkHooks.user?.imageUrl 
+      ? clerkHooks.user.imageUrl 
+      : "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"
+  }
+
+  const handleLogout = async () => {
+    if (isAuthEnabled() && clerkHooks.signOut) {
+      try {
+        await clerkHooks.signOut();
+        setIsExpanded(false);
+        toast({
+          title: "Logged out successfully",
+          description: "You have been logged out of your account"
+        });
+      } catch (error) {
+        toast({
+          title: "Error logging out",
+          description: "There was a problem logging out of your account",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "Demo Mode",
+        description: "Logout is disabled in demo mode"
+      });
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -24,26 +66,6 @@ export function UserProfile() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  const handleLogout = async () => {
-    try {
-      await signOut({
-        sessionId: 'all',
-        redirectUrl: '/sign-in'
-      });
-      setIsExpanded(false);
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account"
-      });
-    } catch (error) {
-      toast({
-        title: "Error logging out",
-        description: "There was a problem logging out of your account",
-        variant: "destructive"
-      });
-    }
-  };
 
   const menuItems = [
     { 
@@ -69,12 +91,6 @@ export function UserProfile() {
       className: 'text-red-600 hover:text-red-700 hover:bg-red-50/20'
     }
   ]
-
-  if (!user) return null;
-
-  const userImage = user.imageUrl || user.hasImage 
-    ? user.imageUrl 
-    : "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"
 
   return (
     <>
@@ -118,17 +134,17 @@ export function UserProfile() {
         >
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
             <img
-              src={userImage}
-              alt={user.fullName || "User"}
+              src={userData.imageUrl}
+              alt={userData.fullName}
               className="w-6 h-6 rounded-md"
             />
           </div>
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-gray-900">
-              {user.fullName || user.firstName || 'User'}
+              {userData.fullName}
             </div>
             <div className="text-xs text-gray-500">
-              {user.primaryEmailAddress?.emailAddress || ''}
+              {userData.email}
             </div>
           </div>
           {isExpanded ? (

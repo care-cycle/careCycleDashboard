@@ -1,8 +1,9 @@
 // src/hooks/use-auth-api.ts
-import { useEffect, useState } from 'react';
-import { useAuth, useOrganization } from '@clerk/clerk-react';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { isAuthEnabled } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import apiClient from '@/lib/api-client';
+import { useAuth } from '@clerk/clerk-react';
 
 interface UseAuthApiOptions {
   onError?: (error: any) => void;
@@ -10,98 +11,64 @@ interface UseAuthApiOptions {
   showErrorToast?: boolean;
 }
 
-export function useAuthApi<T>(
-  endpoint: string, 
-  options: UseAuthApiOptions = {}
-) {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-  const { organization } = useOrganization();
-  
+// Default state for non-auth mode
+const nonAuthState = {
+  data: null,
+  isLoading: false,
+  error: null,
+  isAuthenticated: true,
+  refetch: () => Promise.resolve(null)
+};
+
+export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {}) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
 
-  const fetchData = async () => {
-    if (!isLoaded || !isSignedIn) {
-      console.log('Auth not ready:', { isLoaded, isSignedIn });
-      return;
-    }
+  // Return non-auth state immediately if auth is disabled
+  if (!isAuthEnabled()) {
+    return nonAuthState;
+  }
 
-    try {
-      setIsLoading(true);
-      setError(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const auth = useAuth();
 
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('No auth token available');
-      }
-
-      // Normalize endpoint without adding '/api' prefix
-      const normalizedEndpoint = endpoint.startsWith('/api') 
-        ? endpoint.replace(/^\/api/, '') 
-        : endpoint.startsWith('/') 
-          ? endpoint 
-          : `/${endpoint}`;
-
-      // Log auth and request url if in development
-      if (import.meta.env.VITE_NODE_ENV === 'development') {
-        console.log('Auth details:', {
-          hasToken: !!token,
-          organizationId: organization?.id,
-          endpoint: normalizedEndpoint
-        });
-        console.log(`Making request to: ${apiClient.defaults.baseURL}${normalizedEndpoint}`);
-      }
-
-      const response = await apiClient.get<T>(normalizedEndpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'x-organization-id': organization?.id || '',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Accept': 'application/json'
-        },
-        withCredentials: true,
-        timeout: 30000
-      });
-      
-      setData(response.data);
-      options.onSuccess?.(response.data);
-    } catch (error: any) {
-      console.error('API Error:', {
-        endpoint,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-        stack: error.stack
-      });
-      
-      setError(error);
-      options.onError?.(error);
-      
-      if (options.showErrorToast) {
-        toast({
-          title: "Error",
-          description: error.message || "An error occurred",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.get(endpoint);
+        setData(response.data);
+        options.onSuccess?.(response.data);
+      } catch (err: any) {
+        setError(err);
+        options.onError?.(err);
+        if (options.showErrorToast) {
+          toast({
+            title: "Error",
+            description: err.message || "An error occurred",
+            variant: "destructive"
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (auth.isLoaded && auth.isSignedIn) {
       fetchData();
     }
-  }, [endpoint, organization?.id, isLoaded, isSignedIn]);
+  }, [endpoint, auth.isLoaded, auth.isSignedIn]);
 
-  return { 
-    data, 
-    isLoading: !isLoaded || isLoading, 
+  return {
+    data,
+    isLoading,
     error,
-    refetch: fetchData,
-    isAuthenticated: isLoaded && isSignedIn
+    isAuthenticated: auth.isLoaded && auth.isSignedIn,
+    refetch: async () => {
+      // Implement refetch logic here if needed
+    }
   };
 } 

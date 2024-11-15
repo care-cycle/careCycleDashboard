@@ -1,17 +1,19 @@
 import { cn } from "@/lib/utils"
 
 interface TopMetricsBarProps extends React.HTMLAttributes<HTMLDivElement> {
-  metrics: {
+  metrics?: {
     title: string
     value: string
   }[]
 }
 
-export function TopMetricsBar({ metrics, className }: TopMetricsBarProps) {
+export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
+  if (!metrics?.length) return null;
+
   return (
     <div className={cn("sticky top-0 z-20 flex w-full border-b bg-background/95 backdrop-blur", className)}>
       <div className="flex w-full">
-        {metrics.map((metric, i) => (
+        {metrics.map((metric) => (
           <div 
             key={metric.title} 
             className="flex-1 min-w-0 px-4 py-3"

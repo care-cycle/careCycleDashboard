@@ -5,17 +5,25 @@ import { BrowserRouter } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/clerk-react';
 import App from './App';
 import './index.css';
+import { isAuthEnabled } from '@/lib/utils';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const DEV_DOMAIN = 'http://10.0.0.155:5173';
-const PROD_DOMAIN = 'https://app.nodable.ai';
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing Clerk Publishable Key');
-}
+// Wrap the app conditionally based on auth status
+export const AppWrapper = () => {
+  if (!isAuthEnabled()) {
+    return (
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+  }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  if (!PUBLISHABLE_KEY) {
+    throw new Error('Missing Clerk Publishable Key');
+  }
+
+  return (
     <ClerkProvider 
       publishableKey={PUBLISHABLE_KEY}
       isSatellite={false}
@@ -35,5 +43,11 @@ createRoot(document.getElementById('root')!).render(
         <App />
       </BrowserRouter>
     </ClerkProvider>
+  );
+};
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <AppWrapper />
   </StrictMode>
 );

@@ -1,8 +1,30 @@
 // src/lib/api-client.ts
 import axios from "axios";
+import { isAuthEnabled } from '@/lib/utils';
+import { mockData } from './mock-data';
 
 const isDevelopment = import.meta.env.VITE_NODE_ENV === 'development';
 
+const getMockResponse = (endpoint: string) => {
+  // Map endpoints to mock data
+  const mockResponses: Record<string, any> = {
+    '/api/calls': mockData.calls,
+    '/api/billing': mockData.billing,
+    '/api/user': mockData.user
+  };
+  
+  return mockResponses[endpoint] || {};
+};
+
+// Create mock client
+const mockClient = {
+  get: async (url: string) => ({ data: getMockResponse(url) }),
+  post: async (url: string) => ({ data: getMockResponse(url) }),
+  put: async (url: string) => ({ data: getMockResponse(url) }),
+  delete: async (url: string) => ({ data: getMockResponse(url) })
+};
+
+// Create real API client
 const apiClient = axios.create({
   baseURL: isDevelopment
     ? 'http://10.0.0.155:3000/api'
@@ -54,4 +76,5 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient;
+// Export the appropriate client based on auth setting
+export default isAuthEnabled() ? apiClient : mockClient;

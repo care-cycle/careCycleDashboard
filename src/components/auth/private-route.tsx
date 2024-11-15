@@ -1,24 +1,21 @@
-import { useAuth } from "@clerk/clerk-react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
+import { isAuthEnabled } from '@/lib/utils';
 
-interface PrivateRouteProps {
-  children: React.ReactNode;
-}
-
-export function PrivateRoute({ children }: PrivateRouteProps) {
-  const { isSignedIn, isLoaded } = useAuth();
-  const location = useLocation();
-
-  // If auth is loaded and user is not signed in, redirect immediately
-  if (isLoaded && !isSignedIn) {
-    return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
+export function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  // If auth is disabled, allow access
+  if (!isAuthEnabled()) {
+    return <>{children}</>;
   }
 
-  // Show loading state only if auth is still loading
   if (!isLoaded) {
     return <div>Loading...</div>;
   }
 
-  // If we get here, user is authenticated
+  if (!isSignedIn) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
   return <>{children}</>;
 }

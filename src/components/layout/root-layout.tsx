@@ -4,7 +4,7 @@ import { KnowledgeSearch } from "@/components/search/knowledge-search"
 
 interface RootLayoutProps {
   children: React.ReactNode
-  topMetrics: {
+  topMetrics?: {
     title: string
     value: string
   }[]
@@ -18,7 +18,7 @@ export function RootLayout({ children, topMetrics, hideKnowledgeSearch }: RootLa
         <Sidebar />
       </div>
       <div className="flex flex-1 flex-col overflow-hidden relative">
-        <TopMetricsBar metrics={topMetrics} className="left-0 lg:left-64" />
+        {topMetrics && <TopMetricsBar metrics={topMetrics} className="left-0 lg:left-64" />}
         <main className="flex-1 overflow-auto">
           <div className="floating-orb w-[600px] h-[600px] -left-64 top-32 fixed" />
           <div 
