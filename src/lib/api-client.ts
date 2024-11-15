@@ -37,19 +37,26 @@ const apiClient = axios.create({
   timeout: 30000
 });
 
-let authToken: string | null = null;
-
-// Function to set the auth token
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
-};
-
 // Request interceptor
 apiClient.interceptors.request.use(
   async (config) => {
-    // Add auth token if available
-    if (isAuthEnabled() && authToken) {
-      config.headers.Authorization = `Bearer ${authToken}`;
+    if (isAuthEnabled()) {
+      try {
+        // Get the current active session
+        const session = await window.Clerk?.session;
+        const token = await session?.getToken();
+        
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          if (isDevelopment) {
+            console.log('🔑 Auth token added to request');
+          }
+        } else {
+          console.warn('No auth token available');
+        }
+      } catch (error) {
+        console.error('Error getting auth token:', error);
+      }
     }
     
     if (isDevelopment) {
