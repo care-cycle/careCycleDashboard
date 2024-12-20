@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { DateRange } from 'react-day-picker'
 import { RootLayout } from '@/components/layout/root-layout'
 import { KPICard } from '@/components/metrics/kpi-card'
@@ -6,9 +6,9 @@ import { CallDispositionsChart } from '@/components/charts/call-dispositions-cha
 import { EndedByChart } from '@/components/charts/ended-by-chart'
 import { CallVolumeChart } from '@/components/charts/call-volume-chart'
 import { DateRangePicker } from '@/components/date-range-picker'
-import { AgentSelect } from '@/components/agent-select'
+import { CampaignSelect } from '@/components/campaign-select'
 import { CallsByAgent } from '@/components/metrics/calls-by-agent'
-import { generateTimeSeriesData, generateCallVolumeData } from '@/lib/data-utils'
+import { generateCallVolumeData, generateDispositionsData } from '@/lib/data-utils'
 import { PageTransition } from "@/components/layout/page-transition"
 
 const topMetrics = [
@@ -55,11 +55,41 @@ const agents = ["Agent A", "Agent B", "Agent C"]
 export default function Dashboard() {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 9, 5),
-    to: new Date(2024, 10, 31)
+    to: new Date(2024, 9, 6)
   })
-  const [selectedAgent, setSelectedAgent] = useState("all")
-  const [dispositionsData] = useState(() => generateTimeSeriesData())
-  const [callVolumeData] = useState(() => generateCallVolumeData())
+  const [selectedCampaign, setSelectedCampaign] = useState("all")
+
+  const callVolumeData = useMemo(() => {
+    if (!date?.from || !date?.to) return []
+    
+    try {
+      return generateCallVolumeData(date)
+    } catch (e) {
+      console.error('Error generating call volume data:', e)
+      return []
+    }
+  }, [date])
+
+  const dispositionsData = useMemo(() => {
+    if (!date?.from || !date?.to) return []
+    return generateDispositionsData(date)
+  }, [date])
+
+  const handleDateChange = (newDate: DateRange | undefined) => {
+    if (newDate?.from && newDate?.to) {
+      const from = new Date(newDate.from)
+      const to = new Date(newDate.to)
+      
+      if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+        setDate(newDate)
+      } else {
+        console.error('Invalid date selection:', newDate)
+      }
+    }
+  }
+
+  console.log('Dashboard DateRange:', date)
+  console.log('Call Volume Data:', callVolumeData)
 
   return (
     <RootLayout topMetrics={topMetrics}>
@@ -68,12 +98,15 @@ export default function Dashboard() {
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
             <div className="flex gap-4">
-              <AgentSelect
-                agents={agents}
-                value={selectedAgent}
-                onValueChange={setSelectedAgent}
+              <CampaignSelect
+                value={selectedCampaign}
+                onValueChange={setSelectedCampaign}
               />
-              <DateRangePicker date={date} onChange={setDate} />
+              <DateRangePicker 
+                date={date} 
+                onChange={handleDateChange} 
+                className="w-[260px]"
+              />
             </div>
           </div>
 
@@ -90,10 +123,16 @@ export default function Dashboard() {
           </div>
 
           <div className="grid gap-6 grid-cols-2">
-            <CallDispositionsChart data={dispositionsData} />
+            <CallDispositionsChart 
+              data={dispositionsData} 
+              dateRange={date}
+            />
             <div className="space-y-6">
               <EndedByChart data={endedByData} />
-              <CallVolumeChart data={callVolumeData} />
+              <CallVolumeChart 
+                data={callVolumeData} 
+                dateRange={date}
+              />
             </div>
           </div>
 

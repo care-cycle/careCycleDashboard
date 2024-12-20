@@ -1,61 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { RootLayout } from '@/components/layout/root-layout'
 import { BillingOverview } from '@/components/billing/billing-overview'
 import { CreditBalance } from '@/components/billing/credit-balance'
 import { BillingMethod } from '@/components/billing/billing-method'
 import { RevenueCalculator } from '@/components/billing/revenue-calculator'
-import { useAuthApi } from '@/hooks/use-auth-api'
-
-interface PaymentMethod {
-  last4: string
-  expMonth: number
-  expYear: number
-  brand: string
-}
-
-interface ClientInfo {
-  stripe_customer_id: string
-  default_payment_method: PaymentMethod | null
-}
-
-const nextBillingDate = new Date()
-nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
-nextBillingDate.setDate(1)
-
-const topMetrics = [
-  { title: "Current Call Rate", value: "$0.20/min" },
-  { title: "Current SMS Rate", value: "$0.02/sms" },
-  // { title: "Next Tier", value: "47,234 mins" },
-  { title: "Auto-replenish", value: "Enabled" },
-  // { title: "Next Billing", value: nextBillingDate.toLocaleDateString('en-US', { 
-  //   month: 'long',
-  //   day: 'numeric',
-  //   year: 'numeric'
-  // })}
-]
+import { useInitialData } from '@/hooks/useInitialData'
 
 export default function BillingPage() {
-  const { 
-    data: clientInfo, 
-    isLoading, 
-    isAuthenticated,
-    error 
-  } = useAuthApi<ClientInfo>('/portal/client/info', {
-    showErrorToast: true,
-    onError: (error) => {
-      console.error('Billing page error:', error);
-    }
-  });
+  // Use the existing data from the app-level fetch
+  const { clientInfo } = useInitialData();
+  const isAuthenticated = Boolean(clientInfo);
 
-  if (error) {
-    return (
-      <RootLayout topMetrics={topMetrics} hideKnowledgeSearch>
-        <div className="text-center py-8">
-          <p className="text-red-500">Failed to load billing information. Please try again later.</p>
-        </div>
-      </RootLayout>
-    );
-  }
+  const topMetrics = [
+    { 
+      title: "Current Call Rate", 
+      value: clientInfo ? `$${(Number(clientInfo.pricePerCallMs) * 60000).toFixed(2)}/min` : '-' 
+    },
+    { 
+      title: "Current SMS Rate", 
+      value: clientInfo ? `$${Number(clientInfo.pricePerSms).toFixed(2)}/sms` : '-' 
+    },
+    { 
+      title: "Auto-replenish", 
+      value: clientInfo?.enableTopUp ? "Enabled" : "Disabled" 
+    },
+  ];
 
   if (!isAuthenticated) {
     return (
@@ -74,11 +43,19 @@ export default function BillingPage() {
         
         <div className="grid gap-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <BillingOverview />
+            <BillingOverview 
+              totalSpend={Number(clientInfo?.totalCallSpend) + Number(clientInfo?.totalSmsSpend)}
+              availableBalance={Number(clientInfo?.availableBalance)}
+            />
             <RevenueCalculator />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <CreditBalance />
+            <CreditBalance 
+              availableBalance={Number(clientInfo?.availableBalance)}
+              pricePerCallMs={Number(clientInfo?.pricePerCallMs)}
+              topUpThreshold={clientInfo?.topUpThreshold}
+              enableTopUp={clientInfo?.enableTopUp ?? false}
+            />
           </div>
           <BillingMethod 
             paymentMethod={clientInfo?.default_payment_method || null}

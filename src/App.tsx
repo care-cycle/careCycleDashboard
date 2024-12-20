@@ -13,6 +13,7 @@ import SignIn from './pages/sign-in';
 import ProfilePage from './pages/user/profile';
 import BillingPage from './pages/user/billing';
 import { isAuthEnabled } from '@/lib/utils';
+import { useInitialData } from './hooks/useInitialData';
 
 // Non-auth version of App
 function NonAuthApp() {
@@ -34,12 +35,25 @@ function NonAuthApp() {
 // Auth version of App
 function AuthApp() {
   const { isLoaded, isSignedIn } = useAuth();
+  const { clientInfo, isLoading: isLoadingInitialData } = useInitialData();
 
+  // Only show loading if auth is still loading
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-panel p-6 rounded-lg">
           <div className="animate-pulse">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // If we're signed in and loading initial data, show loading
+  if (isSignedIn && isLoadingInitialData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass-panel p-6 rounded-lg">
+          <div className="animate-pulse">Loading your data...</div>
         </div>
       </div>
     );
