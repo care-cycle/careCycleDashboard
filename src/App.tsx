@@ -14,6 +14,10 @@ import ProfilePage from './pages/user/profile';
 import BillingPage from './pages/user/billing';
 import { isAuthEnabled } from '@/lib/utils';
 import { useInitialData } from './hooks/useInitialData';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+// Create a client
+const queryClient = new QueryClient()
 
 // Non-auth version of App
 function NonAuthApp() {
@@ -103,7 +107,11 @@ function AuthApp() {
   );
 }
 
-// Export the appropriate version based on auth status
+// Main App component
 export default function App() {
-  return isAuthEnabled() ? <AuthApp /> : <NonAuthApp />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthApp />
+    </QueryClientProvider>
+  );
 }

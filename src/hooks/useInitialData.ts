@@ -1,32 +1,24 @@
-import { useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
-import { useAuthApi } from './use-auth-api';
-import type { ClientInfo } from '@/types/client';
+import { useQuery } from '@tanstack/react-query'
+import apiClient from '@/lib/api-client'
 
 export function useInitialData() {
-  const { isSignedIn, isLoaded } = useAuth();
-  
-  const {
-    data: clientInfo,
-    isLoading,
-    error,
-    refetch
-  } = useAuthApi<ClientInfo>('/portal/client/info', {
-    showErrorToast: false,
-    onError: (error) => {
-      console.error('Failed to load initial client info:', error);
-    }
-  });
+  const { data: clientInfo } = useQuery({
+    queryKey: ['clientInfo'],
+    queryFn: () => apiClient.get('/portal/client/info'),
+    staleTime: Infinity,
+    cacheTime: Infinity
+  })
 
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      refetch();
-    }
-  }, [isLoaded, isSignedIn]);
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ['metrics'],
+    queryFn: () => apiClient.get('/portal/client/metrics/8d2ab588-f852-4792-8de8-3510d9ff7f92'),
+    staleTime: Infinity,
+    cacheTime: Infinity
+  })
 
   return {
-    clientInfo,
-    isLoading: isLoaded && isSignedIn ? isLoading : false,
-    error
-  };
+    metrics: metrics?.data,
+    clientInfo: clientInfo?.data,
+    isLoading
+  }
 } 

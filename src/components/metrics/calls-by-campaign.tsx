@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface CallsByAgentProps {
+interface CallsByCampaignProps {
   data: {
     name: string
     calls: number
@@ -10,27 +10,27 @@ interface CallsByAgentProps {
   }[]
 }
 
-export function CallsByAgent({ data }: CallsByAgentProps) {
+export function CallsByCampaign({ data }: CallsByCampaignProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calls by Agent</CardTitle>
+        <CardTitle>Calls by Campaign</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {data.map((agent) => (
-            <div key={agent.name} className="flex items-center justify-between">
+          {data.map((campaign) => (
+            <div key={campaign.name} className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">{agent.name}</p>
+                <p className="text-sm font-medium leading-none">{campaign.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {agent.calls} calls
+                  {campaign.calls.toLocaleString()} calls
                 </p>
               </div>
               <div className={cn(
                 "flex items-center",
-                agent.trend === "up" ? "text-green-500" : "text-red-500"
+                campaign.trend === "up" ? "text-green-500" : "text-red-500"
               )}>
-                {agent.trend === "up" ? (
+                {campaign.trend === "up" ? (
                   <ArrowUp className="h-4 w-4 mr-1" />
                 ) : (
                   <ArrowDown className="h-4 w-4 mr-1" />

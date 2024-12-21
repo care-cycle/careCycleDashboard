@@ -1,14 +1,27 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useInitialData } from "@/hooks/useInitialData"
 
 interface CampaignSelectProps {
   value: string
   onValueChange: (value: string) => void
+  isLoading?: boolean
+  campaigns?: Array<{ type: string; name: string }>
 }
 
-export function CampaignSelect({ value, onValueChange }: CampaignSelectProps) {
-  const { clientInfo } = useInitialData();
-  const campaigns = clientInfo?.campaigns || [];
+export function CampaignSelect({ 
+  value, 
+  onValueChange, 
+  isLoading,
+  campaigns 
+}: CampaignSelectProps) {
+  if (isLoading) {
+    return (
+      <Select disabled>
+        <SelectTrigger className="w-[240px] glass-panel">
+          <SelectValue placeholder="Loading..." />
+        </SelectTrigger>
+      </Select>
+    );
+  }
 
   return (
     <Select value={value} onValueChange={onValueChange}>
@@ -17,14 +30,12 @@ export function CampaignSelect({ value, onValueChange }: CampaignSelectProps) {
       </SelectTrigger>
       <SelectContent className="glass-panel">
         <SelectItem value="all">All Campaigns</SelectItem>
-        {campaigns.map((campaign) => (
+        {campaigns?.map((campaign) => (
           <SelectItem 
-            key={campaign.name} 
-            value={campaign.name}
-            disabled={!campaign.enabled}
+            key={campaign.type}
+            value={campaign.type}
           >
             {campaign.name}
-            {!campaign.enabled && " (Disabled)"}
           </SelectItem>
         ))}
       </SelectContent>

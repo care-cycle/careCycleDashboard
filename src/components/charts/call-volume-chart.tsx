@@ -13,9 +13,23 @@ const volumeColors = {
   "Outbound": "#293AF9"
 }
 
+const HeaderLegend = () => {
+  return (
+    <div className="flex justify-center gap-6">
+      {Object.entries(volumeColors).map(([name, color]) => (
+        <div key={name} className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full" 
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-sm text-gray-600">{name}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
-  console.log('Chart Data:', data)
-  console.log('Date Range:', dateRange)
 
   if (!data?.length) {
     return (
@@ -110,12 +124,13 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
   }
 
   return (
-    <Card className="glass-panel interactive cursor-pointer">
-      <CardHeader>
+    <Card className="glass-panel interactive cursor-pointer h-[400px]">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-gray-900">Call Volume</CardTitle>
+        <HeaderLegend />
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={160}>
+      <CardContent className="flex-1 h-[calc(100%-65px)]">
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
               <linearGradient id="inboundGradient" x1="0" y1="0" x2="0" y2="1">
@@ -146,14 +161,21 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
               axisLine={{ stroke: '#E2E8F0' }}
             />
             <Tooltip 
-              content={<CustomTooltip />}
-              isAnimationActive={false}
-              cursor={{ stroke: '#E2E8F0' }}
-            />
-            <Legend 
-              content={<CustomLegend />}
-              verticalAlign="bottom"
-              height={36}
+              content={({ active, payload }) => {
+                if (active && payload?.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
+                      <p className="text-sm font-medium mb-2">{data.formattedDate}, {data.formattedHour}</p>
+                      <div className="space-y-1.5">
+                        <p className="text-sm">Inbound: {data.Inbound} calls</p>
+                        <p className="text-sm">Outbound: {data.Outbound} calls</p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
             />
             <Area
               type="monotone"

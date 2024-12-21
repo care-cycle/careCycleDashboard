@@ -2,13 +2,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, Tooltip, Legend, CartesianGrid } from "recharts"
 import { format, differenceInDays } from "date-fns"
 import { DateRange } from 'react-day-picker';
+import { Switch } from "@/components/ui/switch"
+import { useMemo, useState } from "react"
+
 const dispositionColors = {
-  Voicemail: "#74E0BB",
-  Transferred: "#293AF9",
-  Busy: "#519d8f",
-  Blocked: "#c2fff4",
-  "Do Not Call": "#94b8ff"
+  // Primary Positive Outcomes (these appear separately from verification flow)
+  "Qualified": "#74E0BB",                     // Primary turquoise
+  "Appointment Scheduled": "#64D1AC",         // Slightly deeper turquoise
+
+  // Verification Flow Positives (these appear together)
+  "Identity Verification Succeeded": "#293AF9", // Royal blue (brand)
+  "Message Delivered": "#4B5EFA",              // Lighter royal blue
+  "Transferred": "#6B82FB",                    // Soft royal blue
+
+  // High Volume Neutrals (make up bulk of chart)
+  "Busy/No Answer": "#55C39D",                // Rich turquoise
+  "Voicemail": "#4B9B8A",                     // Deep turquoise
+
+  // Warning States
+  "Not Interested": "#FFD700",                // Bright gold
+  "Pipeline Error": "#F2C94C",                // Muted gold
+  "Telephony Block": "#E5BC47",               // Deep gold
+
+  // Negative Outcomes
+  "Do Not Call": "#FFB7C5",                   // Cherry blossom
+  "Identity Verification Failed": "#FF8093",   // Deep cherry blossom
+  "Unqualified": "#FF5674"                    // Deep rose
 }
+
+const NON_CONNECTED_DISPOSITIONS = [
+  "Busy/No Answer",
+  "Voicemail"
+]
 
 interface CallDispositionsChartProps {
   data: any[]
@@ -16,6 +41,20 @@ interface CallDispositionsChartProps {
 }
 
 export function CallDispositionsChart({ data, dateRange }: CallDispositionsChartProps) {
+  const [showConnectedOnly, setShowConnectedOnly] = useState(true)
+
+  const filteredData = useMemo(() => {
+    if (!showConnectedOnly) return data;
+    
+    return data.map(entry => {
+      const filteredEntry = { ...entry };
+      NON_CONNECTED_DISPOSITIONS.forEach(disposition => {
+        delete filteredEntry[disposition];
+      });
+      return filteredEntry;
+    });
+  }, [data, showConnectedOnly]);
+
   const getTimeFormatter = () => {
     if (!dateRange?.from || !dateRange?.to) return (time: string) => format(new Date(time), 'MMM dd')
     
@@ -82,14 +121,27 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
   }
 
   return (
-    <Card className="glass-panel interactive cursor-pointer overflow-hidden">
+    <Card className="glass-panel interactive cursor-pointer h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-gray-900">Call Dispositions</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={showConnectedOnly}
+            onCheckedChange={setShowConnectedOnly}
+            id="connected-calls-filter"
+          />
+          <label 
+            htmlFor="connected-calls-filter" 
+            className="text-sm text-gray-600"
+          >
+            Show Connected Calls Only
+          </label>
+        </div>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
+      <CardContent className="flex-1 h-[calc(100%-65px)]">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart 
-            data={data} 
+            data={filteredData}
             margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
           >
             <CartesianGrid 
@@ -104,30 +156,21 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
               fontSize={12}
               tickLine={false}
               axisLine={{ stroke: '#E2E8F0' }}
-              height={45}
-              interval="preserveEnd"
-              minTickGap={30}
-              tickMargin={8}
             />
             <YAxis
               stroke="#64748B"
               fontSize={12}
               tickLine={false}
               axisLine={{ stroke: '#E2E8F0' }}
-              width={50}
             />
-            <Tooltip 
-              content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
-            />
-            {Object.entries(dispositionColors).map(([key, color]) => (
+            <Tooltip content={CustomTooltip} />
+            {Object.keys(dispositionColors).map((key) => (
               <Bar
                 key={key}
                 dataKey={key}
                 stackId="dispositions"
-                fill={color}
-                radius={[key === "Do Not Call" ? 4 : 0, key === "Do Not Call" ? 4 : 0, 0, 0]}
-                maxBarSize={50}
+                fill={dispositionColors[key as keyof typeof dispositionColors]}
+                radius={[0, 0, 0, 0]}
               />
             ))}
           </BarChart>
