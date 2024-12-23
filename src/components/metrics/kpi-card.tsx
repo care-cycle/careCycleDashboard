@@ -48,7 +48,7 @@ export function KPICard({ title, value, change, info }: KPICardProps) {
             "text-xs font-medium",
             isPositiveChange ? "text-emerald-600" : "text-red-600"
           )}>
-            {change} from last month
+            {change}
           </p>
         )}
       </CardContent>
