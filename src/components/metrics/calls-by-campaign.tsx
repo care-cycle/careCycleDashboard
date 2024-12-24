@@ -11,10 +11,15 @@ interface CallsByCampaignProps {
 }
 
 export function CallsByCampaign({ data }: CallsByCampaignProps) {
+  // If there's no data or only one campaign with 0 calls, don't render the component
+  if (!data.length || (data.length === 1 && data[0].calls === 0)) {
+    return null;
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calls by Campaign</CardTitle>
+        <CardTitle>Campaign Activity</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -23,7 +28,7 @@ export function CallsByCampaign({ data }: CallsByCampaignProps) {
               <div className="space-y-1">
                 <p className="text-sm font-medium leading-none">{campaign.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {campaign.calls.toLocaleString()} calls
+                  {campaign.calls.toLocaleString()} {campaign.calls === 1 ? 'call' : 'calls'}
                 </p>
               </div>
               <div className={cn(

@@ -11,7 +11,7 @@ export function useInitialData() {
 
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['metrics'],
-    queryFn: () => apiClient.get('/portal/client/metrics/8d2ab588-f852-4792-8de8-3510d9ff7f92'),
+    queryFn: () => apiClient.get(`/portal/client/metrics/${clientInfo?.data?.id}`),
     staleTime: Infinity,
     cacheTime: Infinity
   })

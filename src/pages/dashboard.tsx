@@ -19,20 +19,20 @@ import { formatDuration } from '@/lib/utils'
 
 const getTopMetrics = (todayMetrics: any) => [
   { 
-    title: "Total Calls", 
-    value: todayMetrics?.uniqueCalls?.toLocaleString() || "0" 
+    title: "Today's Total Calls", 
+    value: todayMetrics?.totalCalls?.toLocaleString() || '0'
   },
   { 
-    title: "Total Spend", 
-    value: todayMetrics?.totalSpend ? `$${todayMetrics.totalSpend.toFixed(2)}` : "$0.00" 
+    title: "Today's Total Spend", 
+    value: `$${Number(todayMetrics?.totalSpend || 0).toFixed(2)}`
   },
   { 
-    title: "Total Duration", 
-    value: todayMetrics?.totalDurationMs ? formatDuration(todayMetrics.totalDurationMs) : "0s"
+    title: "Today's Total Duration", 
+    value: formatDuration(todayMetrics?.totalDurationMs)
   },
   { 
-    title: "Avg Duration", 
-    value: todayMetrics?.averageDurationMs ? formatDuration(todayMetrics.averageDurationMs) : "0s"
+    title: "Today's Avg Duration", 
+    value: formatDuration(todayMetrics?.averageDurationMs)
   }
 ]
 
@@ -179,33 +179,41 @@ export default function Dashboard() {
     if (isLoading || !metrics?.data?.campaigns) return [];
     
     return metrics.data.campaigns.map(campaign => {
-      // Calculate current period calls
-      const currentPeriodCalls = campaign.hours
-        .filter(hour => {
-          const hourDate = new Date(hour.hour);
-          return hourDate >= date?.from && hourDate <= date?.to;
-        })
-        .reduce((sum, hour) => sum + (Number(hour.inbound) + Number(hour.outbound)), 0);
+      // Get all hours for this campaign
+      const hours = campaign.hours || [];
+      
+      // Calculate total calls for current period
+      const currentPeriodCalls = hours.reduce((sum, hour) => {
+        const hourDate = new Date(hour.hour);
+        if (hourDate >= date?.from && hourDate <= date?.to) {
+          return sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0));
+        }
+        return sum;
+      }, 0);
 
       // Calculate previous period calls
       const daysDiff = Math.ceil((date?.to?.getTime() - date?.from?.getTime()) / (1000 * 60 * 60 * 24));
       const previousFrom = new Date(date?.from?.getTime() - (daysDiff * 24 * 60 * 60 * 1000));
       const previousTo = new Date(date?.from?.getTime() - 1);
       
-      const previousPeriodCalls = campaign.hours
-        .filter(hour => {
-          const hourDate = new Date(hour.hour);
-          return hourDate >= previousFrom && hourDate <= previousTo;
-        })
-        .reduce((sum, hour) => sum + (Number(hour.inbound) + Number(hour.outbound)), 0);
+      const previousPeriodCalls = hours.reduce((sum, hour) => {
+        const hourDate = new Date(hour.hour);
+        if (hourDate >= previousFrom && hourDate <= previousTo) {
+          return sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0));
+        }
+        return sum;
+      }, 0);
 
       return {
         name: campaign.name,
         calls: currentPeriodCalls,
         trend: currentPeriodCalls >= previousPeriodCalls ? "up" : "down"
       };
-    });
+    });  // Removed the filter to see all campaigns
   }, [metrics, date, isLoading]);
+
+  // Add a console log to see the final result
+  console.log('Final campaign metrics:', campaignMetrics);
 
   const totalDuration = useMemo(() => {
     if (isLoading || !metrics?.data) return { value: "0", change: "N/A", description: "" };
@@ -355,7 +363,7 @@ export default function Dashboard() {
   }, [date, metrics, selectedCampaign, isLoading]);
 
   return (
-    <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
+    <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
       <PageTransition>
         <div className="space-y-8">
           <div className="flex justify-between items-center">
@@ -375,7 +383,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Show loading state for charts */}
           {isLoading ? (
             <div className="grid gap-6 grid-cols-2">
               <Card className="glass-panel">
@@ -398,18 +405,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2">
                 <KPICard
                   title="Customers Engaged"
                   value={customersEngaged.value}
                   change={customersEngaged.change}
                   info={`Number of unique customers who interacted with our AI assistants`}
-                />
-                <KPICard
-                  title="Performance Score"
-                  value="8.5/10"
-                  change="+0.3"
-                  info="Average AI performance score based on QA guidelines"
                 />
                 <KPICard
                   title="Total Duration"

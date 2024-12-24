@@ -13,11 +13,11 @@ export default function BillingPage() {
 
   const topMetrics = [
     { 
-      title: "Current Call Rate", 
+      title: "Today's Call Rate", 
       value: clientInfo ? `$${(Number(clientInfo.pricePerCallMs) * 60000).toFixed(2)}/min` : '-' 
     },
     { 
-      title: "Current SMS Rate", 
+      title: "Today's SMS Rate", 
       value: clientInfo ? `$${Number(clientInfo.pricePerSms).toFixed(2)}/sms` : '-' 
     },
     { 
