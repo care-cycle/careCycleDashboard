@@ -7,12 +7,26 @@ import { CallDetails } from '@/components/calls/call-details'
 import { DateRange } from 'react-day-picker'
 import { useUI } from '@/contexts/ui-context'
 import { Call } from '@/types/calls'
+import { useInitialData } from '@/hooks/useInitialData'
+import { formatDuration } from '@/lib/utils'
 
-const topMetrics = [
-  { title: "Total Calls", value: "12,345" },
-  { title: "Total Spend", value: "$12,345" },
-  { title: "Transfers", value: "1,234" },
-  { title: "Cost per Transfer", value: "$10.00" }
+const getTopMetrics = (todayMetrics: any) => [
+  { 
+    title: "Total Calls", 
+    value: todayMetrics?.uniqueCalls?.toLocaleString() || "0" 
+  },
+  { 
+    title: "Total Spend", 
+    value: todayMetrics?.totalSpend ? `$${todayMetrics.totalSpend.toFixed(2)}` : "$0.00" 
+  },
+  { 
+    title: "Total Duration", 
+    value: todayMetrics?.totalDurationMs ? formatDuration(todayMetrics.totalDurationMs) : "0s"
+  },
+  { 
+    title: "Avg Duration", 
+    value: todayMetrics?.averageDurationMs ? formatDuration(todayMetrics.averageDurationMs) : "0s"
+  }
 ]
 
 export default function CallsPage() {
@@ -22,6 +36,7 @@ export default function CallsPage() {
     to: new Date(2024, 2, 12)
   })
   const { setCallDetailsOpen } = useUI()
+  const { todayMetrics } = useInitialData();
 
   const handleCallSelect = (call: Call) => {
     setSelectedCall(call)
@@ -38,7 +53,7 @@ export default function CallsPage() {
   }
 
   return (
-    <RootLayout topMetrics={topMetrics}>
+    <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
       <div className="space-y-6">
         <CallMetrics />
         <CallFilters 

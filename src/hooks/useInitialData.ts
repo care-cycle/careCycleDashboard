@@ -9,16 +9,24 @@ export function useInitialData() {
     cacheTime: Infinity
   })
 
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['metrics'],
     queryFn: () => apiClient.get('/portal/client/metrics/8d2ab588-f852-4792-8de8-3510d9ff7f92'),
     staleTime: Infinity,
     cacheTime: Infinity
   })
 
+  const { data: todayMetrics, isLoading: todayMetricsLoading } = useQuery({
+    queryKey: ['todayMetrics'],
+    queryFn: () => apiClient.get(`/portal/client/metrics/today/${clientInfo?.data?.id}`),
+    enabled: !!clientInfo?.data?.id,
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  })
+
   return {
     metrics: metrics?.data,
     clientInfo: clientInfo?.data,
-    isLoading
+    todayMetrics: todayMetrics?.data,
+    isLoading: metricsLoading || todayMetricsLoading
   }
 } 

@@ -15,12 +15,25 @@ import { Card, CardContent } from '@/components/ui/card'
 import { aggregateTimeseriesData } from '@/lib/date-utils'
 import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
+import { formatDuration } from '@/lib/utils'
 
-const topMetrics = [
-  { title: "Total Calls", value: "12,345" },
-  { title: "Total Spend", value: "$12,345" },
-  { title: "Transfers", value: "1,234" },
-  { title: "Cost per Transfer", value: "$10.00" }
+const getTopMetrics = (todayMetrics: any) => [
+  { 
+    title: "Total Calls", 
+    value: todayMetrics?.uniqueCalls?.toLocaleString() || "0" 
+  },
+  { 
+    title: "Total Spend", 
+    value: todayMetrics?.totalSpend ? `$${todayMetrics.totalSpend.toFixed(2)}` : "$0.00" 
+  },
+  { 
+    title: "Total Duration", 
+    value: todayMetrics?.totalDurationMs ? formatDuration(todayMetrics.totalDurationMs) : "0s"
+  },
+  { 
+    title: "Avg Duration", 
+    value: todayMetrics?.averageDurationMs ? formatDuration(todayMetrics.averageDurationMs) : "0s"
+  }
 ]
 
 const endedByData = [
@@ -41,7 +54,7 @@ export default function Dashboard() {
     };
   });
   const [selectedCampaign, setSelectedCampaign] = useState("all");
-  const { metrics, clientInfo, isLoading } = useInitialData();
+  const { metrics, clientInfo, isLoading, todayMetrics } = useInitialData();
 
   console.log('Raw metrics response:', metrics);
 
@@ -122,6 +135,9 @@ export default function Dashboard() {
           [key]: Number(value) || 0
         }), {})
       }));
+
+    console.log('Raw campaign data:', campaignData);
+    console.log('Filtered disposition data:', rawData);
 
     return aggregateTimeseriesData(
       rawData,
@@ -327,6 +343,8 @@ export default function Dashboard() {
         return acc;
       }, {} as Record<string, number>);
 
+    console.log('Assistant type counts:', typeCounts);
+
     // Convert to array format and map to friendly names
     return Object.entries(typeCounts)
       .map(([type, count]) => ({
@@ -337,7 +355,7 @@ export default function Dashboard() {
   }, [date, metrics, selectedCampaign, isLoading]);
 
   return (
-    <RootLayout topMetrics={topMetrics}>
+    <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
       <PageTransition>
         <div className="space-y-8">
           <div className="flex justify-between items-center">
@@ -385,7 +403,7 @@ export default function Dashboard() {
                   title="Customers Engaged"
                   value={customersEngaged.value}
                   change={customersEngaged.change}
-                  info={`Number of unique customers who interacted with our AI assistants ${customersEngaged.description}`}
+                  info={`Number of unique customers who interacted with our AI assistants`}
                 />
                 <KPICard
                   title="Performance Score"
@@ -397,7 +415,7 @@ export default function Dashboard() {
                   title="Total Duration"
                   value={totalDuration.value}
                   change={totalDuration.change}
-                  info={`Total duration of all calls ${totalDuration.description}`}
+                  info={`Total duration of all calls`}
                 />
               </div>
 
