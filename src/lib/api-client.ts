@@ -70,13 +70,13 @@ apiClient.interceptors.request.use(
 // Response interceptor
 apiClient.interceptors.response.use(
   (response) => {
-    if (isDevelopment) {
+    // if (isDevelopment) {
       console.log('📦 Response:', {
         status: response.status,
         url: response.config.url,
         data: response.data
       });
-    }
+    // }
     return response;
   },
   (error) => {

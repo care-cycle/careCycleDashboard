@@ -56,8 +56,6 @@ export default function Dashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState("all");
   const { metrics, clientInfo, isLoading, todayMetrics } = useInitialData();
 
-  console.log('Raw metrics response:', metrics);
-
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
     
@@ -136,9 +134,6 @@ export default function Dashboard() {
         }), {})
       }));
 
-    console.log('Raw campaign data:', campaignData);
-    console.log('Filtered disposition data:', rawData);
-
     return aggregateTimeseriesData(
       rawData,
       date,
@@ -212,8 +207,6 @@ export default function Dashboard() {
     });  // Removed the filter to see all campaigns
   }, [metrics, date, isLoading]);
 
-  // Add a console log to see the final result
-  console.log('Final campaign metrics:', campaignMetrics);
 
   const totalDuration = useMemo(() => {
     if (isLoading || !metrics?.data) return { value: "0", change: "N/A", description: "" };
@@ -350,8 +343,6 @@ export default function Dashboard() {
         });
         return acc;
       }, {} as Record<string, number>);
-
-    console.log('Assistant type counts:', typeCounts);
 
     // Convert to array format and map to friendly names
     return Object.entries(typeCounts)
