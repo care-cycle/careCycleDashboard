@@ -27,7 +27,7 @@ const mockClient = {
 // Create real API client
 const apiClient = axios.create({
   baseURL: isDevelopment
-    ? 'http://10.0.0.155:3000/api'
+    ? 'http://localhost:3000/api'
     : 'https://api.nodable.ai/api',
   headers: {
     'Accept': 'application/json',

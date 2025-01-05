@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { SignIn } from "@clerk/clerk-react";
 import { isAuthEnabled } from '@/lib/utils';
 
-const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' ? 'http://10.0.0.155:5173' : 'https://clerk.nodable.ai';
+const BASE_URL = import.meta.env.VITE_NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://clerk.nodable.ai';
 
 export default function SignInPage() {
   // Redirect to dashboard if auth is disabled

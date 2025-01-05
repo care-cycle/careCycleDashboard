@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { SignUp } from "@clerk/clerk-react";
 
 const PROD_DOMAIN = 'https://app.nodable.ai';
-const DEV_DOMAIN = 'http://10.0.0.155:5173';
+const DEV_DOMAIN = 'http://localhost:5173';
 
 export default function SignUpWrapper() {
   const location = useLocation();
