@@ -7,7 +7,7 @@ import { CallDetails } from '@/components/calls/call-details'
 import { DateRange } from 'react-day-picker'
 import { useUI } from '@/contexts/ui-context'
 import { Call } from '@/types/calls'
-import { useInitialData } from '@/hooks/useInitialData'
+import { useInitialData } from '@/hooks/use-client-data'
 import { formatDuration } from '@/lib/utils'
 
 const getTopMetrics = (todayMetrics: any) => [

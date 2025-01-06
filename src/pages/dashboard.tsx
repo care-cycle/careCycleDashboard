@@ -9,13 +9,15 @@ import { CampaignSelect } from '@/components/campaign-select'
 import { CallsByCampaign } from '@/components/metrics/calls-by-campaign'
 import { generateCallVolumeData, generateDispositionsData } from '@/lib/data-utils'
 import { PageTransition } from "@/components/layout/page-transition"
-import { useInitialData } from '@/hooks/useInitialData'
+import { useInitialData } from '@/hooks/use-client-data'
 import type { MetricsResponse } from '@/types/metrics'
 import { Card, CardContent } from '@/components/ui/card'
 import { aggregateTimeseriesData } from '@/lib/date-utils'
 import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
 import { formatDuration } from '@/lib/utils'
+import axios from 'axios';
+import { format } from 'date-fns';
 
 const getTopMetrics = (todayMetrics: any) => [
   { 
@@ -54,7 +56,7 @@ export default function Dashboard() {
     };
   });
   const [selectedCampaign, setSelectedCampaign] = useState("all");
-  const { metrics, clientInfo, isLoading, todayMetrics } = useInitialData();
+  const { metrics, clientInfo, isLoading, todayMetrics, fetchUniqueCallers } = useInitialData();
 
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
@@ -157,18 +159,44 @@ export default function Dashboard() {
     );
   }, [date, metrics, selectedCampaign, isLoading]);
 
-  const handleDateChange = (newDate: DateRange | undefined) => {
+  const handleDateChange = async (newDate: DateRange | undefined) => {
     if (newDate?.from && newDate?.to) {
       const from = new Date(newDate.from)
       const to = new Date(newDate.to)
       
       if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
         setDate(newDate)
+        
+        try {
+          const response = await fetchUniqueCallers(from, to)
+
+          if (response.data.success) {
+            const { currentPeriod, previousPeriod, comparison } = response.data.data
+            const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+            setCustomersEngaged({
+              value: currentPeriod.uniqueCallers.toLocaleString(),
+              change: previousPeriod.uniqueCallers === 0 
+                ? `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`
+                : `${comparison.percentChange >= 0 ? '+' : ''}${comparison.percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
+              description: `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), 'MMM d, yyyy')} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), 'MMM d, yyyy')}`
+            })
+          }
+        } catch (error) {
+          console.error('Error fetching unique callers:', error)
+        }
       } else {
         console.error('Invalid date selection:', newDate)
       }
     }
   }
+
+  // Add state for customers engaged
+  const [customersEngaged, setCustomersEngaged] = useState({
+    value: "0",
+    change: "N/A",
+    description: ""
+  });
 
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.campaigns) return [];
@@ -260,59 +288,6 @@ export default function Dashboard() {
     const percentChange = ((currentHours - previousHours) / previousHours * 100);
     return {
       value: `${currentHours.toLocaleString()} hrs`,
-      change: `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-      description: `${previousFrom.toLocaleDateString()} - ${previousTo.toLocaleDateString()}`
-    };
-  }, [date, metrics, selectedCampaign, isLoading]);
-
-  const customersEngaged = useMemo(() => {
-    if (isLoading || !metrics?.data) return { value: "0", change: "N/A", description: "" };
-
-    let campaignData;
-    if (selectedCampaign === 'all') {
-      campaignData = metrics.data.total;
-    } else {
-      const campaign = metrics.data.campaigns?.find(c => c.type === selectedCampaign);
-      campaignData = campaign?.hours;
-    }
-
-    if (!campaignData?.length) return { value: "0", change: "N/A", description: "" };
-
-    // Calculate current period unique callers
-    const currentPeriodCallers = campaignData
-      .filter(metric => {
-        const metricDate = new Date(metric.hour);
-        return metricDate >= date?.from && metricDate <= date?.to;
-      })
-      .reduce((sum, metric) => sum + (Number(metric.uniqueCallers) || 0), 0);
-
-    // Calculate the duration of the selected period in days
-    const daysDiff = Math.ceil((date?.to?.getTime() - date?.from?.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    
-    // Calculate the previous period
-    const previousFrom = new Date(date?.from?.getTime() - (daysDiff * 24 * 60 * 60 * 1000));
-    const previousTo = new Date(date?.from?.getTime() - 1);
-    
-    const previousPeriodCallers = campaignData
-      .filter(metric => {
-        const metricDate = new Date(metric.hour);
-        return metricDate >= previousFrom && metricDate <= previousTo;
-      })
-      .reduce((sum, metric) => sum + (Number(metric.uniqueCallers) || 0), 0);
-
-    // If we have no previous data
-    if (previousPeriodCallers === 0) {
-      return {
-        value: currentPeriodCallers.toLocaleString(),
-        change: `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-        description: `${previousFrom.toLocaleDateString()} - ${previousTo.toLocaleDateString()}`
-      };
-    }
-
-    // Calculate percentage change
-    const percentChange = ((currentPeriodCallers - previousPeriodCallers) / previousPeriodCallers * 100);
-    return {
-      value: currentPeriodCallers.toLocaleString(),
       change: `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
       description: `${previousFrom.toLocaleDateString()} - ${previousTo.toLocaleDateString()}`
     };

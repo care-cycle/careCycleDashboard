@@ -4,7 +4,7 @@ import { BillingOverview } from '@/components/billing/billing-overview'
 import { CreditBalance } from '@/components/billing/credit-balance'
 import { BillingMethod } from '@/components/billing/billing-method'
 import { RevenueCalculator } from '@/components/billing/revenue-calculator'
-import { useInitialData } from '@/hooks/useInitialData'
+import { useInitialData } from '@/hooks/use-client-data'
 
 export default function BillingPage() {
   // Use the existing data from the app-level fetch

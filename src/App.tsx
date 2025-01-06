@@ -13,7 +13,7 @@ import SignIn from './pages/sign-in';
 import ProfilePage from './pages/user/profile';
 import BillingPage from './pages/user/billing';
 import { isAuthEnabled } from '@/lib/utils';
-import { useInitialData } from './hooks/useInitialData';
+import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Create a client

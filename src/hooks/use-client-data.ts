@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '@/lib/api-client'
+import { format } from 'date-fns'
 
 export function useInitialData() {
   const { data: clientInfo } = useQuery({
@@ -23,10 +24,20 @@ export function useInitialData() {
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   })
 
+  const fetchUniqueCallers = async (from: Date, to: Date) => {
+    const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
+    const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
+    
+    return apiClient.get(`/portal/client/metrics/unique-callers/${clientInfo?.data?.id}`, {
+      params: { from: fromStr, to: toStr }
+    })
+  }
+
   return {
     metrics: metrics?.data,
     clientInfo: clientInfo?.data,
     todayMetrics: todayMetrics?.data,
-    isLoading: metricsLoading || todayMetricsLoading
+    isLoading: metricsLoading || todayMetricsLoading,
+    fetchUniqueCallers
   }
 } 

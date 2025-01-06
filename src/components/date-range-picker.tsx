@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useEffect } from 'react'
 
 interface DateRangePickerProps {
   date: DateRange | undefined
@@ -21,6 +22,14 @@ export function DateRangePicker({
   onChange,
   className,
 }: DateRangePickerProps) {
+  // Log whenever the date range changes
+  useEffect(() => {
+    console.log('Date Range:', {
+      from: date?.from ? format(date.from, 'yyyy-MM-dd HH:mm:ss') : null,
+      to: date?.to ? format(date.to, 'yyyy-MM-dd HH:mm:ss') : null
+    });
+  }, [date]);
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>

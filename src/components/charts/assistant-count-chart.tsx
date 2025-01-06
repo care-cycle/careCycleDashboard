@@ -8,6 +8,16 @@ interface AssistantCountChartProps {
   }[]
 }
 
+interface TooltipProps {
+  active?: boolean;
+  payload?: {
+    payload: {
+      name: string;
+    };
+    value: number;
+  }[];
+}
+
 export const assistantTypeLabels: Record<string, string> = {
   'appointment_callback': 'Appointment',
   'inbound_afterhours_existing': 'After Hours Inbound',
@@ -19,10 +29,12 @@ export const assistantTypeLabels: Record<string, string> = {
   'triggered_outbound_existing': 'Requested Call from SMS'
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (!active || !payload) return null
+const CustomTooltip = ({ active, payload }: TooltipProps) => {
+  if (!active || !payload || !payload.length || !payload[0]) return null;
 
-  const data = payload[0]
+  const data = payload[0];
+  if (!data?.payload) return null;
+
   return (
     <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
       <div className="flex flex-col gap-1">
@@ -30,8 +42,8 @@ const CustomTooltip = ({ active, payload }: any) => {
         <span className="text-sm font-medium">{data.value.toLocaleString()} calls</span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const CustomXAxisTick = ({ x, y, payload }: any) => {
   const words = payload.value.split(' ');
