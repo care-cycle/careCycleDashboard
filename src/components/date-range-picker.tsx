@@ -30,6 +30,26 @@ export function DateRangePicker({
     });
   }, [date]);
 
+  // Add handler for calendar selection
+  const handleSelect = (selectedDate: DateRange | undefined) => {
+    // If no date is selected yet, or if we have a complete range, use the new selection
+    if (!date || (date.from && date.to)) {
+      onChange(selectedDate);
+      return;
+    }
+
+    // If we're clicking on the existing start date, keep it as anchor and allow selecting in either direction
+    if (selectedDate?.from && date.from && 
+        selectedDate.from.getTime() === date.from.getTime() && 
+        !selectedDate.to) {
+      // Keep the existing selection
+      return;
+    }
+
+    // For all other cases, just pass through the selection
+    onChange(selectedDate);
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -66,7 +86,7 @@ export function DateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={onChange}
+            onSelect={handleSelect}
             numberOfMonths={2}
             className="bg-white rounded-md"
           />

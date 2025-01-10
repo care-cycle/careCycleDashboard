@@ -49,7 +49,7 @@ apiClient.interceptors.request.use(
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
           if (isDevelopment) {
-            console.log('🔑 Auth token added to request');
+            // console.log('🔑 Auth token added to request');
           }
         } else {
           console.warn('No auth token available');

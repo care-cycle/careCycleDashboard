@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, Tooltip, Legend, CartesianGrid } from "recharts"
-import { format, differenceInDays } from "date-fns"
+import { format, differenceInDays, startOfHour, endOfHour, addHours } from "date-fns"
 import { DateRange } from 'react-day-picker';
 import { Switch } from "@/components/ui/switch"
 import { useMemo, useState } from "react"
@@ -27,7 +27,17 @@ const dispositionColors = {
   // Negative Outcomes
   "Do Not Call": "#FFB7C5",                   // Cherry blossom
   "Identity Verification Failed": "#FF8093",   // Deep cherry blossom
-  "Unqualified": "#FF5674"                    // Deep rose
+  "Unqualified": "#FF5674",                    // Deep rose
+
+  // Add these new ones:
+  "Customer Did Not Answer": "#55C39D",  // Using similar color to "Busy/No Answer"
+  "Bad Contact": "#FF8093",              // Using similar color to negative outcomes
+  "Disposition Error": "#F2C94C",        // Using similar color to warning states
+  "Do Not Contact": "#FFB7C5",           // Using similar color to "Do Not Call"
+  
+  // Note: If "Identity Verified" is different from "Identity Verification Succeeded",
+  // you might want to add it as well:
+  "Identity Verified": "#293AF9",        // Using same color as "Identity Verification Succeeded"
 }
 
 const NON_CONNECTED_DISPOSITIONS = [
@@ -43,17 +53,51 @@ interface CallDispositionsChartProps {
 export function CallDispositionsChart({ data, dateRange }: CallDispositionsChartProps) {
   const [showConnectedOnly, setShowConnectedOnly] = useState(true)
 
-  const filteredData = useMemo(() => {
-    if (!showConnectedOnly) return data;
+  const processedData = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return data;
     
-    return data.map(entry => {
+    const diffDays = differenceInDays(dateRange.to, dateRange.from);
+    
+    // Only process hourly data if we're looking at less than 2 days
+    if (diffDays > 2) return data;
+
+    // Create a map of existing timestamps
+    const dataMap = new Map(
+      data.map(d => [new Date(d.timestamp).toISOString(), d])
+    );
+    
+    // Generate all hour slots between from and to
+    const result = [];
+    let current = startOfHour(dateRange.from);
+    const end = endOfHour(new Date()); // Use current time as end if later than dateRange.to
+    const rangeEnd = dateRange.to > end ? end : dateRange.to;
+
+    while (current <= rangeEnd) {
+      const timestamp = current.toISOString();
+      // Use existing data or create empty data point
+      const existingData = dataMap.get(timestamp) || {
+        timestamp,
+        ...Object.fromEntries(Object.keys(dispositionColors).map(key => [key, 0]))
+      };
+      result.push(existingData);
+      current = addHours(current, 1);
+    }
+
+    return result;
+  }, [data, dateRange]);
+
+  // Use processedData instead of data in filteredData
+  const filteredData = useMemo(() => {
+    if (!showConnectedOnly) return processedData;
+    
+    return processedData.map(entry => {
       const filteredEntry = { ...entry };
       NON_CONNECTED_DISPOSITIONS.forEach(disposition => {
         delete filteredEntry[disposition];
       });
       return filteredEntry;
     });
-  }, [data, showConnectedOnly]);
+  }, [processedData, showConnectedOnly]);
 
   const getTimeFormatter = () => {
     if (!dateRange?.from || !dateRange?.to) return (time: string) => format(new Date(time), 'MMM dd')
@@ -105,7 +149,7 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
       <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
         <p className="text-sm font-medium mb-2">{dateDisplay}</p>
         <div className="space-y-1.5">
-          {payload.map((entry: any) => (
+          {[...payload].sort((a, b) => b.value - a.value).map((entry: any) => (
             <div key={entry.name} className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 
@@ -164,15 +208,22 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
               axisLine={{ stroke: '#E2E8F0' }}
             />
             <Tooltip content={CustomTooltip} />
-            {Object.keys(dispositionColors).map((key) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                stackId="dispositions"
-                fill={dispositionColors[key as keyof typeof dispositionColors]}
-                radius={[0, 0, 0, 0]}
-              />
-            ))}
+            {Object.keys(dispositionColors)
+              .sort((a, b) => {
+                // Get the total value for each disposition across all data points
+                const sumA = data.reduce((sum, entry) => sum + (entry[a] || 0), 0);
+                const sumB = data.reduce((sum, entry) => sum + (entry[b] || 0), 0);
+                return sumB - sumA; // Sort descending
+              })
+              .map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  stackId="dispositions"
+                  fill={dispositionColors[key as keyof typeof dispositionColors]}
+                  radius={[0, 0, 0, 0]}
+                />
+              ))}
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

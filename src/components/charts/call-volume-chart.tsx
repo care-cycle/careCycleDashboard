@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend } from "recharts"
-import { format, differenceInDays, startOfWeek, endOfWeek, addDays, addWeeks } from "date-fns"
+import { format, differenceInDays, startOfWeek, endOfWeek, addDays, addWeeks, startOfHour, endOfHour, addHours } from "date-fns"
 import type { CallVolumeDataPoint } from "@/lib/data-utils"
 import { DateRange } from 'react-day-picker';
+import { useMemo } from 'react';
+
 interface CallVolumeChartProps {
   data: CallVolumeDataPoint[]
   dateRange: DateRange | undefined
@@ -30,6 +32,43 @@ const HeaderLegend = () => {
 }
 
 export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
+
+  const processedData = useMemo(() => {
+    if (!data?.length) return [];
+    if (!dateRange?.from || !dateRange?.to) return data;
+    
+    const diffDays = differenceInDays(dateRange.to, dateRange.from);
+    
+    // Only process hourly data if we're looking at less than 2 days
+    if (diffDays > 2) return data;
+
+    // Create a map of existing timestamps
+    const dataMap = new Map(
+      data.map(d => [new Date(d.timestamp).toISOString(), d])
+    );
+    
+    // Generate all hour slots between from and to
+    const result = [];
+    let current = startOfHour(dateRange.from);
+    const end = endOfHour(new Date()); // Use current time as end if later than dateRange.to
+    const rangeEnd = dateRange.to > end ? end : dateRange.to;
+
+    while (current <= rangeEnd) {
+      const timestamp = current.toISOString();
+      // Use existing data or create empty data point
+      const existingData = dataMap.get(timestamp) || {
+        timestamp,
+        Inbound: 0,
+        Outbound: 0,
+        formattedDate: format(current, 'MMM dd'),
+        formattedHour: format(current, 'HH:mm')
+      };
+      result.push(existingData);
+      current = addHours(current, 1);
+    }
+
+    return result;
+  }, [data, dateRange]);
 
   if (!data?.length) {
     return (
@@ -131,7 +170,7 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
       </CardHeader>
       <CardContent className="flex-1 h-[calc(100%-65px)]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={processedData}>
             <defs>
               <linearGradient id="inboundGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#74E0BB" stopOpacity={0.8}/>
