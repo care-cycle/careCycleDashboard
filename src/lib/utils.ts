@@ -26,3 +26,14 @@ export function formatDuration(ms: number): string {
   
   return `${minutes}m ${seconds}s`;
 }
+
+export function formatPhoneNumber(phoneNumber: string): string {
+  // Remove any non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '')
+  
+  // Check if it's a valid phone number
+  if (cleaned.length !== 11) return phoneNumber
+  
+  // Format as "+1 234-567-8901"
+  return `+${cleaned.slice(0, 1)} ${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`
+}

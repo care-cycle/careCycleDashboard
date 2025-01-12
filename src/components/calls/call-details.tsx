@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -11,38 +11,74 @@ import { Call } from '@/types/calls'
 interface CallDetailsProps {
   call: Call;
   onClose: () => void;
+  preloadedAudio?: HTMLAudioElement;
 }
 
-export function CallDetails({ call, onClose }: CallDetailsProps) {
+export const CallDetails = memo(function CallDetails({ call, onClose, preloadedAudio }: CallDetailsProps) {
   const [feedback, setFeedback] = useState('')
   const { setCallDetailsOpen } = useUI()
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [isClosing, setIsClosing] = useState(false)
 
-  const handleClose = () => {
-    setCallDetailsOpen(false)
-    onClose()
-  }
+  // Add cleanup effect for audio
+  useEffect(() => {
+    // Cleanup function that runs when component unmounts OR when call changes
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+    }
+  }, [call.id]) // Add dependency on call.id to cleanup when call changes
+
+  // Use callback to prevent recreation of handler
+  const handleClose = useCallback(() => {
+    setIsClosing(true)
+    // Small delay for animation
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      onClose()
+    }, 150)
+  }, [onClose])
+
+  // Add escape key handler
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [handleClose])
 
   const callDetails = [
-    { icon: User, label: "Agent", value: call.agent },
+    { icon: User, label: "Assistant Type", value: call.assistantType },
     { icon: Clock, label: "Duration", value: call.duration },
     { icon: PhoneCall, label: "Direction", value: call.direction },
     { icon: CheckCircle2, label: "Disposition", value: call.disposition },
-    { icon: ArrowRightLeft, label: "Ended By", value: call.endedBy },
-    { icon: DollarSign, label: "Cost", value: "$5.00" }
+    { icon: DollarSign, label: "Cost", value: `$${call.cost.toFixed(3)}` }
   ]
 
   return (
-    <div className="fixed inset-0 z-[9999]">
+    <div className={`fixed inset-0 z-50 transition-opacity duration-150 ${
+      isClosing ? 'opacity-0' : 'opacity-100'
+    }`}>
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/20 backdrop-blur-sm"
         onClick={handleClose}
-      />
+      >
+        <div className="sticky top-0 z-10 flex w-full border-b bg-background/95 backdrop-blur opacity-40" />
+      </div>
 
       {/* Details Panel */}
       <div className="absolute top-0 bottom-0 right-0 w-[480px] bg-white/95 backdrop-blur-xl shadow-2xl border-l">
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div>
               <h2 className="text-lg font-semibold">Call Details</h2>
@@ -53,21 +89,14 @@ export function CallDetails({ call, onClose }: CallDetailsProps) {
             </Button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            {/* Performance Score */}
-            <div className="glass-panel p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-500 mb-1">Performance Score</div>
-              <div className="text-3xl font-bold text-primary">{call.performance}</div>
-            </div>
-
-            {/* Call Recording */}
             <AudioPlayer 
-              url="https://example.com/recording.mp3" 
+              url={call.recordingUrl} 
               className="glass-panel"
+              preloadedAudio={preloadedAudio}
+              ref={audioRef}
             />
 
-            {/* Call Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               {callDetails.map((detail, index) => (
                 <Card key={index} className="p-4">
@@ -80,50 +109,39 @@ export function CallDetails({ call, onClose }: CallDetailsProps) {
               ))}
             </div>
 
-            {/* Call Details */}
             <Accordion type="single" collapsible>
               <AccordionItem value="summary">
                 <AccordionTrigger>Call Summary</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-gray-600">
-                    Customer called regarding their recent order. Issue was resolved by providing tracking information and estimated delivery date.
-                  </p>
+                  <p className="text-sm text-gray-600">{call.summary}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="transcript">
                 <AccordionTrigger>Transcript</AccordionTrigger>
                 <AccordionContent>
-                  <div className="text-sm text-gray-600 space-y-4">
-                    <p><strong>Agent:</strong> Hello, how can I help you today?</p>
-                    <p><strong>Customer:</strong> Hi, I'm calling about my order...</p>
+                  <div className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
+                    {call.transcript?.split('\n').map((line, index) => {
+                      if (line.startsWith('AI:')) {
+                        return <div key={index} className="mb-2"><strong>AI:</strong>{line.substring(3)}</div>
+                      }
+                      if (line.startsWith('User:')) {
+                        return <div key={index} className="mb-2"><strong>User:</strong>{line.substring(5)}</div>
+                      }
+                      return <div key={index} className="mb-2">{line}</div>
+                    }) || 'No transcript available'}
                   </div>
                 </AccordionContent>
               </AccordionItem>
+              <AccordionItem value="evaluation">
+                <AccordionTrigger>Evaluation</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-gray-600">{call.successEvaluation}</p>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
-          </div>
-
-          {/* Feedback Section */}
-          <div className="border-t p-4 bg-gray-50/50">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Call Feedback</h3>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Flag className="h-4 w-4" />
-                  Flag for Review
-                </Button>
-              </div>
-              <Textarea
-                placeholder="Add feedback about this call..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                className="resize-none"
-                rows={3}
-              />
-              <Button className="w-full">Submit Feedback</Button>
-            </div>
           </div>
         </div>
       </div>
     </div>
   )
-}
+})

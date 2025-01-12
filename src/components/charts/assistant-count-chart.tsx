@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
     <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
       <div className="flex flex-col gap-1">
         <span className="text-sm text-gray-600">{data.payload.name}</span>
-        <span className="text-sm font-medium">{data.value.toLocaleString()} calls</span>
+        <span className="text-sm font-medium">{data.value.toLocaleString()} {data.value === 1 ? 'call' : 'calls'}</span>
       </div>
     </div>
   );
@@ -67,6 +67,19 @@ const CustomXAxisTick = ({ x, y, payload }: any) => {
 };
 
 export function AssistantCountChart({ data }: AssistantCountChartProps) {
+  if (!data?.length) {
+    return (
+      <Card className="glass-panel interactive cursor-pointer h-[400px]">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Assistant Types</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
+          <p className="text-gray-500">No data available for selected date range</p>
+        </CardContent>
+      </Card>
+    )
+  }
+  
   return (
     <Card className="glass-panel interactive cursor-pointer h-[400px]">
       <CardHeader>

@@ -15,8 +15,6 @@ const navigationItems = [
     title: "Calls",
     icon: Phone,
     href: "/calls",
-    disabled: true,
-    badge: "Coming Soon",
   },
   {
     title: "Journeys",

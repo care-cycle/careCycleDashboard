@@ -111,7 +111,7 @@ function AuthApp() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthApp />
+      {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
     </QueryClientProvider>
   );
 }

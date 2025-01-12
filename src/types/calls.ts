@@ -1,9 +1,16 @@
 export interface Call {
   id: string;
-  agent: string;
-  duration: string;
-  direction: 'Inbound' | 'Outbound';
+  campaignId: string;
   disposition: string;
-  performance: string;
-  endedBy: string;
+  callerId: string;
+  createdAt: string;
+  recordingUrl: string;
+  duration: string;
+  assistantType: string;
+  successEvaluation: string;
+  summary: string;
+  transcript: string;
+  direction: 'inbound' | 'outbound';
+  cost: number;
+  testFlag: boolean;
 } 

@@ -11,7 +11,7 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
   if (!metrics?.length) return null;
 
   return (
-    <div className={cn("sticky top-0 z-20 flex w-full border-b bg-background/95 backdrop-blur", className)}>
+    <div className={cn("sticky top-0 z-10 flex w-full border-b bg-background/95 backdrop-blur", className)}>
       <div className="flex w-full">
         {metrics.map((metric) => (
           <div 

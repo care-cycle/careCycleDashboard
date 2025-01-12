@@ -24,6 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 
 const filterGroups = {
   "Key Metrics": [
@@ -59,11 +60,18 @@ const filterGroups = {
 }
 
 interface CallFiltersProps {
-  dateRange: DateRange | undefined;
-  onDateRangeChange: (date: DateRange | undefined) => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  showTestCalls: boolean;
+  onTestCallsChange: (value: boolean) => void;
 }
 
-export function CallFilters({ dateRange, onDateRangeChange }: CallFiltersProps) {
+export function CallFilters({ 
+  searchQuery,
+  onSearchChange,
+  showTestCalls,
+  onTestCallsChange
+}: CallFiltersProps) {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [selectedExports, setSelectedExports] = useState<string[]>([])
   const [openFilter, setOpenFilter] = useState(false)
@@ -91,168 +99,34 @@ export function CallFilters({ dateRange, onDateRangeChange }: CallFiltersProps) 
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 glass-panel p-4 rounded-lg">
-      <div className="flex items-center gap-4">
-        <div className="relative">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between w-full glass-panel p-4 rounded-lg">
+        <div className="relative flex-1 max-w-[630px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search calls..."
-            className="w-[300px] bg-white/50 pl-9"
+            className="w-full bg-white/50 pl-9"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
 
-        {/* Filters */}
-        <Popover open={openFilter} onOpenChange={setOpenFilter}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filters
-              {selectedFilters.length > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="ml-1 bg-primary/20 text-primary hover:bg-primary/30"
-                >
-                  {selectedFilters.length}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent 
-            className="w-[520px] p-0 bg-white/95 backdrop-blur-xl" 
-            align="start"
-          >
-            <Command>
-              <CommandInput placeholder="Search filters..." />
-              <CommandList>
-                <ScrollArea className="h-[320px]">
-                  {Object.entries(filterGroups).map(([group, items], index) => (
-                    <div key={group}>
-                      {index > 0 && <CommandSeparator />}
-                      <CommandGroup heading={group}>
-                        {items.map((item) => (
-                          <CommandItem
-                            key={item.id}
-                            onSelect={() => handleFilterSelect(item.id)}
-                            className="flex items-center gap-2"
-                          >
-                            <Checkbox 
-                              checked={selectedFilters.includes(item.id)}
-                              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                            />
-                            {item.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </div>
-                  ))}
-                </ScrollArea>
-              </CommandList>
-              <div className="p-2 flex justify-between items-center border-t">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedFilters([])}
-                >
-                  Clear All
-                </Button>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setOpenFilter(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setOpenFilter(false)}
-                  >
-                    Apply Filters
-                  </Button>
-                </div>
-              </div>
-            </Command>
-          </PopoverContent>
-        </Popover>
-
-        <DateRangePicker
-          date={dateRange}
-          onChange={onDateRangeChange}
-        />
-      </div>
-
-      {/* Export */}
-      <Popover open={openExport} onOpenChange={setOpenExport}>
-        <PopoverTrigger asChild>
-          <Button className="gap-2">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-[520px] p-0 bg-white/95 backdrop-blur-xl" 
-          align="end"
-        >
-          <div className="p-4 border-b">
-            <h3 className="font-medium">Export Call Data</h3>
-            <p className="text-sm text-gray-500">
-              Select the fields you want to include in your export
-            </p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="test-calls"
+              checked={showTestCalls}
+              onCheckedChange={onTestCallsChange}
+            />
+            <label
+              htmlFor="test-calls"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Show Test Calls
+            </label>
           </div>
-          <Command>
-            <CommandInput placeholder="Search fields..." />
-            <CommandList>
-              <ScrollArea className="h-[320px]">
-                {Object.entries(filterGroups).map(([group, items], index) => (
-                  <div key={group}>
-                    {index > 0 && <CommandSeparator />}
-                    <CommandGroup heading={group}>
-                      {items.map((item) => (
-                        <CommandItem
-                          key={item.id}
-                          onSelect={() => handleExportSelect(item.id)}
-                          className="flex items-center gap-2"
-                        >
-                          <Checkbox 
-                            checked={selectedExports.includes(item.id)}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                          {item.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </div>
-                ))}
-              </ScrollArea>
-            </CommandList>
-            <div className="p-2 flex justify-between items-center border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedExports([])}
-              >
-                Clear All
-              </Button>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOpenExport(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleExport}
-                  disabled={selectedExports.length === 0}
-                >
-                  Export Selected
-                </Button>
-              </div>
-            </div>
-          </Command>
-        </PopoverContent>
-      </Popover>
+        </div>
+      </div>
     </div>
   )
 }

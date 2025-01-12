@@ -9,7 +9,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useEffect } from 'react'
 
 interface DateRangePickerProps {
   date: DateRange | undefined
@@ -22,14 +21,6 @@ export function DateRangePicker({
   onChange,
   className,
 }: DateRangePickerProps) {
-  // Log whenever the date range changes
-  useEffect(() => {
-    console.log('Date Range:', {
-      from: date?.from ? format(date.from, 'yyyy-MM-dd HH:mm:ss') : null,
-      to: date?.to ? format(date.to, 'yyyy-MM-dd HH:mm:ss') : null
-    });
-  }, [date]);
-
   // Add handler for calendar selection
   const handleSelect = (selectedDate: DateRange | undefined) => {
     // If no date is selected yet, or if we have a complete range, use the new selection

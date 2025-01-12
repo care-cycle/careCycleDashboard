@@ -86,7 +86,6 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
     return result;
   }, [data, dateRange]);
 
-  // Use processedData instead of data in filteredData
   const filteredData = useMemo(() => {
     if (!showConnectedOnly) return processedData;
     
@@ -98,6 +97,32 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
       return filteredEntry;
     });
   }, [processedData, showConnectedOnly]);
+
+  if (!data?.length) {
+    return (
+      <Card className="glass-panel interactive cursor-pointer h-full">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-gray-900">Call Dispositions</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={showConnectedOnly}
+              onCheckedChange={setShowConnectedOnly}
+              id="connected-calls-filter"
+            />
+            <label 
+              htmlFor="connected-calls-filter" 
+              className="text-sm text-gray-600"
+            >
+              Show Connected Calls Only
+            </label>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
+          <p className="text-gray-500">No data available for selected date range</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const getTimeFormatter = () => {
     if (!dateRange?.from || !dateRange?.to) return (time: string) => format(new Date(time), 'MMM dd')
@@ -156,7 +181,7 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
                 style={{ backgroundColor: dispositionColors[entry.name as keyof typeof dispositionColors] }}
               />
               <span className="text-sm text-gray-600">{entry.name}:</span>
-              <span className="text-sm font-medium">{entry.value} calls</span>
+              <span className="text-sm font-medium">{entry.value} {entry.value === 1 ? 'call' : 'calls'}</span>
             </div>
           ))}
         </div>
