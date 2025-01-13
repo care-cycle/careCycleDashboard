@@ -2,11 +2,13 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { X, Flag, User, Clock, PhoneCall, CheckCircle2, ArrowRightLeft, DollarSign } from "lucide-react"
+import { X, Flag, User, Clock, PhoneCall, CheckCircle2, ArrowRightLeft, DollarSign, Copy, Check } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useUI } from "@/contexts/ui-context"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { Call } from '@/types/calls'
+import { toast } from "sonner"
+import { formatPhoneNumber } from '@/lib/utils'
 
 interface CallDetailsProps {
   call: Call;
@@ -19,6 +21,10 @@ export const CallDetails = memo(function CallDetails({ call, onClose, preloadedA
   const { setCallDetailsOpen } = useUI()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isClosing, setIsClosing] = useState(false)
+  const [hasCopied, setHasCopied] = useState({
+    id: false,
+    callerId: false
+  })
 
   // Add cleanup effect for audio
   useEffect(() => {
@@ -56,6 +62,18 @@ export const CallDetails = memo(function CallDetails({ call, onClose, preloadedA
     return () => window.removeEventListener('keydown', handleEscape)
   }, [handleClose])
 
+  // Add copy function
+  const copyText = useCallback(async (text: string, type: 'id' | 'callerId') => {
+    await navigator.clipboard.writeText(text)
+    setHasCopied(prev => ({ ...prev, [type]: true }))
+    toast.success(`${type === 'id' ? 'Call ID' : 'Caller ID'} copied to clipboard`)
+    
+    // Reset copy state after 2 seconds
+    setTimeout(() => {
+      setHasCopied(prev => ({ ...prev, [type]: false }))
+    }, 2000)
+  }, [])
+
   const callDetails = [
     { icon: User, label: "Assistant Type", value: call.assistantType },
     { icon: Clock, label: "Duration", value: call.duration },
@@ -80,9 +98,30 @@ export const CallDetails = memo(function CallDetails({ call, onClose, preloadedA
       <div className="absolute top-0 bottom-0 right-0 w-[480px] bg-white/95 backdrop-blur-xl shadow-2xl border-l">
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
-            <div>
+            <div className="space-y-1">
               <h2 className="text-lg font-semibold">Call Details</h2>
-              <p className="text-sm text-gray-500">ID: {call.id}</p>
+              <button
+                onClick={() => copyText(call.id, 'id')}
+                className="text-sm text-gray-500 flex items-center gap-1.5 hover:text-gray-900 transition-colors group"
+              >
+                ID: <span className="font-mono">{call.id}</span>
+                {hasCopied.id ? (
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </button>
+              <button
+                onClick={() => copyText(call.callerId, 'callerId')}
+                className="text-sm text-gray-500 flex items-center gap-1.5 hover:text-gray-900 transition-colors group"
+              >
+                Caller ID: <span className="font-mono">{formatPhoneNumber(call.callerId)}</span>
+                {hasCopied.callerId ? (
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </button>
             </div>
             <Button variant="ghost" size="icon" onClick={handleClose}>
               <X className="h-4 w-4" />

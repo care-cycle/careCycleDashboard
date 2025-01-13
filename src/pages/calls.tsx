@@ -20,6 +20,7 @@ import {
 import { format } from 'date-fns'
 import { DateRangePicker } from '@/components/date-range-picker'
 import { CampaignSelect } from '@/components/campaign-select'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 
 interface CallsTableProps {
   calls: Call[];
@@ -96,6 +97,9 @@ const MemoizedCallDetails = memo(function MemoizedCallDetails({
 
 export default function CallsPage() {
   const { todayMetrics, metrics, isLoading, calls, callsError, clientInfo } = useInitialData();
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (!calls?.data?.length) return undefined;
@@ -196,12 +200,16 @@ export default function CallsPage() {
   const handleCallSelect = useCallback((call: Call) => {
     setSelectedCall(call);
     setCallDetailsOpen(true);
-  }, [setCallDetailsOpen]);
+    // Add call ID to URL without navigation
+    navigate(`?id=${call.id}`, { replace: true });
+  }, [setCallDetailsOpen, navigate]);
 
   const handleCallClose = useCallback(() => {
     setCallDetailsOpen(false);
     setSelectedCall(null);
-  }, [setCallDetailsOpen]);
+    // Remove call ID from URL
+    navigate('', { replace: true });
+  }, [setCallDetailsOpen, navigate]);
 
   const handleDateRangeChange = (date: DateRange | undefined) => {
     setDateRange(date)
@@ -234,6 +242,18 @@ export default function CallsPage() {
       document.body.removeChild(link);
     }
   };
+
+  // Add effect to handle initial URL with call ID
+  useEffect(() => {
+    const callId = searchParams.get('id');
+    if (callId && calls?.data) {
+      const call = calls.data.find(c => c.id === callId);
+      if (call) {
+        setSelectedCall(call);
+        setCallDetailsOpen(true);
+      }
+    }
+  }, [calls?.data, searchParams, setCallDetailsOpen]);
 
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>

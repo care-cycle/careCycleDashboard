@@ -15,6 +15,7 @@ import BillingPage from './pages/user/billing';
 import { isAuthEnabled } from '@/lib/utils';
 import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
 
 // Create a client
 const queryClient = new QueryClient()
@@ -110,8 +111,11 @@ function AuthApp() {
 // Main App component
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
-    </QueryClientProvider>
+    <>
+      <Toaster />
+      <QueryClientProvider client={queryClient}>
+        {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
+      </QueryClientProvider>
+    </>
   );
 }
