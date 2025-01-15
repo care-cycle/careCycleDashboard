@@ -4,6 +4,7 @@ import { format, differenceInDays, startOfWeek, endOfWeek, addDays, addWeeks, st
 import type { CallVolumeDataPoint } from "@/lib/data-utils"
 import { DateRange } from 'react-day-picker';
 import { useMemo } from 'react';
+import { Loader2 } from "lucide-react"
 
 interface CallVolumeChartProps {
   data: CallVolumeDataPoint[]
@@ -78,7 +79,7 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
           <HeaderLegend />
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
-          <p className="text-gray-500">No data available for selected date range</p>
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </CardContent>
       </Card>
     )

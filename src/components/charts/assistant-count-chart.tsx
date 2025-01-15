@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts"
+import { Loader2 } from "lucide-react"
 
 interface AssistantCountChartProps {
   data: {
@@ -74,7 +75,7 @@ export function AssistantCountChart({ data }: AssistantCountChartProps) {
           <CardTitle className="text-gray-900">Assistant Types</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
-          <p className="text-gray-500">No data available for selected date range</p>
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </CardContent>
       </Card>
     )

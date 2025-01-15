@@ -4,23 +4,23 @@ import { format } from 'date-fns'
 import { useAuth } from '@clerk/clerk-react'
 
 interface CallsResponse {
-  s: boolean;          // success
-  d: {                 // data
-    c: Array<{         // calls
-      i: string;       // id
-      cid: string;     // campaignId 
-      d: string;       // disposition
-      ca: string;      // callerId
-      cr: string;      // createdAt
-      r: string;       // recordingUrl
-      du: string;      // duration
-      at: string;      // assistantType
-      se: string;      // successEvaluation
-      su: string;      // summary
-      tr: string;      // transcript
-      di: 'i' | 'o';   // direction (inbound/outbound)
-      co: number;      // cost
-      tf: boolean;     // testFlag
+  s: boolean;          
+  d: {                 
+    c: Array<{         
+      i: string;       
+      cid: string;     
+      d: string;       
+      ca: string;      
+      cr: string;      
+      r: string;       
+      du: string;      
+      at: string;      
+      se: string;      
+      su: string;      
+      tr: string;      
+      di: 'i' | 'o';   
+      co: number;      
+      tf: boolean;     
     }>;
   };
 }
@@ -28,7 +28,16 @@ interface CallsResponse {
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
 
-  // Client Info Query - Primary query
+  // Essential metrics for header - high priority
+  const { data: todayMetrics, isLoading: todayMetricsLoading } = useQuery({
+    queryKey: ['todayMetrics'],
+    queryFn: () => apiClient.get('/portal/client/metrics/today'),
+    enabled: isLoaded && isSignedIn,
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 4 * 60 * 1000, // Cache for 4 minutes
+  })
+
+  // Client info - high priority
   const { data: clientInfo, isLoading: clientInfoLoading } = useQuery({
     queryKey: ['clientInfo'],
     queryFn: () => apiClient.get('/portal/client/info'),
@@ -37,42 +46,26 @@ export function useInitialData() {
     enabled: isLoaded && isSignedIn,
   })
 
-  const clientId = clientInfo?.data?.id
-
-  // Metrics Query - Depends on clientInfo
+  // Historical metrics - lower priority
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['metrics', clientId],
-    queryFn: () => apiClient.get(`/portal/client/metrics/${clientId}`),
-    enabled: !!clientId && isLoaded && isSignedIn,
-    staleTime: Infinity,
-    cacheTime: Infinity
+    queryKey: ['metrics'],
+    queryFn: () => apiClient.get('/portal/client/metrics'),
+    staleTime: 5 * 60 * 1000,
+    enabled: isLoaded && isSignedIn,
+    // Delay this query until more important data is loaded
+    suspense: false,
   })
 
-  // Today's Metrics Query - Depends on clientInfo
-  const { data: todayMetrics, isLoading: todayMetricsLoading } = useQuery({
-    queryKey: ['todayMetrics', clientId],
-    queryFn: () => apiClient.get(`/portal/client/metrics/today/${clientId}`),
-    enabled: !!clientId && isLoaded && isSignedIn,
-    refetchInterval: 5 * 60 * 1000
-  })
-
-  const fetchUniqueCallers = async (from: Date, to: Date) => {
-    const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
-    const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
-    
-    return apiClient.get(`/portal/client/metrics/unique-callers/${clientInfo?.data?.id}`, {
-      params: { from: fromStr, to: toStr }
-    })
-  }
-
-  // Calls Query - Depends on clientInfo
-  const { data: calls, error: callsError } = useQuery({
-    queryKey: ['calls', clientId],
+  // Calls data - lowest priority
+  const { data: calls, isLoading: callsLoading, error: callsError } = useQuery({
+    queryKey: ['calls'],
     queryFn: async () => {
-      const response = await apiClient.get<CallsResponse>(`/portal/client/calls/${clientId}`);
+      const response = await apiClient.get<CallsResponse>('/portal/client/calls');
       return response;
     },
-    enabled: !!clientId,
+    enabled: isLoaded && isSignedIn,
+    suspense: false,
+    // Add pagination to reduce initial load
     select: (response) => {
       if (!response?.data?.d?.c) {
         return { data: [] };
@@ -100,11 +93,17 @@ export function useInitialData() {
       return transformedData;
     },
     staleTime: 5 * 60 * 1000,
-    retry: 2,
-    onError: (error) => {
-      console.error('Error in calls query:', error);
-    }
+    retry: 1, // Reduce retry attempts
   })
+
+  const fetchUniqueCallers = async (from: Date, to: Date) => {
+    const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
+    const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
+    
+    return apiClient.get('/portal/client/metrics/unique-callers', {
+      params: { from: fromStr, to: toStr }
+    })
+  }
 
   return {
     metrics: metrics?.data,
@@ -112,7 +111,10 @@ export function useInitialData() {
     calls,
     callsError,
     todayMetrics: todayMetrics?.data,
-    isLoading: !isLoaded || clientInfoLoading || metricsLoading || todayMetricsLoading,
+    // Split loading states by priority
+    isHeaderLoading: !isLoaded || todayMetricsLoading || clientInfoLoading,
+    isMetricsLoading: metricsLoading,
+    isCallsLoading: callsLoading,
     fetchUniqueCallers
   }
 } 

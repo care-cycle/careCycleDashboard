@@ -4,6 +4,7 @@ import { format, differenceInDays, startOfHour, endOfHour, addHours } from "date
 import { DateRange } from 'react-day-picker';
 import { Switch } from "@/components/ui/switch"
 import { useMemo, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 const dispositionColors = {
   // Primary Positive Outcomes (these appear separately from verification flow)
@@ -118,7 +119,7 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
           </div>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
-          <p className="text-gray-500">No data available for selected date range</p>
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </CardContent>
       </Card>
     )

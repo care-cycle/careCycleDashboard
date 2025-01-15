@@ -351,8 +351,8 @@ export default function Dashboard() {
                   from: yesterday,
                   to: today
                 }}
-                minDate={metrics?.data?.total?.[metrics.data.total.length - 1]?.hour 
-                  ? new Date(metrics.data.total[metrics.data.total.length - 1].hour) 
+                minDate={metrics?.data?.total?.[0]?.hour 
+                  ? new Date(metrics.data.total[0].hour) 
                   : undefined}
               />
             </div>

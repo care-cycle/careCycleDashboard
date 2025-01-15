@@ -97,7 +97,15 @@ const MemoizedCallDetails = memo(function MemoizedCallDetails({
 });
 
 export default function CallsPage() {
-  const { todayMetrics, metrics, isLoading, calls, callsError, clientInfo } = useInitialData();
+  const { 
+    todayMetrics, 
+    metrics, 
+    isLoading, 
+    isCallsLoading,
+    calls, 
+    callsError, 
+    clientInfo 
+  } = useInitialData();
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const location = useLocation()
@@ -299,11 +307,17 @@ export default function CallsPage() {
           onTestCallsChange={setShowTestCalls}
         />
 
-        <MemoizedCallsTable 
-          calls={paginatedCalls}
-          onCallSelect={handleCallSelect}
-          showTestCalls={showTestCalls}
-        />
+        {isCallsLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <p>Loading calls...</p>
+          </div>
+        ) : (
+          <MemoizedCallsTable 
+            calls={paginatedCalls}
+            onCallSelect={handleCallSelect}
+            showTestCalls={showTestCalls}
+          />
+        )}
 
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
