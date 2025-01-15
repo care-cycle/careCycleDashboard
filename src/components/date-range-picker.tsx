@@ -1,6 +1,6 @@
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, TimerReset } from "lucide-react"
 import { DateRange } from "react-day-picker"
-import { format } from "date-fns"
+import { format, addDays } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -9,18 +9,32 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useState } from "react"
 
 interface DateRangePickerProps {
   date: DateRange | undefined
   onChange: (date: DateRange | undefined) => void
   className?: string
+  defaultDate?: DateRange
+  minDate?: Date
 }
 
 export function DateRangePicker({
   date,
   onChange,
   className,
+  defaultDate,
+  minDate,
 }: DateRangePickerProps) {
+  const [open, setOpen] = useState(false)
+  const today = new Date()
+
+  // Disable future dates and dates before minDate
+  const disabledDays = {
+    after: today,
+    before: minDate
+  }
+
   // Add handler for calendar selection
   const handleSelect = (selectedDate: DateRange | undefined) => {
     // If no date is selected yet, or if we have a complete range, use the new selection
@@ -41,9 +55,13 @@ export function DateRangePicker({
     onChange(selectedDate);
   };
 
+  const handleReset = () => {
+    onChange(defaultDate);
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             id="date"
@@ -75,11 +93,22 @@ export function DateRangePicker({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
+            defaultMonth={date?.from || minDate}
             selected={date}
             onSelect={handleSelect}
             numberOfMonths={2}
+            disabled={disabledDays}
             className="bg-white rounded-md"
+            middleContent={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="h-10 w-10 p-0 hover:bg-gray-100"
+              >
+                <TimerReset className="h-6 w-6" />
+              </Button>
+            }
           />
         </PopoverContent>
       </Popover>

@@ -21,6 +21,7 @@ import { format } from 'date-fns'
 import { DateRangePicker } from '@/components/date-range-picker'
 import { CampaignSelect } from '@/components/campaign-select'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { subDays } from 'date-fns'
 
 interface CallsTableProps {
   calls: Call[];
@@ -101,21 +102,13 @@ export default function CallsPage() {
   const [searchParams] = useSearchParams()
   const location = useLocation()
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    if (!calls?.data?.length) return undefined;
-    
-    // Sort calls by date and get the first one
-    const sortedCalls = [...calls.data].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-    
-    const firstCallDate = new Date(sortedCalls[0].createdAt);
-    const today = new Date();
-    
-    return {
-      from: firstCallDate,
-      to: today
-    };
+  // Define today and yesterday
+  const today = new Date()
+  const yesterday = subDays(today, 1)
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: yesterday,
+    to: today
   });
 
   // Move the dateRange state after useInitialData to ensure we have the calls data
@@ -160,14 +153,18 @@ export default function CallsPage() {
   const filteredCalls = useMemo(() => {
     return (calls?.data || []).filter(call => {
       const campaignMatch = selectedCampaignId === "all" || call.campaignId === selectedCampaignId;
-      const dateMatch = true; // your existing date matching logic
+      
+      // Add date range filtering
+      const callDate = new Date(call.createdAt);
+      const dateMatch = dateRange?.from && dateRange?.to 
+        ? callDate >= dateRange.from && callDate <= new Date(dateRange.to.setHours(23, 59, 59, 999))
+        : true;
+      
       const testMatch = showTestCalls || !call.testFlag;
       
-      // Add search filtering
       const searchMatch = !searchQuery || Object.values(call).some(value => {
         if (value === null || value === undefined) return false;
         
-        // Handle nested objects by converting to string
         const searchStr = typeof value === 'object' 
           ? JSON.stringify(value).toLowerCase()
           : String(value).toLowerCase();
@@ -177,7 +174,7 @@ export default function CallsPage() {
       
       return campaignMatch && dateMatch && testMatch && searchMatch;
     });
-  }, [calls?.data, selectedCampaignId, showTestCalls, searchQuery]); // Add searchQuery to dependencies
+  }, [calls?.data, selectedCampaignId, dateRange, showTestCalls, searchQuery]); // Add dateRange to dependencies
 
   // Step 2: Calculate pagination values based on filtered results
   const totalFilteredCalls = filteredCalls.length;
@@ -285,6 +282,13 @@ export default function CallsPage() {
           <DateRangePicker
             date={dateRange}
             onChange={handleDateRangeChange}
+            defaultDate={{
+              from: yesterday,
+              to: today
+            }}
+            minDate={calls?.data?.[calls.data.length - 1]?.createdAt 
+              ? new Date(calls.data[calls.data.length - 1].createdAt) 
+              : undefined}
           />
         </div>
 

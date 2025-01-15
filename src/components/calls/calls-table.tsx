@@ -171,6 +171,16 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
     }
   };
 
+  // Add this mapping object near the top of the component
+  const columnToDataKeyMap: { [key: string]: keyof Call } = {
+    "Caller ID": "callerId",
+    "Assistant Type": "assistantType",
+    "Direction": "direction",
+    "Duration": "duration",
+    "Disposition": "disposition",
+    "Created At": "createdAt"
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -191,7 +201,8 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
                     key={header}
                     header={header}
                     onSort={() => {
-                      requestSort(header.toLowerCase().replace(/\s+/g, ''));
+                      // Use the mapping to get the correct data key
+                      requestSort(columnToDataKeyMap[header]);
                     }}
                   />
                 ))}
@@ -200,7 +211,7 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
             </TableRow>
           </TableHeader>
           <TableBody>
-            {calls.map((call) => (
+            {filteredCalls.map((call) => (
               <TableRow
                 key={call.id}
                 className="hover:bg-black/5 cursor-pointer"

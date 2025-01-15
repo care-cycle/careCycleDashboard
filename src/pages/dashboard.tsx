@@ -17,7 +17,7 @@ import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
 import { formatDuration } from '@/lib/utils'
 import axios from 'axios';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 const getTopMetrics = (todayMetrics: any) => [
   { 
@@ -46,6 +46,8 @@ const endedByData = [
 const agents = ["Agent A", "Agent B", "Agent C"]
 
 export default function Dashboard() {
+  const today = new Date()
+  const yesterday = subDays(today, 1)
   const [date, setDate] = useState<DateRange | undefined>(() => {
     const today = new Date();
     const yesterday = new Date();
@@ -345,6 +347,13 @@ export default function Dashboard() {
                 date={date} 
                 onChange={handleDateChange} 
                 className="w-[260px]"
+                defaultDate={{
+                  from: yesterday,
+                  to: today
+                }}
+                minDate={metrics?.data?.total?.[metrics.data.total.length - 1]?.hour 
+                  ? new Date(metrics.data.total[metrics.data.total.length - 1].hour) 
+                  : undefined}
               />
             </div>
           </div>
