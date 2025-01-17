@@ -43,7 +43,9 @@ const dispositionColors = {
 
 const NON_CONNECTED_DISPOSITIONS = [
   "Busy/No Answer",
-  "Voicemail"
+  "Voicemail",
+  "Customer Did Not Answer",
+  "Bad Contact"
 ]
 
 interface CallDispositionsChartProps {
