@@ -59,22 +59,19 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
 
   return (
     <TableHead ref={setNodeRef} style={style}>
-      <div className="flex items-center h-10">
-        {/* Drag Handle */}
-        <div {...attributes} {...listeners} className="cursor-grab flex items-center p-2">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
-        
-        {/* Sort Button */}
-        <Button
-          variant="ghost"
-          onClick={onSort}
-          className="hover:text-gray-900 text-gray-600 flex items-center gap-2 px-2 h-10"
-        >
-          {header}
-          <ArrowUpDown className="h-4 w-4" />
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        onClick={onSort}
+        className="hover:text-gray-900 text-gray-600 flex items-center gap-2 px-2 h-10"
+      >
+        <GripVertical 
+          className="h-4 w-4 text-muted-foreground cursor-grab" 
+          {...attributes} 
+          {...listeners}
+        />
+        {header}
+        <ArrowUpDown className="h-4 w-4" />
+      </Button>
     </TableHead>
   );
 }
@@ -219,9 +216,9 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
                 onMouseEnter={() => preloadAudio(call.recordingUrl)}
               >
                 <TableCell>
-                  <Button size="icon" variant="ghost" className="h-8 w-8">
-                    <Play className="h-4 w-4" />
-                  </Button>
+                  <div className="h-8 w-8 flex items-center justify-center">
+                    <Play className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell key={column}>

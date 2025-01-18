@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { format } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -36,4 +37,9 @@ export function formatPhoneNumber(phoneNumber: string): string {
   
   // Format as "+1 234-567-8901"
   return `+${cleaned.slice(0, 1)} ${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`
+}
+
+export function formatDate(date: string | Date) {
+  if (!date) return '-';
+  return format(new Date(date), 'MMM d, yyyy h:mm a');
 }

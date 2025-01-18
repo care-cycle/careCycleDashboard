@@ -16,6 +16,7 @@ import { isAuthEnabled } from '@/lib/utils';
 import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
+import Customers from './pages/customers';
 
 // Create a client
 const queryClient = new QueryClient()
@@ -30,6 +31,7 @@ function NonAuthApp() {
           <Route path="/calls" element={<Calls />} />
           <Route path="/user/profile" element={<ProfilePage />} />
           <Route path="/user/billing" element={<BillingPage />} />
+          <Route path="/customers" element={<Customers />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -99,6 +101,7 @@ function AuthApp() {
           <Route path="/calls" element={<PrivateRoute><Calls /></PrivateRoute>} />
           <Route path="/user/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/user/billing" element={<PrivateRoute><BillingPage /></PrivateRoute>} />
+          <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
           
           {/* Catch all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />

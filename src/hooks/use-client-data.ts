@@ -25,6 +25,23 @@ interface CallsResponse {
   };
 }
 
+interface Customer {
+  id: string;
+  client_id: string;
+  caller_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  total_calls: number;
+  last_call_date: string;
+  active_campaigns: number;
+}
+
+interface CustomersResponse {
+  customers: Customer[];
+  total: number;
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
 
@@ -52,8 +69,6 @@ export function useInitialData() {
     queryFn: () => apiClient.get('/portal/client/metrics'),
     staleTime: 5 * 60 * 1000,
     enabled: isLoaded && isSignedIn,
-    // Delay this query until more important data is loaded
-    suspense: false,
   })
 
   // Calls data - lowest priority
@@ -64,7 +79,6 @@ export function useInitialData() {
       return response;
     },
     enabled: isLoaded && isSignedIn,
-    suspense: false,
     // Add pagination to reduce initial load
     select: (response) => {
       if (!response?.data?.d?.c) {
@@ -96,6 +110,15 @@ export function useInitialData() {
     retry: 1, // Reduce retry attempts
   })
 
+  // Customers data - lowest priority
+  const { data: customers, isLoading: customersLoading } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => apiClient.get<CustomersResponse>('/portal/client/customers/base'),
+    enabled: isLoaded && isSignedIn,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
+
   const fetchUniqueCallers = async (from: Date, to: Date) => {
     const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
     const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
@@ -115,6 +138,8 @@ export function useInitialData() {
     isHeaderLoading: !isLoaded || todayMetricsLoading || clientInfoLoading,
     isMetricsLoading: metricsLoading,
     isCallsLoading: callsLoading,
-    fetchUniqueCallers
+    fetchUniqueCallers,
+    customers: customers?.data,
+    isCustomersLoading: customersLoading,
   }
 } 
