@@ -21,6 +21,7 @@ import {
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useRedaction } from '@/contexts/redaction-context';
 
 interface CallsTableProps {
   onCallSelect: (call: Call) => void
@@ -76,7 +77,13 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
   );
 }
 
+// Add this helper function at the top of the file
+const redactData = (value: string) => {
+  return value.replace(/./g, '*');
+};
+
 export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOnly }: CallsTableProps) {
+  const { isRedacted } = useRedaction();
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc';
@@ -222,7 +229,8 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell key={column}>
-                    {column === "Caller ID" && formatPhoneNumber(call.callerId)}
+                    {column === "Caller ID" && 
+                      (isRedacted ? redactData(call.callerId) : formatPhoneNumber(call.callerId))}
                     {column === "Assistant Type" && call.assistantType}
                     {column === "Direction" && call.direction}
                     {column === "Duration" && call.duration}

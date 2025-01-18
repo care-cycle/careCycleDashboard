@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef, useImperativeHandle } from "react"
+import { useState, useMemo, forwardRef, useImperativeHandle, useEffect, useCallback } from "react"
 import { 
   Table, 
   TableBody, 
@@ -16,6 +16,7 @@ import { Customer } from '@/types/customers' // You might need to create this ty
 import { formatPhoneNumber, formatDate } from '@/lib/utils'
 import { CampaignBadge } from './campaign-badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useRedaction } from '@/contexts/redaction-context'
 
 interface SortableHeaderProps {
   header: { key: string; label: string };
@@ -60,35 +61,58 @@ interface CustomersTableProps {
   onCustomerSelect?: (customer: Customer) => void;
 }
 
+const redactData = (value: string) => {
+  return value.replace(/./g, '*');
+};
+
 export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: CustomersTableProps, ref) => {
-  const [columns, setColumns] = useState([
-    { key: "customer", label: "Customer", render: (customer: Customer) => (
-      <span className="flex flex-col">
-        <span className="font-medium">{`${customer.firstName} ${customer.lastName}`}</span>
-        <span className="text-sm text-gray-500">ID: {customer.id}</span>
-      </span>
-    )},
-    { key: "contact", label: "Contact", render: (customer: Customer) => (
-      <span className="flex flex-col gap-1">
-        <span className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-gray-500" />
-          <span>{formatPhoneNumber(customer.callerId)}</span>
-        </span>
-        {customer.email && (
-          <span className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-gray-500" />
-            <span>{customer.email}</span>
+  const { isRedacted } = useRedaction();
+  const [columns, setColumns] = useState(() => [
+    { 
+      key: "customer", 
+      label: "Customer", 
+      render: (customer: Customer) => (
+        <span className="flex flex-col">
+          <span className="font-medium">
+            {renderCustomerName(customer.firstName, customer.lastName)}
           </span>
-        )}
-      </span>
-    )},
+          <span className="text-sm text-gray-500">
+            {renderCustomerId(customer.id)}
+          </span>
+        </span>
+      )
+    },
+    { 
+      key: "contact", 
+      label: "Contact", 
+      render: (customer: Customer) => (
+        <span className="flex flex-col gap-1">
+          <span className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-gray-500" />
+            <span>
+              {renderContact(customer.callerId)}
+            </span>
+          </span>
+          {customer.email && (
+            <span className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-gray-500" />
+              <span>
+                {renderContact(customer.email)}
+              </span>
+            </span>
+          )}
+        </span>
+      )
+    },
     { key: "location", label: "Location", render: (customer: Customer) => (
       <span className="flex items-center gap-2">
         <MapPin className="h-4 w-4 text-gray-500" />
         <span>
-          {[customer.state, customer.timezone, customer.postalCode]
-            .filter(Boolean)
-            .join(', ') || '-'}
+          {[
+            customer.state,
+            customer.timezone,
+            customer.postalCode
+          ].filter(Boolean).join(', ') || '-'}
         </span>
       </span>
     )},
@@ -112,6 +136,18 @@ export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: Custo
       formatDate(customer.lastCallDate)
     )}
   ]);
+
+  const renderCustomerName = useCallback((firstName: string, lastName?: string) => {
+    return `${firstName} ${isRedacted && lastName ? '*'.repeat(lastName.length) : lastName || ''}`;
+  }, [isRedacted]);
+
+  const renderCustomerId = useCallback((id?: string) => {
+    return `ID: ${isRedacted && id ? '*'.repeat(id.length) : id || ''}`;
+  }, [isRedacted]);
+
+  const renderContact = useCallback((value?: string) => {
+    return isRedacted && value ? '*'.repeat(value.length) : value || '';
+  }, [isRedacted]);
 
   const [sortConfig, setSortConfig] = useState<{
     key: string;

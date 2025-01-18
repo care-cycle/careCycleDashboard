@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { UIProvider } from './contexts/ui-context';
 import { AnimatePresence } from 'framer-motion';
+import { RedactionProvider } from './contexts/redaction-context';
 import { PublicRoute } from './components/auth/public-route';
 import { PrivateRoute } from './components/auth/private-route';
 import { VerifyEmail } from "./pages/sign-up/verify-email";
@@ -117,7 +118,9 @@ export default function App() {
     <>
       <Toaster />
       <QueryClientProvider client={queryClient}>
-        {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
+        <RedactionProvider>
+          {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
+        </RedactionProvider>
       </QueryClientProvider>
     </>
   );
