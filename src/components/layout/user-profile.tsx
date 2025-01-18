@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useUser, useClerk } from '@clerk/clerk-react'
 
-export function UserProfile() {
+interface UserProfileProps {
+  isRedacted: boolean;
+}
+
+export function UserProfile({ isRedacted }: UserProfileProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -25,8 +29,8 @@ export function UserProfile() {
 
   // Use the values conditionally
   const userData = {
-    fullName: isAuthEnabled() && clerkHooks.user?.fullName || 'Demo User',
-    email: isAuthEnabled() && clerkHooks.user?.primaryEmailAddress?.emailAddress || 'demo@example.com',
+    fullName: isRedacted ? "***" : (isAuthEnabled() && clerkHooks.user?.fullName || 'Demo User'),
+    email: isRedacted ? "***" : (isAuthEnabled() && clerkHooks.user?.primaryEmailAddress?.emailAddress || 'demo@example.com'),
     imageUrl: isAuthEnabled() && clerkHooks.user?.imageUrl 
       ? clerkHooks.user.imageUrl 
       : "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"

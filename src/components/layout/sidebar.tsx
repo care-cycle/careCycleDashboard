@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserProfile } from "@/components/layout/user-profile"
 import { Link } from "react-router-dom"
+import { useRedaction } from "@/contexts/redaction-context"
 
 const navigationItems = [
   {
@@ -33,6 +34,8 @@ const navigationItems = [
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar({ className }: SidebarProps) {
+  const { isRedacted } = useRedaction();
+  
   return (
     <div className="relative h-full">
       {/* Animated orbs */}
@@ -100,7 +103,7 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
 
         {/* User Profile */}
-        <UserProfile />
+        <UserProfile isRedacted={isRedacted} />
       </div>
     </div>
   )
