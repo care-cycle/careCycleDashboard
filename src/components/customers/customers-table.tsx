@@ -17,6 +17,7 @@ import { formatPhoneNumber, formatDate } from '@/lib/utils'
 import { CampaignBadge } from './campaign-badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useRedaction } from '@/contexts/redaction-context'
+import { useNavigate } from 'react-router-dom'
 
 interface SortableHeaderProps {
   header: { key: string; label: string };
@@ -59,14 +60,25 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
 interface CustomersTableProps {
   customers: Customer[];
   onCustomerSelect?: (customer: Customer) => void;
+  onSort: (key: string, direction: 'asc' | 'desc' | null) => void;
+  sortConfig: {
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  };
 }
 
 const redactData = (value: string) => {
   return value.replace(/./g, '*');
 };
 
-export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: CustomersTableProps, ref) => {
+export const CustomersTable = forwardRef(({ 
+  customers, 
+  onCustomerSelect,
+  onSort,
+  sortConfig 
+}: CustomersTableProps, ref) => {
   const { isRedacted } = useRedaction();
+  const navigate = useNavigate();
   const [columns, setColumns] = useState(() => [
     { 
       key: "customer", 
@@ -127,11 +139,26 @@ export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: Custo
         ))}
       </div>
     )},
-    { key: "calls", label: "Total Calls", render: (customer: Customer) => (
-      <div className="text-center w-full">
-        {customer.totalCalls || 0}
-      </div>
-    )},
+    { 
+      key: "calls", 
+      label: "Total Calls", 
+      render: (customer: Customer) => (
+        <div 
+          className="text-center w-full cursor-pointer hover:text-primary transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            const searchParams = new URLSearchParams();
+            searchParams.set('search', customer.callerId || '');
+            searchParams.set('from', customer.lastCallDate || '2020-01-01');
+            searchParams.set('to', new Date().toISOString().split('T')[0]);
+            
+            navigate(`/calls?${searchParams.toString()}`);
+          }}
+        >
+          {customer.totalCalls || 0}
+        </div>
+      )
+    },
     { key: "last-contact", label: "Last Contact", render: (customer: Customer) => (
       formatDate(customer.lastCallDate)
     )}
@@ -146,13 +173,15 @@ export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: Custo
   }, [isRedacted]);
 
   const renderContact = useCallback((value?: string) => {
-    return isRedacted && value ? '*'.repeat(value.length) : value || '';
+    if (!value) return '';
+    if (isRedacted) return '*'.repeat(value.length);
+    
+    // If it's a phone number (simple check for length and digits)
+    if (value.replace(/\D/g, '').length >= 10) {
+      return formatPhoneNumber(value);
+    }
+    return value;
   }, [isRedacted]);
-
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: 'asc' | 'desc' | null;
-  }>({ key: '', direction: null });
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' | null = 'asc';
@@ -165,49 +194,8 @@ export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: Custo
       }
     }
     
-    setSortConfig({ key, direction });
+    onSort(key, direction);
   };
-
-  const sortedCustomers = [...customers].sort((a, b) => {
-    if (!sortConfig.direction || !sortConfig.key) return 0;
-
-    let aValue, bValue;
-    
-    switch (sortConfig.key) {
-      case 'customer':
-        aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
-        bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
-        break;
-      case 'contact':
-        aValue = a.callerId || '';
-        bValue = b.callerId || '';
-        break;
-      case 'location':
-        aValue = [a.state, a.timezone, a.postalCode].filter(Boolean).join(',');
-        bValue = [b.state, b.timezone, b.postalCode].filter(Boolean).join(',');
-        break;
-      case 'campaigns':
-        aValue = a.campaigns?.[0]?.campaign_status || '';
-        bValue = b.campaigns?.[0]?.campaign_status || '';
-        break;
-      case 'calls':
-        aValue = a.totalCalls || 0;
-        bValue = b.totalCalls || 0;
-        break;
-      case 'last-contact':
-        aValue = a.lastCallDate || '';
-        bValue = b.lastCallDate || '';
-        break;
-      default:
-        return 0;
-    }
-
-    if (sortConfig.direction === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -320,7 +308,7 @@ export const CustomersTable = forwardRef(({ customers, onCustomerSelect }: Custo
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedCustomers.map((customer) => (
+            {customers.map((customer) => (
               <TableRow 
                 key={`row-${customer.id}`}
                 className="hover:bg-black/5 cursor-pointer"

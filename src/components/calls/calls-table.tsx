@@ -24,10 +24,15 @@ import { CSS } from '@dnd-kit/utilities';
 import { useRedaction } from '@/contexts/redaction-context';
 
 interface CallsTableProps {
-  onCallSelect: (call: Call) => void
-  calls: Call[]
-  showTestCalls: boolean
-  showConnectedOnly: boolean
+  onCallSelect: (call: Call) => void;
+  calls: Call[];
+  showTestCalls: boolean;
+  showConnectedOnly: boolean;
+  onSort: (key: string, direction: 'asc' | 'desc' | null) => void;
+  sortConfig: {
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  };
 }
 
 const TestFlask = () => (
@@ -82,16 +87,18 @@ const redactData = (value: string) => {
   return value.replace(/./g, '*');
 };
 
-export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOnly }: CallsTableProps) {
+export function CallsTable({ 
+  calls, 
+  onCallSelect, 
+  showTestCalls, 
+  showConnectedOnly,
+  onSort,
+  sortConfig 
+}: CallsTableProps) {
   const { isRedacted } = useRedaction();
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: 'asc' | 'desc';
-  } | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Audio preloading
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  
   const preloadAudio = (url: string) => {
     if (audioRef.current) {
       audioRef.current.src = url
@@ -104,26 +111,6 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
     audioRef.current = new Audio()
   }, [])
 
-  const sortedCalls = [...calls].sort((a, b) => {
-    if (!sortConfig) return 0
-    const key = sortConfig.key as keyof typeof a
-    if (a[key] < b[key]) return sortConfig.direction === 'asc' ? -1 : 1
-    if (a[key] > b[key]) return sortConfig.direction === 'asc' ? 1 : -1
-    return 0
-  })
-
-  const requestSort = (key: string) => {
-    setSortConfig({
-      key,
-      direction: 
-        !sortConfig || sortConfig.key !== key
-          ? 'asc'
-          : sortConfig.direction === 'asc'
-          ? 'desc'
-          : 'asc',
-    })
-  }
-
   const nonConnectedDispositions = [
     'Busy/No Answer',
     'Voicemail',
@@ -132,7 +119,7 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
     'Pipeline Error'
   ];
 
-  const filteredCalls = sortedCalls.filter(call => {
+  const filteredCalls = calls.filter(call => {
     // Filter out test calls if showTestCalls is false
     if (!showTestCalls && call.testFlag) {
       return false;
@@ -185,6 +172,20 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
     "Created At": "createdAt"
   };
 
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' | null = 'asc';
+    
+    if (sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+        direction = 'desc';
+      } else if (sortConfig.direction === 'desc') {
+        direction = null;
+      }
+    }
+    
+    onSort(key, direction);
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -205,8 +206,7 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
                     key={header}
                     header={header}
                     onSort={() => {
-                      // Use the mapping to get the correct data key
-                      requestSort(columnToDataKeyMap[header]);
+                      handleSort(columnToDataKeyMap[header]);
                     }}
                   />
                 ))}
@@ -231,8 +231,12 @@ export function CallsTable({ calls, onCallSelect, showTestCalls, showConnectedOn
                   <TableCell key={column}>
                     {column === "Caller ID" && 
                       (isRedacted ? redactData(call.callerId) : formatPhoneNumber(call.callerId))}
-                    {column === "Assistant Type" && call.assistantType}
-                    {column === "Direction" && call.direction}
+                    {column === "Assistant Type" && 
+                      call.assistantType.split('_').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                      ).join(' ')}
+                    {column === "Direction" && 
+                      call.direction.charAt(0).toUpperCase() + call.direction.slice(1)}
                     {column === "Duration" && call.duration}
                     {column === "Disposition" && call.disposition}
                     {column === "Created At" && format(new Date(call.createdAt), 'MMM d, yyyy h:mm a')}

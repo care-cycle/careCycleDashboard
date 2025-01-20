@@ -28,6 +28,11 @@ interface CallsTableProps {
   onCallSelect: (call: Call) => void;
   showTestCalls: boolean;
   showConnectedOnly?: boolean;
+  onSort: (key: string, direction: 'asc' | 'desc' | null) => void;
+  sortConfig: {
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  };
 }
 
 const getTopMetrics = (todayMetrics: any) => [
@@ -73,7 +78,9 @@ const MemoizedCallsTable = memo(function MemoizedCallsTable({
   calls,
   onCallSelect,
   showTestCalls,
-  showConnectedOnly
+  showConnectedOnly,
+  onSort,
+  sortConfig
 }: CallsTableProps) {
   return (
     <CallsTable
@@ -81,6 +88,8 @@ const MemoizedCallsTable = memo(function MemoizedCallsTable({
       onCallSelect={onCallSelect}
       showTestCalls={showTestCalls}
       showConnectedOnly={showConnectedOnly}
+      onSort={onSort}
+      sortConfig={sortConfig}
     />
   );
 });
@@ -114,18 +123,36 @@ export default function CallsPage() {
   const today = new Date()
   const yesterday = subDays(today, 1)
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: yesterday,
-    to: today
+  // Get search params
+  const initialSearch = searchParams.get('search') || '';
+  const fromDate = searchParams.get('from');
+  const toDate = searchParams.get('to');
+
+  // Set initial search query if provided
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+
+  // Set initial date range if provided
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (fromDate && toDate) {
+      return {
+        from: new Date(fromDate),
+        to: new Date(toDate)
+      };
+    }
+    // Default to yesterday/today if no dates provided
+    return {
+      from: yesterday,
+      to: today
+    };
   });
 
   // Move the dateRange state after useInitialData to ensure we have the calls data
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const { setCallDetailsOpen } = useUI();
   const [showTestCalls, setShowTestCalls] = useState(false);
+  const [showConnectedOnly, setShowConnectedOnly] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCampaignType, setSelectedCampaignType] = useState(() => {
     // If there's exactly one campaign, use its type, otherwise use 'all'
     return clientInfo?.campaigns?.length === 1 
@@ -173,6 +200,17 @@ export default function CallsPage() {
       const searchMatch = !searchQuery || Object.values(call).some(value => {
         if (value === null || value === undefined) return false;
         
+        if (typeof value === 'string' && (
+          value.includes('+') || 
+          value.includes('-') || 
+          value.includes(' ')
+        )) {
+          // Normalize phone numbers by removing spaces and dashes
+          const normalizedValue = value.replace(/[\s-]/g, '');
+          const normalizedSearch = searchQuery.replace(/[\s-]/g, '');
+          return normalizedValue.includes(normalizedSearch);
+        }
+        
         const searchStr = typeof value === 'object' 
           ? JSON.stringify(value).toLowerCase()
           : String(value).toLowerCase();
@@ -184,16 +222,50 @@ export default function CallsPage() {
     });
   }, [calls?.data, selectedCampaignId, dateRange, showTestCalls, searchQuery]); // Add dateRange to dependencies
 
-  // Step 2: Calculate pagination values based on filtered results
-  const totalFilteredCalls = filteredCalls.length;
-  const totalPages = Math.max(1, Math.ceil(totalFilteredCalls / rowsPerPage));
-  
-  // Step 3: Get the paginated slice of filtered data
+  // Add sorting state
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  }>({ key: '', direction: null });
+
+  // Move sorting logic before pagination
+  const sortedAndFilteredCalls = useMemo(() => {
+    let result = filteredCalls;
+
+    // Apply sorting if configured
+    if (sortConfig.key && sortConfig.direction) {
+      result = [...result].sort((a, b) => {
+        let aValue = a[sortConfig.key as keyof Call];
+        let bValue = b[sortConfig.key as keyof Call];
+
+        // Handle special cases for date fields
+        if (sortConfig.key === 'createdAt') {
+          aValue = new Date(aValue as string).getTime();
+          bValue = new Date(bValue as string).getTime();
+        }
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [filteredCalls, sortConfig]);
+
+  // Update pagination to use sorted results
   const paginatedCalls = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return filteredCalls.slice(startIndex, endIndex);
-  }, [filteredCalls, currentPage, rowsPerPage]);
+    return sortedAndFilteredCalls.slice(startIndex, endIndex);
+  }, [sortedAndFilteredCalls, currentPage, rowsPerPage]);
+
+  // Add these calculations before the useEffect
+  const totalFilteredCalls = sortedAndFilteredCalls.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredCalls / rowsPerPage));
 
   // Ensure current page is within bounds
   useEffect(() => {
@@ -260,6 +332,11 @@ export default function CallsPage() {
     }
   }, [calls?.data, searchParams, setCallDetailsOpen]);
 
+  // Add handler for sorting
+  const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
+    setSortConfig({ key, direction });
+  };
+
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
       <div className="space-y-6">
@@ -305,6 +382,8 @@ export default function CallsPage() {
           onSearchChange={setSearchQuery}
           showTestCalls={showTestCalls}
           onTestCallsChange={setShowTestCalls}
+          showConnectedOnly={showConnectedOnly}
+          onConnectedOnlyChange={setShowConnectedOnly}
         />
 
         {isCallsLoading ? (
@@ -316,6 +395,9 @@ export default function CallsPage() {
             calls={paginatedCalls}
             onCallSelect={handleCallSelect}
             showTestCalls={showTestCalls}
+            showConnectedOnly={showConnectedOnly}
+            onSort={handleSort}
+            sortConfig={sortConfig}
           />
         )}
 

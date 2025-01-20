@@ -211,7 +211,17 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
         <audio ref={audioRef} src={url} preload="metadata" />
         
         {/* Waveform Visualization */}
-        <div className="relative h-24 bg-white/10 rounded-lg overflow-hidden">
+        <div 
+          className="relative h-24 bg-white/10 rounded-lg overflow-hidden cursor-pointer"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const clickPosition = (e.clientX - rect.left) / rect.width
+            if (audioRef.current) {
+              const newTime = clickPosition * duration
+              handleSeek([newTime])
+            }
+          }}
+        >
           {/* Progress overlay */}
           <div 
             className="absolute inset-0 bg-sky-500/10"

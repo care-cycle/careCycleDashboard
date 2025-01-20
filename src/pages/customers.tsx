@@ -42,6 +42,12 @@ export default function CustomersPage() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Add sorting state at the page level
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  }>({ key: '', direction: null });
+
   const formattedCustomers = useMemo(() => {
     if (!customers?.customers) return [];
     
@@ -51,10 +57,14 @@ export default function CustomersPage() {
         
         if (searchQuery) {
           const searchLower = searchQuery.toLowerCase();
+          // Normalize the callerId by removing spaces and dashes for comparison
+          const normalizedCallerId = customer.callerId?.replace(/[\s-]/g, '') || '';
+          const normalizedSearch = searchQuery.replace(/[\s-]/g, '');
+          
           return (
             customer.firstName?.toLowerCase().includes(searchLower) ||
             customer.lastName?.toLowerCase().includes(searchLower) ||
-            customer.callerId?.includes(searchQuery) ||
+            normalizedCallerId.includes(normalizedSearch) ||
             customer.email?.toLowerCase().includes(searchLower) ||
             customer.state?.toLowerCase().includes(searchLower) ||
             customer.postalCode?.includes(searchQuery) ||
@@ -76,16 +86,74 @@ export default function CustomersPage() {
       }));
   }, [customers, searchQuery]);
 
-  // Add pagination calculations
-  const totalFilteredCustomers = formattedCustomers.length;
+  // Move sorting logic before pagination
+  const sortedAndFilteredCustomers = useMemo(() => {
+    let result = formattedCustomers;
+
+    // Apply sorting if configured
+    if (sortConfig.key && sortConfig.direction) {
+      result = [...result].sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortConfig.key) {
+          case 'customer':
+            aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+            bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+            break;
+          case 'contact':
+            aValue = a.callerId || '';
+            bValue = b.callerId || '';
+            break;
+          case 'location':
+            aValue = [a.state, a.timezone, a.postalCode].filter(Boolean).join(',');
+            bValue = [b.state, b.timezone, b.postalCode].filter(Boolean).join(',');
+            break;
+          case 'campaigns':
+            aValue = a.campaigns?.[0]?.campaign_status || '';
+            bValue = b.campaigns?.[0]?.campaign_status || '';
+            break;
+          case 'calls':
+            aValue = a.totalCalls || 0;
+            bValue = b.totalCalls || 0;
+            break;
+          case 'last-contact':
+            aValue = a.lastCallDate || '';
+            bValue = b.lastCallDate || '';
+            break;
+          default:
+            if (sortConfig.key.startsWith('custom_')) {
+              const customKey = sortConfig.key.replace('custom_', '');
+              aValue = a.customData?.[customKey] || '';
+              bValue = b.customData?.[customKey] || '';
+            } else {
+              return 0;
+            }
+        }
+
+        return sortConfig.direction === 'asc' 
+          ? aValue > bValue ? 1 : -1
+          : aValue < bValue ? 1 : -1;
+      });
+    }
+
+    return result;
+  }, [formattedCustomers, sortConfig]);
+
+  // Update pagination calculations to use sorted results
+  const totalFilteredCustomers = sortedAndFilteredCustomers.length;
   const totalPages = Math.max(1, Math.ceil(totalFilteredCustomers / rowsPerPage));
 
-  // Get paginated customers
+  // Get paginated customers from sorted results
   const paginatedCustomers = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return formattedCustomers.slice(startIndex, endIndex);
-  }, [formattedCustomers, currentPage, rowsPerPage]);
+    return sortedAndFilteredCustomers.slice(startIndex, endIndex);
+  }, [sortedAndFilteredCustomers, currentPage, rowsPerPage]);
+
+  // Add handler for sorting
+  const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
+    setSortConfig({ key, direction });
+  };
 
   // Add export function
   const exportToCsv = () => {
@@ -186,6 +254,8 @@ export default function CustomersPage() {
               onCustomerSelect={(customer) => {
                 console.log('Selected customer:', customer);
               }}
+              onSort={handleSort}
+              sortConfig={sortConfig}
             />
 
             <div className="flex items-center justify-between mt-4">

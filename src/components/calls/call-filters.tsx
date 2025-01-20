@@ -70,7 +70,7 @@ export function CallFilters({
   searchQuery,
   onSearchChange,
   showTestCalls,
-  onTestCallsChange
+  onTestCallsChange,
 }: CallFiltersProps) {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [selectedExports, setSelectedExports] = useState<string[]>([])
