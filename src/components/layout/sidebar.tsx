@@ -26,8 +26,6 @@ const navigationItems = [
     title: "Campaigns",
     icon: CircuitBoard,
     href: "/campaigns",
-    disabled: true,
-    badge: "Coming Soon",
   },
   {
     title: "Journeys",
