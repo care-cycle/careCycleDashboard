@@ -64,6 +64,8 @@ interface CallFiltersProps {
   onSearchChange: (value: string) => void;
   showTestCalls: boolean;
   onTestCallsChange: (value: boolean) => void;
+  showConnectedOnly: boolean;
+  onConnectedOnlyChange: (value: boolean) => void;
 }
 
 export function CallFilters({ 
@@ -71,6 +73,8 @@ export function CallFilters({
   onSearchChange,
   showTestCalls,
   onTestCallsChange,
+  showConnectedOnly,
+  onConnectedOnlyChange,
 }: CallFiltersProps) {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [selectedExports, setSelectedExports] = useState<string[]>([])
@@ -112,18 +116,34 @@ export function CallFilters({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="test-calls"
-              checked={showTestCalls}
-              onCheckedChange={onTestCallsChange}
-            />
-            <label
-              htmlFor="test-calls"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Show Test Calls
-            </label>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="connected-calls"
+                checked={showConnectedOnly}
+                onCheckedChange={onConnectedOnlyChange}
+              />
+              <label
+                htmlFor="connected-calls"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Show Connected Calls Only
+              </label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="test-calls"
+                checked={showTestCalls}
+                onCheckedChange={onTestCallsChange}
+              />
+              <label
+                htmlFor="test-calls"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Show Test Calls
+              </label>
+            </div>
           </div>
         </div>
       </div>

@@ -149,7 +149,7 @@ export const CustomersTable = forwardRef(({
             e.stopPropagation();
             const searchParams = new URLSearchParams();
             searchParams.set('search', customer.callerId || '');
-            searchParams.set('from', customer.lastCallDate || '2020-01-01');
+            searchParams.set('from', '2024-10-15');
             searchParams.set('to', new Date().toISOString().split('T')[0]);
             
             navigate(`/calls?${searchParams.toString()}`);

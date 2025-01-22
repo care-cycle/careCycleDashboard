@@ -7,43 +7,14 @@ import { CallVolumeChart } from '@/components/charts/call-volume-chart'
 import { DateRangePicker } from '@/components/date-range-picker'
 import { CampaignSelect } from '@/components/campaign-select'
 import { CallsByCampaign } from '@/components/metrics/calls-by-campaign'
-import { generateCallVolumeData, generateDispositionsData } from '@/lib/data-utils'
 import { PageTransition } from "@/components/layout/page-transition"
 import { useInitialData } from '@/hooks/use-client-data'
-import type { MetricsResponse } from '@/types/metrics'
 import { Card, CardContent } from '@/components/ui/card'
 import { aggregateTimeseriesData } from '@/lib/date-utils'
 import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
-import { formatDuration } from '@/lib/utils'
-import axios from 'axios';
 import { format, subDays } from 'date-fns';
-
-const getTopMetrics = (todayMetrics: any) => [
-  { 
-    title: "Today's Total Calls", 
-    value: todayMetrics?.totalCalls?.toLocaleString() || '0'
-  },
-  { 
-    title: "Today's Total Spend", 
-    value: `$${Number(todayMetrics?.totalSpend || 0).toFixed(2)}`
-  },
-  { 
-    title: "Today's Total Duration", 
-    value: formatDuration(todayMetrics?.totalDurationMs)
-  },
-  { 
-    title: "Today's Avg Duration", 
-    value: formatDuration(todayMetrics?.averageDurationMs)
-  }
-]
-
-const endedByData = [
-  { name: "Agent", value: 700 },
-  { name: "Customer", value: 500 },
-]
-
-const agents = ["Agent A", "Agent B", "Agent C"]
+import { getTopMetrics } from '@/lib/metrics'
 
 export default function Dashboard() {
   const today = new Date()

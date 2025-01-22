@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { format } from 'date-fns'
+import { format, formatDuration } from 'date-fns'
+import { getTopMetrics } from '@/lib/metrics'
 
 // Helper function for pagination numbers
 const getPageNumbers = (currentPage: number, totalPages: number) => {
@@ -34,7 +35,7 @@ const getPageNumbers = (currentPage: number, totalPages: number) => {
 };
 
 export default function CustomersPage() {
-  const { customers, isCustomersLoading } = useInitialData();
+  const { customers, isCustomersLoading, todayMetrics } = useInitialData();
   const [searchQuery, setSearchQuery] = useState("");
   const customersTable = useRef(null);
 
@@ -223,7 +224,7 @@ export default function CustomersPage() {
 
   if (isCustomersLoading) {
     return (
-      <RootLayout>
+      <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
         <div className="flex items-center justify-center h-64">
           <p>Loading customers...</p>
         </div>
@@ -232,7 +233,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <RootLayout hideKnowledgeSearch={true}>
+    <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch={true}>
       <div className="space-y-6">
         <CustomerFilters 
           searchQuery={searchQuery}

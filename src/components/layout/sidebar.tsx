@@ -1,4 +1,4 @@
-import { LayoutDashboard, Phone, GitBranch, Users } from "lucide-react"
+import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,13 @@ const navigationItems = [
     title: "Customers",
     icon: Users,
     href: "/customers",
+  },
+  {
+    title: "Campaigns",
+    icon: CircuitBoard,
+    href: "/campaigns",
+    disabled: true,
+    badge: "Coming Soon",
   },
   {
     title: "Journeys",

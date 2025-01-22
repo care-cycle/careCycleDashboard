@@ -42,6 +42,26 @@ interface CustomersResponse {
   total: number;
 }
 
+interface CustomerStats {
+  total: number;
+  passed: number;
+  failed: number;
+  pending: number;
+  remainingToCall: number;
+}
+
+interface Campaign {
+  campaignName: string;
+  campaignType: string;
+  campaignDescription: string;
+  campaignStatus: string;
+  customerStats: CustomerStats;
+}
+
+interface CampaignsResponse {
+  [key: string]: Campaign;
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
 
@@ -119,6 +139,14 @@ export function useInitialData() {
     retry: 1,
   })
 
+  const { data: campaigns, isLoading: isCampaignsLoading } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: () => apiClient.get<CampaignsResponse>('/portal/client/campaigns'),
+    staleTime: 5 * 60 * 1000,
+    enabled: isLoaded && isSignedIn,
+    retry: 1,
+  });
+
   const fetchUniqueCallers = async (from: Date, to: Date) => {
     const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
     const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
@@ -127,6 +155,8 @@ export function useInitialData() {
       params: { from: fromStr, to: toStr }
     })
   }
+
+  const isLoading = !isLoaded || todayMetricsLoading || clientInfoLoading || metricsLoading || callsLoading || customersLoading || isCampaignsLoading;
 
   return {
     metrics: metrics?.data,
@@ -141,5 +171,7 @@ export function useInitialData() {
     fetchUniqueCallers,
     customers: customers?.data,
     isCustomersLoading: customersLoading,
+    campaigns,
+    isLoading,
   }
 } 

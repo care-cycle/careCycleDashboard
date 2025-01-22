@@ -22,6 +22,7 @@ import { DateRangePicker } from '@/components/date-range-picker'
 import { CampaignSelect } from '@/components/campaign-select'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { subDays } from 'date-fns'
+import { getTopMetrics } from '@/lib/metrics'
 
 interface CallsTableProps {
   calls: Call[];
@@ -34,25 +35,6 @@ interface CallsTableProps {
     direction: 'asc' | 'desc' | null;
   };
 }
-
-const getTopMetrics = (todayMetrics: any) => [
-  { 
-    title: "Total Calls", 
-    value: todayMetrics?.uniqueCalls?.toLocaleString() || "0" 
-  },
-  { 
-    title: "Total Spend", 
-    value: todayMetrics?.totalSpend ? `$${todayMetrics.totalSpend.toFixed(2)}` : "$0.00" 
-  },
-  { 
-    title: "Total Duration", 
-    value: todayMetrics?.totalDurationMs ? formatDuration(todayMetrics.totalDurationMs) : "0s"
-  },
-  { 
-    title: "Avg Duration", 
-    value: todayMetrics?.averageDurationMs ? formatDuration(todayMetrics.averageDurationMs) : "0s"
-  }
-]
 
 const getPageNumbers = (currentPage: number, totalPages: number) => {
   const delta = 2;
@@ -150,7 +132,7 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const { setCallDetailsOpen } = useUI();
   const [showTestCalls, setShowTestCalls] = useState(false);
-  const [showConnectedOnly, setShowConnectedOnly] = useState(false);
+  const [showConnectedOnly, setShowConnectedOnly] = useState(true);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCampaignType, setSelectedCampaignType] = useState(() => {
@@ -196,6 +178,15 @@ export default function CallsPage() {
         : true;
       
       const testMatch = showTestCalls || !call.testFlag;
+
+      // Add connected calls filtering
+      const connectedMatch = !showConnectedOnly || ![
+        'Busy/No Answer',
+        'Voicemail',
+        'Telephony Block',
+        'Customer Did Not Answer',
+        'Pipeline Error'
+      ].includes(call.disposition);
       
       const searchMatch = !searchQuery || Object.values(call).some(value => {
         if (value === null || value === undefined) return false;
@@ -218,9 +209,9 @@ export default function CallsPage() {
         return searchStr.includes(searchQuery.toLowerCase());
       });
       
-      return campaignMatch && dateMatch && testMatch && searchMatch;
+      return campaignMatch && dateMatch && testMatch && connectedMatch && searchMatch;
     });
-  }, [calls?.data, selectedCampaignId, dateRange, showTestCalls, searchQuery]); // Add dateRange to dependencies
+  }, [calls?.data, selectedCampaignId, dateRange, showTestCalls, showConnectedOnly, searchQuery]);
 
   // Add sorting state
   const [sortConfig, setSortConfig] = useState<{
@@ -386,20 +377,21 @@ export default function CallsPage() {
           onConnectedOnlyChange={setShowConnectedOnly}
         />
 
-        {isCallsLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <p>Loading calls...</p>
-          </div>
-        ) : (
-          <MemoizedCallsTable 
-            calls={paginatedCalls}
-            onCallSelect={handleCallSelect}
-            showTestCalls={showTestCalls}
-            showConnectedOnly={showConnectedOnly}
-            onSort={handleSort}
-            sortConfig={sortConfig}
-          />
-        )}
+        <div className="mt-0">
+          {isCallsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <p>Loading calls...</p>
+            </div>
+          ) : (
+            <MemoizedCallsTable 
+              calls={paginatedCalls}
+              onCallSelect={handleCallSelect}
+              showTestCalls={showTestCalls}
+              onSort={handleSort}
+              sortConfig={sortConfig}
+            />
+          )}
+        </div>
 
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">

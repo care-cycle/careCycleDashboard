@@ -18,6 +18,7 @@ import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import Customers from './pages/customers';
+import CampaignsPage from './pages/campaigns';
 
 // Create a client
 const queryClient = new QueryClient()
@@ -33,6 +34,7 @@ function NonAuthApp() {
           <Route path="/user/profile" element={<ProfilePage />} />
           <Route path="/user/billing" element={<BillingPage />} />
           <Route path="/customers" element={<Customers />} />
+          <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -103,6 +105,7 @@ function AuthApp() {
           <Route path="/user/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/user/billing" element={<PrivateRoute><BillingPage /></PrivateRoute>} />
           <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
+          <Route path="/campaigns" element={<PrivateRoute><CampaignsPage /></PrivateRoute>} />
           
           {/* Catch all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
