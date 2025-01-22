@@ -12,7 +12,7 @@ export function RedactionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'r' && (event.ctrlKey || event.metaKey)) {
+      if (event.key === 'r' && event.ctrlKey && !event.metaKey) {
         event.preventDefault();
         setIsRedacted(prev => !prev);
       }
