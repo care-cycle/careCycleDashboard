@@ -174,7 +174,12 @@ export default function Dashboard() {
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.campaigns) return [];
     
-    return metrics.data.campaigns.map(campaign => {
+    // Convert campaigns to array if it's an object
+    const campaignsArray = Array.isArray(metrics.data.campaigns) 
+      ? metrics.data.campaigns
+      : Object.values(metrics.data.campaigns);
+      
+    return campaignsArray.map(campaign => {
       // Get all hours for this campaign
       const hours = campaign.hours || [];
       
@@ -205,7 +210,7 @@ export default function Dashboard() {
         calls: currentPeriodCalls,
         trend: currentPeriodCalls >= previousPeriodCalls ? "up" : "down"
       };
-    });  // Removed the filter to see all campaigns
+    });
   }, [metrics, date, isLoading]);
 
 
