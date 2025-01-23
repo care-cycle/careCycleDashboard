@@ -347,7 +347,7 @@ export default function CallsPage() {
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select Campaign" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-md">
               {campaignOptions.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
