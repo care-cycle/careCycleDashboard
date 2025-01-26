@@ -9,6 +9,7 @@ import { AudioPlayer } from "@/components/audio/audio-player"
 import { Call } from '@/types/calls'
 import { toast } from "sonner"
 import { formatPhoneNumber } from '@/lib/utils'
+import { FeedbackModule } from './feedback-module'
 
 interface CallDetailsProps {
   call: Call;
@@ -17,7 +18,6 @@ interface CallDetailsProps {
 }
 
 export const CallDetails = memo(function CallDetails({ call, onClose, preloadedAudio }: CallDetailsProps) {
-  const [feedback, setFeedback] = useState('')
   const { setCallDetailsOpen } = useUI()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isClosing, setIsClosing] = useState(false)
@@ -72,6 +72,13 @@ export const CallDetails = memo(function CallDetails({ call, onClose, preloadedA
     setTimeout(() => {
       setHasCopied(prev => ({ ...prev, [type]: false }))
     }, 2000)
+  }, [])
+
+  // Add feedback handler
+  const handleFeedbackSubmit = useCallback((feedback: { type: string; severity: string; comment: string }) => {
+    // Handle the feedback submission here
+    console.log('Feedback submitted:', feedback)
+    // TODO: Add API call to submit feedback
   }, [])
 
   const callDetails = [
@@ -179,6 +186,14 @@ export const CallDetails = memo(function CallDetails({ call, onClose, preloadedA
               </AccordionItem>
             </Accordion>
           </div>
+
+          <div className="border-t p-4 bg-gray-50/50">
+            <FeedbackModule 
+              callId={call.id} 
+              onSubmit={handleFeedbackSubmit} 
+            />
+          </div>
+          
         </div>
       </div>
     </div>
