@@ -17,6 +17,7 @@ interface CustomerFiltersProps {
   availableColumns: { key: string; label: string }[];
   activeColumns: string[];
   onColumnToggle: (columnKey: string) => void;
+  isLoading?: boolean;
 }
 
 export function CustomerFilters({ 
@@ -25,31 +26,24 @@ export function CustomerFilters({
   availableColumns,
   activeColumns,
   onColumnToggle,
+  isLoading = false
 }: CustomerFiltersProps) {
   const [open, setOpen] = useState(false);
   const [checkedColumns, setCheckedColumns] = useState<string[]>(activeColumns);
-
-  const handleItemSelect = (event: Event, columnKey: string) => {
-    event.preventDefault();
-    
-    // Update local checked state
-    setCheckedColumns(prev => {
-      const isChecked = prev.includes(columnKey);
-      if (isChecked) {
-        return prev.filter(key => key !== columnKey);
-      } else {
-        return [...prev, columnKey];
-      }
-    });
-    
-    // Call parent toggle handler
-    onColumnToggle(columnKey);
-  };
 
   // Keep checkedColumns in sync with activeColumns from parent
   useEffect(() => {
     setCheckedColumns(activeColumns);
   }, [activeColumns]);
+
+  const handleItemSelect = (columnKey: string) => {
+    // Prevent unchecking if it would result in no columns being visible
+    if (checkedColumns.includes(columnKey) && checkedColumns.length <= 1) {
+      return;
+    }
+    
+    onColumnToggle(columnKey);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,7 +59,11 @@ export function CustomerFilters({
         </div>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-4">
+            <Button 
+              variant="outline" 
+              className="ml-4"
+              disabled={isLoading}
+            >
               <Columns className="h-4 w-4 mr-2" />
               Manage Columns
             </Button>
@@ -76,21 +74,24 @@ export function CustomerFilters({
           >
             <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {availableColumns
-              .filter(column => column.key !== 'callDateTimeUTC' && column.key !== 'Call Date Time U T C')
-              .map((column) => (
+            <div className="max-h-[400px] overflow-y-auto">
+              {availableColumns.map((column) => (
                 <DropdownMenuCheckboxItem
                   key={column.key}
                   checked={checkedColumns.includes(column.key)}
-                  onSelect={(event: any) => handleItemSelect(event, column.key)}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleItemSelect(column.key);
+                  }}
                   className="cursor-pointer"
                 >
                   {column.label}
                 </DropdownMenuCheckboxItem>
               ))}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </div>
-  )
+  );
 } 

@@ -8,20 +8,23 @@ export interface CustomData {
 
 export interface Customer {
   id: string;
-  clientId: string;
-  callerId: string;
   firstName: string;
-  lastName: string;
-  email: string | null;
-  state: string | null;
-  timezone: string | null;
-  totalCalls: number;
-  lastCallDate: string;
-  activeCampaigns: number;
-  customData: CustomData;
-  dateOfBirth?: string;
-  language?: string | null;
+  lastName?: string;
+  callerId?: string;
+  email?: string;
+  state?: string;
+  timezone?: string;
   postalCode?: string;
-  do_not_contact?: boolean;
-  sms_consent?: boolean;
+  campaigns?: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    campaign_status: string;
+  }>;
+  totalCalls?: number;
+  lastCallDate?: string;
+  smsConsent?: boolean;
+  doNotContact?: boolean;
+  customData?: {
+    [key: string]: any;
+  };
 } 

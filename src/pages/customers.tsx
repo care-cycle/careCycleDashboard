@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { RootLayout } from '@/components/layout/root-layout'
 import { useInitialData } from '@/hooks/use-client-data'
 import { CustomerFilters } from '@/components/customers/customer-filters'
@@ -13,6 +13,19 @@ import {
 } from "@/components/ui/select"
 import { format, formatDuration } from 'date-fns'
 import { getTopMetrics } from '@/lib/metrics'
+import { TableRef } from '@/components/customers/customers-table'
+import { Customer, CustomData } from '@/types/customers'
+
+interface Campaign {
+  campaign_id: string;
+  campaign_name: string;
+  campaign_status: string;
+}
+
+interface FormattedCustomer extends Customer {
+  customData?: CustomData;
+  campaigns?: Campaign[];
+}
 
 // Helper function for pagination numbers
 const getPageNumbers = (currentPage: number, totalPages: number) => {
@@ -37,7 +50,7 @@ const getPageNumbers = (currentPage: number, totalPages: number) => {
 export default function CustomersPage() {
   const { customers, isCustomersLoading, todayMetrics } = useInitialData();
   const [searchQuery, setSearchQuery] = useState("");
-  const customersTable = useRef(null);
+  const customersTable = useRef<TableRef>(null);
 
   // Add pagination states
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -49,11 +62,77 @@ export default function CustomersPage() {
     direction: 'asc' | 'desc' | null;
   }>({ key: '', direction: null });
 
+  // Add column management state at the page level
+  const [activeColumnKeys, setActiveColumnKeys] = useState<string[]>([
+    'customer', 'contact', 'location', 'campaigns', 'calls', 'last-contact'
+  ]);
+
+  // Generate available columns
+  const availableColumns = useMemo(() => {
+    const defaultColumns = [
+      { key: 'customer', label: 'Customer' },
+      { key: 'contact', label: 'Contact' },
+      { key: 'location', label: 'Location' },
+      { key: 'campaigns', label: 'Active Campaigns' },
+      { key: 'calls', label: 'Total Calls' },
+      { key: 'last-contact', label: 'Last Contact' }
+    ];
+
+    // Create a Set of existing keys to prevent duplicates
+    const existingKeys = new Set(defaultColumns.map(col => col.key));
+
+    // Filter out duplicate data fields and transform them
+    const dataColumns = (customers?.dataFields || [])
+      .filter((field: string) => !existingKeys.has(`data_${field}`)) // Filter out duplicates
+      .map((field: string) => {
+        const key = `data_${field}`;
+        existingKeys.add(key); // Add to set of existing keys
+        return {
+          key,
+          label: field
+            .replace(/([A-Z])/g, ' $1')
+            .split(/(?=[A-Z])/)
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ')
+            .replace(/\b(Id|Sf)\b/gi, (match: string) => match.toUpperCase())
+        };
+      });
+
+    return [...defaultColumns, ...dataColumns].map(col => ({
+      ...col,
+      isActive: activeColumnKeys.includes(col.key)
+    }));
+  }, [customers?.dataFields, activeColumnKeys]);
+
+  // Handle column toggling
+  const handleColumnToggle = (columnKey: string) => {
+    setActiveColumnKeys(prev => {
+      if (prev.includes(columnKey)) {
+        // Don't allow removing the last column
+        if (prev.length <= 1) return prev;
+        return prev.filter(key => key !== columnKey);
+      } else {
+        return [...prev, columnKey];
+      }
+    });
+  };
+
+  // Add this effect to initialize columns when data is loaded
+  useEffect(() => {
+    if (!isCustomersLoading && customers?.customers) {
+      // Force a re-render to update the columns
+      setForceUpdate(prev => !prev);
+    }
+  }, [isCustomersLoading, customers]);
+
+  // Add this state to force re-renders
+  const [forceUpdate, setForceUpdate] = useState(false);
+
   const formattedCustomers = useMemo(() => {
     if (!customers?.customers) return [];
     
     return customers.customers
-      .filter(customer => {
+      .filter((customer: FormattedCustomer) => {
         if (!customer || !customer.id) return false;
         
         if (searchQuery) {
@@ -62,30 +141,38 @@ export default function CustomersPage() {
           const normalizedCallerId = customer.callerId?.replace(/[\s-]/g, '') || '';
           const normalizedSearch = searchQuery.replace(/[\s-]/g, '');
           
-          return (
+          // Check default fields
+          const defaultFieldsMatch = 
             customer.firstName?.toLowerCase().includes(searchLower) ||
             customer.lastName?.toLowerCase().includes(searchLower) ||
             normalizedCallerId.includes(normalizedSearch) ||
             customer.email?.toLowerCase().includes(searchLower) ||
             customer.state?.toLowerCase().includes(searchLower) ||
-            customer.postalCode?.includes(searchQuery) ||
-            Object.values(customer.customData || {}).some(value => 
-              String(value).toLowerCase().includes(searchLower)
-            )
-          );
+            customer.postalCode?.includes(searchQuery);
+
+          // Check custom data fields that are currently visible
+          const dataFieldsMatch = activeColumnKeys
+            .filter(key => key.startsWith('data_'))
+            .some(key => {
+              const field = key.replace('data_', '');
+              const value = customer.customData?.[field] ?? customer[field as keyof Customer];
+              return value != null && String(value).toLowerCase().includes(searchLower);
+            });
+
+          return defaultFieldsMatch || dataFieldsMatch;
         }
         
         return true;
       })
-      .map(customer => ({
+      .map((customer: FormattedCustomer) => ({
         ...customer,
-        campaigns: customer.campaigns?.map(campaign => ({
+        campaigns: customer.campaigns?.map((campaign: Campaign) => ({
           campaign_id: campaign.campaign_id,
           campaign_name: campaign.campaign_name,
           campaign_status: campaign.campaign_status
         }))
       }));
-  }, [customers, searchQuery]);
+  }, [customers, searchQuery, activeColumnKeys]);
 
   // Move sorting logic before pagination
   const sortedAndFilteredCustomers = useMemo(() => {
@@ -94,7 +181,7 @@ export default function CustomersPage() {
     // Apply sorting if configured
     if (sortConfig.key && sortConfig.direction) {
       result = [...result].sort((a, b) => {
-        let aValue, bValue;
+        let aValue: any, bValue: any;
         
         switch (sortConfig.key) {
           case 'customer':
@@ -122,18 +209,32 @@ export default function CustomersPage() {
             bValue = b.lastCallDate || '';
             break;
           default:
-            if (sortConfig.key.startsWith('custom_')) {
-              const customKey = sortConfig.key.replace('custom_', '');
-              aValue = a.customData?.[customKey] || '';
-              bValue = b.customData?.[customKey] || '';
-            } else {
-              return 0;
+            // Handle data field columns
+            if (sortConfig.key.startsWith('data_')) {
+              const field = sortConfig.key.replace('data_', '');
+              aValue = a.customData?.[field] ?? a[field as keyof Customer] ?? '';
+              bValue = b.customData?.[field] ?? b[field as keyof Customer] ?? '';
+              
+              // Convert to numbers if possible for proper numeric sorting
+              if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                aValue = Number(aValue);
+                bValue = Number(bValue);
+              } else {
+                // Convert to lowercase strings for case-insensitive sorting
+                aValue = String(aValue).toLowerCase();
+                bValue = String(bValue).toLowerCase();
+              }
             }
+            break;
         }
 
+        // Handle undefined/null values
+        if (aValue === undefined || aValue === null) aValue = '';
+        if (bValue === undefined || bValue === null) bValue = '';
+
         return sortConfig.direction === 'asc' 
-          ? aValue > bValue ? 1 : -1
-          : aValue < bValue ? 1 : -1;
+          ? aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+          : aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
       });
     }
 
@@ -156,44 +257,54 @@ export default function CustomersPage() {
     setSortConfig({ key, direction });
   };
 
-  // Add export function
+  // Export function
   const exportToCsv = () => {
     // Get only the visible columns
-    const visibleColumns = customersTable.current?.activeColumnKeys || [];
+    const visibleColumns = customersTable.current?.availableColumns || [];
     
     // Create headers array including special columns
     const headers = [
-      ...visibleColumns.map(key => {
-        const column = customersTable.current?.availableColumns.find(col => col.key === key);
-        return column?.label || key;
-      }),
+      ...visibleColumns.map((col: { key: string; label: string }) => col.label),
       'Do Not Contact',
       'SMS Consent'
     ];
 
     // Create rows array with visible data
-    const rows = formattedCustomers.map(customer => {
-      const rowData = visibleColumns.map(key => {
-        switch (key) {
+    const rows = formattedCustomers.map((customer: FormattedCustomer) => {
+      const rowData = visibleColumns.map((col: { key: string; label: string }) => {
+        switch (col.key) {
           case 'customer':
-            return `"${customer.firstName} ${customer.lastName}"`;
+            return `"${customer.firstName} ${customer.lastName || ''}"`;
           case 'contact':
-            return `"${customer.callerId}${customer.email ? `, ${customer.email}` : ''}"`;
-          case 'location':
-            return `"${[customer.state, customer.timezone, customer.postalCode].filter(Boolean).join(', ')}"`;
-          case 'campaigns':
-            return `"${customer.campaigns?.map(c => c.campaign_name).join(', ') || ''}"`;
+            return `"${customer.callerId || ''}${customer.email ? `, ${customer.email}` : ''}"`;
+          case 'location': {
+            const location = [customer.state, customer.timezone, customer.postalCode]
+              .filter(Boolean)
+              .join(', ');
+            return `"${location || '-'}"`;
+          }
+          case 'campaigns': {
+            const campaigns = customer.campaigns?.map((c: Campaign) => c.campaign_name).join(', ');
+            return `"${campaigns || '-'}"`;
+          }
           case 'calls':
             return customer.totalCalls?.toString() || '0';
           case 'last-contact':
-            return customer.lastCallDate || '';
+            return customer.lastCallDate || '-';
           default:
             // Handle custom columns
-            if (key.startsWith('custom_')) {
-              const customKey = key.replace('custom_', '');
-              return `"${customer.customData?.[customKey] || ''}"`;
+            if (col.key.startsWith('data_')) {
+              const field = col.key.replace('data_', '');
+              const value = customer.customData?.[field] ?? customer[field as keyof Customer];
+              if (value === null || value === undefined || value === 'null' || value === '') return '"-"';
+              if (typeof value === 'boolean') return `"${value ? 'Yes' : 'No'}"`;
+              if (typeof value === 'object') {
+                const stringified = JSON.stringify(value);
+                return `"${stringified === 'null' ? '-' : stringified}"`;
+              }
+              return `"${String(value) === 'null' ? '-' : String(value)}"`;
             }
-            return '';
+            return '"-"';
         }
       });
 
@@ -211,15 +322,11 @@ export default function CustomersPage() {
     const link = document.createElement('a');
     const fileName = `customers_${format(new Date(), 'yyyyMMdd')}.csv`;
     
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileName);
-    } else {
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (isCustomersLoading) {
@@ -238,12 +345,13 @@ export default function CustomersPage() {
         <CustomerFilters 
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          availableColumns={customersTable.current?.availableColumns || []}
-          activeColumns={customersTable.current?.activeColumnKeys || []}
-          onColumnToggle={(columnKey) => customersTable.current?.handleColumnToggle(columnKey)}
+          availableColumns={availableColumns}
+          activeColumns={activeColumnKeys}
+          onColumnToggle={handleColumnToggle}
+          isLoading={isCustomersLoading}
         />
         
-        {!formattedCustomers.length ? (
+        {!customers?.customers.length ? (
           <div className="flex items-center justify-center h-64">
             <p>No customers found.</p>
           </div>
@@ -252,11 +360,14 @@ export default function CustomersPage() {
             <CustomersTable 
               ref={customersTable}
               customers={paginatedCustomers}
-              onCustomerSelect={(customer) => {
+              dataFields={customers?.dataFields || []}
+              onCustomerSelect={(customer: Customer) => {
                 console.log('Selected customer:', customer);
               }}
               onSort={handleSort}
               sortConfig={sortConfig}
+              activeColumnKeys={activeColumnKeys}
+              onColumnToggle={handleColumnToggle}
             />
 
             <div className="flex items-center justify-between mt-4">
