@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import { useDebounce } from "@/hooks/use-debounce"
 
 const filterGroups = {
   "Key Metrics": [
@@ -80,6 +81,13 @@ export function CallFilters({
   const [selectedExports, setSelectedExports] = useState<string[]>([])
   const [openFilter, setOpenFilter] = useState(false)
   const [openExport, setOpenExport] = useState(false)
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 500);
+
+  // Update parent's search query when debounced value changes
+  useEffect(() => {
+    onSearchChange(debouncedSearchQuery);
+  }, [debouncedSearchQuery, onSearchChange]);
 
   const handleFilterSelect = (filterId: string) => {
     setSelectedFilters(current => 
@@ -110,8 +118,8 @@ export function CallFilters({
           <Input
             placeholder="Search calls..."
             className="w-full bg-white/50 pl-9"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
           />
         </div>
 

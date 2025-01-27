@@ -10,6 +10,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface CustomerFiltersProps {
   searchQuery: string;
@@ -30,11 +31,18 @@ export function CustomerFilters({
 }: CustomerFiltersProps) {
   const [open, setOpen] = useState(false);
   const [checkedColumns, setCheckedColumns] = useState<string[]>(activeColumns);
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 500);
 
   // Keep checkedColumns in sync with activeColumns from parent
   useEffect(() => {
     setCheckedColumns(activeColumns);
   }, [activeColumns]);
+
+  // Update parent's search query when debounced value changes
+  useEffect(() => {
+    onSearchChange(debouncedSearchQuery);
+  }, [debouncedSearchQuery, onSearchChange]);
 
   const handleItemSelect = (columnKey: string) => {
     // Prevent unchecking if it would result in no columns being visible
@@ -53,8 +61,8 @@ export function CustomerFilters({
           <Input
             placeholder="Search customers..."
             className="w-full bg-white/50 pl-9"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
           />
         </div>
         <DropdownMenu open={open} onOpenChange={setOpen}>

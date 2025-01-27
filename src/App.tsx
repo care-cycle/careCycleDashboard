@@ -16,9 +16,10 @@ import BillingPage from './pages/user/billing';
 import { isAuthEnabled } from '@/lib/utils';
 import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
 import Customers from './pages/customers';
 import CampaignsPage from './pages/campaigns';
+import { FeedbackWidget } from './components/ui/feedback-widget';
+import { Toaster } from './components/ui/toaster';
 
 // Create a client
 const queryClient = new QueryClient()
@@ -119,10 +120,11 @@ function AuthApp() {
 export default function App() {
   return (
     <>
-      <Toaster />
       <QueryClientProvider client={queryClient}>
         <RedactionProvider>
           {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
+          <FeedbackWidget />
+          <Toaster />
         </RedactionProvider>
       </QueryClientProvider>
     </>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogTrigger, DialogClose, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FEEDBACK_TYPES, SEVERITY_LEVELS } from '@/constants/feedback'
+import { CALL_FEEDBACK_TYPES, CALL_SEVERITY_LEVELS } from '@/constants/feedback'
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from "@radix-ui/react-dialog"
 import { cn } from "@/lib/utils"
@@ -38,27 +38,28 @@ DialogContentWithoutClose.displayName = "DialogContentWithoutClose"
 
 export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
   const [feedbackType, setFeedbackType] = useState<string>('')
-  const [severity, setSeverity] = useState<string>('')
+  const [severity, setSeverity] = useState<keyof typeof CALL_SEVERITY_LEVELS | ''>('')
   const [comment, setComment] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
-    if (!callId || !feedbackType || !comment.trim()) {
+    if (!callId || !feedbackType || !severity || !comment.trim()) {
       toast.error("Please fill in all required fields")
       return
     }
 
     setIsSubmitting(true)
     try {
-      const response = await apiClient.post('/portal/client/calls/feedback', {
-        callId,
+      const response = await apiClient.post('/portal/client/feedback', {
         type: feedbackType,
-        severity: severity.toLowerCase() || 'medium',
-        feedback: comment.trim()
+        severity: CALL_SEVERITY_LEVELS[severity],
+        feedback: comment.trim(),
+        pageUrl: window.location.href,
+        callId
       })
 
-      if (response.status === 201 || response.data?.success) {
+      if (response.data?.success) {
         toast.success('Feedback submitted successfully')
         setIsOpen(false)
         setFeedbackType('')
@@ -120,11 +121,11 @@ export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
                   </DialogClose>
                 </div>
                 <div className="grid grid-cols-3 gap-8">
-                  {Object.entries(FEEDBACK_TYPES).map(([category, items]) => (
+                  {Object.entries(CALL_FEEDBACK_TYPES).map(([category, items]) => (
                     <div key={category} className="space-y-3">
                       <h4 className="text-base font-medium text-gray-700 border-b pb-2">{category}</h4>
                       <div className="space-y-2">
-                        {Object.entries(items).map(([key, value]) => (
+                        {Object.entries(items as Record<string, string>).map(([key, value]) => (
                           <Button
                             key={value}
                             variant={feedbackType === value ? "default" : "ghost"}
@@ -146,7 +147,7 @@ export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
               </div>
             </DialogContent>
           </Dialog>
-          <Select value={severity} onValueChange={setSeverity}>
+          <Select value={severity} onValueChange={(value: keyof typeof CALL_SEVERITY_LEVELS) => setSeverity(value)}>
             <SelectTrigger 
               className={cn(
                 "w-[140px] bg-white",
@@ -157,9 +158,12 @@ export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
                 placeholder={<span className="font-bold">Severity</span>} 
               />
             </SelectTrigger>
-            <SelectContent className="bg-white">
-              {Object.entries(SEVERITY_LEVELS).map(([key, value]) => (
-                <SelectItem key={value} value={value}>
+            <SelectContent 
+              align="end" 
+              className="w-[240px] bg-white"
+            >
+              {Object.entries(CALL_SEVERITY_LEVELS).map(([key]) => (
+                <SelectItem key={key} value={key}>
                   {key.charAt(0) + key.slice(1).toLowerCase()}
                 </SelectItem>
               ))}

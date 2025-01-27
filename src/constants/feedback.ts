@@ -1,4 +1,27 @@
-export const FEEDBACK_TYPES = {
+export const SITE_FEEDBACK_TYPES = {
+  // UI/UX
+  UI_USABILITY: 'ui_usability',
+  UI_DESIGN: 'ui_design',
+  // Performance
+  PERFORMANCE_SPEED: 'performance_speed',
+  PERFORMANCE_RESPONSIVENESS: 'performance_responsiveness',
+  // Features
+  FEATURE_REQUEST: 'feature_request',
+  FEATURE_IMPROVEMENT: 'feature_improvement',
+  // Bugs
+  BUG_REPORT: 'bug_report',
+  // Other
+  OTHER_FEEDBACK: 'other_feedback'
+} as const;
+
+export const SITE_SEVERITY_LEVELS = {
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low'
+} as const;
+
+// Call feedback types
+export const CALL_FEEDBACK_TYPES = {
   'Bot Behavior': {
     BOT_OFF_SCRIPT: 'bot_off_script',
     BOT_INCORRECT_INFO: 'bot_incorrect_info',
@@ -18,7 +41,6 @@ export const FEEDBACK_TYPES = {
   'Compliance': {
     COMPLIANCE_VIOLATION: 'compliance_violation',
     VERIFICATION_ISSUE: 'verification_issue',
-    // OPERATING_HOURS: 'operating_hours',
   },
   'Customer Data': {
     WRONG_CUSTOMER_DATA: 'wrong_customer_data',
@@ -30,7 +52,7 @@ export const FEEDBACK_TYPES = {
   }
 } as const;
 
-export const SEVERITY_LEVELS = {
+export const CALL_SEVERITY_LEVELS = {
   CRITICAL: 'critical',
   HIGH: 'high',
   MEDIUM: 'medium',
