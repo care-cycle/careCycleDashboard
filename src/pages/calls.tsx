@@ -120,6 +120,14 @@ export default function CallsPage() {
   const fromDate = searchParams.get('from');
   const toDate = searchParams.get('to');
 
+  // Add effect to handle search from URL
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search');
+    if (searchFromUrl) {
+      setSearchQuery(searchFromUrl);
+    }
+  }, [searchParams, setSearchQuery]);
+
   // Set initial date range if provided
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (fromDate && toDate) {

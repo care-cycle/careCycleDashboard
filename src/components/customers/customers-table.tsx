@@ -269,10 +269,13 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(({
   // Add this function to handle calls navigation
   const handleCallsNavigation = (e: React.MouseEvent, callerId: string | undefined) => {
     e.stopPropagation(); // Prevent row selection
+    if (!callerId) return;
+    
+    // Format the phone number to ensure it starts with +
+    const formattedNumber = callerId.startsWith('+') ? callerId : `+${callerId}`;
+    
     const searchParams = new URLSearchParams();
-    searchParams.set('search', callerId || '');
-    searchParams.set('from', '2024-10-15');
-    searchParams.set('to', new Date().toISOString().split('T')[0]);
+    searchParams.set('search', formattedNumber);
     navigate(`/calls?${searchParams.toString()}`);
   };
 
