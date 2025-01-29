@@ -4,6 +4,8 @@ import { useInitialData } from '@/hooks/use-client-data'
 import { CustomerFilters } from '@/components/customers/customer-filters'
 import { CustomersTable } from '@/components/customers/customers-table'
 import { DownloadIcon } from '@radix-ui/react-icons'
+import { useLocation } from 'react-router-dom'
+import { usePreferences } from '@/contexts/preferences-context'
 import {
   Select,
   SelectContent,
@@ -49,7 +51,14 @@ const getPageNumbers = (currentPage: number, totalPages: number) => {
 
 export default function CustomersPage() {
   const { customers, isCustomersLoading, todayMetrics } = useInitialData();
-  const [searchQuery, setSearchQuery] = useState("");
+  const location = useLocation();
+  const { 
+    customerColumns: activeColumnKeys, 
+    setCustomerColumns: setActiveColumnKeys,
+    customerSearch: searchQuery,
+    setCustomerSearch: setSearchQuery
+  } = usePreferences();
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const customersTable = useRef<TableRef>(null);
 
   // Add pagination states
@@ -60,12 +69,7 @@ export default function CustomersPage() {
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc' | null;
-  }>({ key: '', direction: null });
-
-  // Add column management state at the page level
-  const [activeColumnKeys, setActiveColumnKeys] = useState<string[]>([
-    'customer', 'contact', 'location', 'campaigns', 'calls', 'last-contact'
-  ]);
+  }>({ key: 'last-contact', direction: 'desc' });
 
   // Generate available columns
   const availableColumns = useMemo(() => {
@@ -128,41 +132,76 @@ export default function CustomersPage() {
   // Add this state to force re-renders
   const [forceUpdate, setForceUpdate] = useState(false);
 
+  // Add debounce effect for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Update this effect to use location and handle URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchFromUrl = params.get('search');
+    if (searchFromUrl) {
+      // Format the phone number for display
+      const formattedNumber = searchFromUrl.startsWith('+') 
+        ? searchFromUrl 
+        : `+${searchFromUrl}`;
+      setSearchQuery(formattedNumber);
+      setDebouncedSearch(formattedNumber); // Immediately set debounced value for URL params
+    }
+  }, [location.search, setSearchQuery]); // React to URL changes
+
   const formattedCustomers = useMemo(() => {
     if (!customers?.customers) return [];
     
     return customers.customers
       .filter((customer: FormattedCustomer) => {
+        // Filter out placeholder/empty records
         if (!customer || !customer.id) return false;
+        if (customer.firstName === 'firstName' && customer.lastName === 'lastName') return false;
+        if (customer.email === 'email' && customer.callerId === 'phone') return false;
         
-        if (searchQuery) {
-          const searchLower = searchQuery.toLowerCase();
-          // Normalize the callerId by removing spaces and dashes for comparison
-          const normalizedCallerId = customer.callerId?.replace(/[\s-]/g, '') || '';
-          const normalizedSearch = searchQuery.replace(/[\s-]/g, '');
-          
-          // Check default fields
-          const defaultFieldsMatch = 
-            customer.firstName?.toLowerCase().includes(searchLower) ||
-            customer.lastName?.toLowerCase().includes(searchLower) ||
-            normalizedCallerId.includes(normalizedSearch) ||
-            customer.email?.toLowerCase().includes(searchLower) ||
-            customer.state?.toLowerCase().includes(searchLower) ||
-            customer.postalCode?.includes(searchQuery);
+        if (!debouncedSearch) return true;
 
-          // Check custom data fields that are currently visible
-          const dataFieldsMatch = activeColumnKeys
-            .filter(key => key.startsWith('data_'))
-            .some(key => {
-              const field = key.replace('data_', '');
-              const value = customer.customData?.[field] ?? customer[field as keyof Customer];
-              return value != null && String(value).toLowerCase().includes(searchLower);
-            });
-
-          return defaultFieldsMatch || dataFieldsMatch;
+        // Convert search term to lowercase once
+        const searchLower = debouncedSearch.toLowerCase();
+        const searchDigits = debouncedSearch.replace(/\D/g, '');
+        
+        // Check phone number first for better performance
+        if (customer.callerId && customer.callerId !== 'phone') {
+          const callerIdDigits = customer.callerId.replace(/\D/g, '');
+          if (callerIdDigits === searchDigits) return true;
         }
         
-        return true;
+        // Check basic fields
+        const basicFieldsMatch = [
+          customer.firstName !== 'firstName' ? customer.firstName : null,
+          customer.lastName !== 'lastName' ? customer.lastName : null,
+          customer.email !== 'email' ? customer.email : null,
+          customer.state !== 'state' ? customer.state : null,
+          customer.postalCode
+        ].some(field => {
+          if (!field) return false;
+          const fieldLower = field.toLowerCase();
+          return fieldLower.includes(searchLower);
+        });
+
+        if (basicFieldsMatch) return true;
+
+        // Only check custom fields if no match found in basic fields
+        return activeColumnKeys
+          .filter(key => key.startsWith('data_'))
+          .some(key => {
+            const field = key.replace('data_', '');
+            const value = customer.customData?.[field] ?? customer[field as keyof Customer];
+            if (!value || value === 'null') return false;
+            const valueLower = String(value).toLowerCase();
+            return valueLower.includes(searchLower);
+          });
       })
       .map((customer: FormattedCustomer) => ({
         ...customer,
@@ -172,7 +211,7 @@ export default function CustomersPage() {
           campaign_status: campaign.campaign_status
         }))
       }));
-  }, [customers, searchQuery, activeColumnKeys]);
+  }, [customers, debouncedSearch, activeColumnKeys]);
 
   // Move sorting logic before pagination
   const sortedAndFilteredCustomers = useMemo(() => {

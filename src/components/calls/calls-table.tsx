@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { 
   Table, 
   TableBody, 
@@ -7,7 +7,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Play, ArrowUpDown, Flag, GripVertical } from "lucide-react"
+import { ArrowUpDown, Flag, GripVertical, UserSearch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Call } from '@/types/calls'
 import { formatPhoneNumber } from '@/lib/utils'
@@ -22,6 +22,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRedaction } from '@/contexts/redaction-context';
+import { useNavigate } from 'react-router-dom';
 
 interface CallsTableProps {
   onCallSelect: (call: Call) => void;
@@ -45,7 +46,7 @@ const TestFlask = () => (
 )
 
 interface SortableHeaderProps {
-  header: string;
+  header: ColumnKey;
   onSort: () => void;
 }
 
@@ -87,6 +88,8 @@ const redactData = (value: string) => {
   return value.replace(/./g, '*');
 };
 
+type ColumnKey = "Caller ID" | "Assistant Type" | "Direction" | "Duration" | "Disposition" | "Created At";
+
 export function CallsTable({ 
   calls, 
   onCallSelect, 
@@ -96,6 +99,7 @@ export function CallsTable({
   sortConfig 
 }: CallsTableProps) {
   const { isRedacted } = useRedaction();
+  const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Audio preloading
@@ -111,66 +115,50 @@ export function CallsTable({
     audioRef.current = new Audio()
   }, [])
 
-  const nonConnectedDispositions = [
+  const nonConnectedDispositions = useMemo(() => [
     'Busy/No Answer',
     'Voicemail',
     'Telephony Block',
     'Customer Did Not Answer',
     'Pipeline Error'
-  ];
+  ], []);
 
-  const filteredCalls = calls.filter(call => {
-    // Filter out test calls if showTestCalls is false
-    if (!showTestCalls && call.testFlag) {
-      return false;
-    }
+  const filteredCalls = useMemo(() => {
+    // Create a Set for faster lookups
+    const nonConnectedSet = new Set(nonConnectedDispositions);
     
-    // Filter out non-connected calls if showConnectedOnly is true
-    if (showConnectedOnly && nonConnectedDispositions.includes(call.disposition)) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  // Add this new state for columns
-  const [columns, setColumns] = useState([
-    "Caller ID",
-    "Assistant Type",
-    "Direction",
-    "Duration",
-    "Disposition",
-    "Created At"
-  ]);
-
-  // Add these sensors for drag and drop
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
-
-  // Add this handler for drag end
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id) {
-      setColumns((items) => {
-        const oldIndex = items.indexOf(active.id);
-        const newIndex = items.indexOf(over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
+    return calls.filter(call => {
+      // Combine conditions to reduce iterations
+      return (!showTestCalls ? !call.testFlag : true) && 
+             (!showConnectedOnly ? true : !nonConnectedSet.has(call.disposition));
+    });
+  }, [calls, showTestCalls, showConnectedOnly, nonConnectedDispositions]);
 
   // Add this mapping object near the top of the component
-  const columnToDataKeyMap: { [key: string]: keyof Call } = {
+  const columnToDataKeyMap = useMemo(() => ({
     "Caller ID": "callerId",
     "Assistant Type": "assistantType",
     "Direction": "direction",
     "Duration": "duration",
     "Disposition": "disposition",
     "Created At": "createdAt"
-  };
+  } as const), []); // Use const assertion to preserve literal types
+
+  // Memoize the columns array
+  const columns = useMemo<ColumnKey[]>(() => [
+    "Caller ID",
+    "Assistant Type",
+    "Direction",
+    "Duration",
+    "Disposition",
+    "Created At"
+  ], []);
+
+  // Add these sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' | null = 'asc';
@@ -186,11 +174,20 @@ export function CallsTable({
     onSort(key, direction);
   };
 
+  // Add this function to handle customer navigation
+  const handleCustomerNavigation = (e: React.MouseEvent, callerId: string) => {
+    e.stopPropagation(); // Prevent row selection
+    const searchParams = new URLSearchParams();
+    // Ensure the phone number starts with a + if it doesn't already
+    const formattedNumber = callerId.startsWith('+') ? callerId : `+${callerId}`;
+    searchParams.set('search', formattedNumber);
+    navigate(`/customers?${searchParams.toString()}`);
+  };
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
     >
       <div className="rounded-md border glass-panel w-full">
         <Table>
@@ -224,7 +221,10 @@ export function CallsTable({
               >
                 <TableCell>
                   <div className="h-8 w-8 flex items-center justify-center">
-                    <Play className="h-4 w-4 text-muted-foreground" />
+                    <UserSearch 
+                      className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer" 
+                      onClick={(e) => handleCustomerNavigation(e, call.callerId)}
+                    />
                   </div>
                 </TableCell>
                 {columns.map((column) => (

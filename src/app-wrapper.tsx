@@ -3,6 +3,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/clerk-react';
 import App from './App';
 import { isAuthEnabled } from '@/lib/utils';
+import { RedactionProvider } from '@/contexts/redaction-context'
+import { UIProvider } from '@/contexts/ui-context'
+import { PreferencesProvider } from '@/contexts/preferences-context'
+import { Toaster } from "@/components/ui/sonner"
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -40,9 +44,16 @@ export function AppWrapper() {
           sameSite: 'lax'
         }}
       >
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <RedactionProvider>
+          <UIProvider>
+            <PreferencesProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+              <Toaster />
+            </PreferencesProvider>
+          </UIProvider>
+        </RedactionProvider>
       </ClerkProvider>
     </StrictMode>
   );

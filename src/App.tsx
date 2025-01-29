@@ -20,6 +20,7 @@ import Customers from './pages/customers';
 import CampaignsPage from './pages/campaigns';
 import { FeedbackWidget } from './components/ui/feedback-widget';
 import { Toaster } from './components/ui/toaster';
+import { PreferencesProvider } from '@/contexts/preferences-context';
 
 // Create a client
 const queryClient = new QueryClient()
@@ -72,46 +73,48 @@ function AuthApp() {
 
   return (
     <UIProvider>
-      <AnimatePresence mode="wait">
-        <Routes>
-          {/* Root redirect */}
-          <Route 
-            path="/" 
-            element={
-              isSignedIn ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Navigate to="/sign-in" replace />
-              )
-            } 
-          />
-          
-          {/* Dashboard route */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } 
-          />
-          
-          {/* Public Routes */}
-          <Route path="/sign-in/*" element={<SignIn />} />
-          <Route path="/sign-up/*" element={<SignUpPage />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          
-          {/* Private Routes */}
-          <Route path="/calls" element={<PrivateRoute><Calls /></PrivateRoute>} />
-          <Route path="/user/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-          <Route path="/user/billing" element={<PrivateRoute><BillingPage /></PrivateRoute>} />
-          <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
-          <Route path="/campaigns" element={<PrivateRoute><CampaignsPage /></PrivateRoute>} />
-          
-          {/* Catch all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
+      <PreferencesProvider>
+        <AnimatePresence mode="wait">
+          <Routes>
+            {/* Root redirect */}
+            <Route 
+              path="/" 
+              element={
+                isSignedIn ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Navigate to="/sign-in" replace />
+                )
+              } 
+            />
+            
+            {/* Dashboard route */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* Public Routes */}
+            <Route path="/sign-in/*" element={<SignIn />} />
+            <Route path="/sign-up/*" element={<SignUpPage />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            
+            {/* Private Routes */}
+            <Route path="/calls" element={<PrivateRoute><Calls /></PrivateRoute>} />
+            <Route path="/user/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/user/billing" element={<PrivateRoute><BillingPage /></PrivateRoute>} />
+            <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
+            <Route path="/campaigns" element={<PrivateRoute><CampaignsPage /></PrivateRoute>} />
+            
+            {/* Catch all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </PreferencesProvider>
     </UIProvider>
   );
 }

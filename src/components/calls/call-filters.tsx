@@ -3,6 +3,7 @@ import { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DateRangePicker } from "@/components/date-range-picker"
+import { usePreferences } from '@/contexts/preferences-context'
 import { 
   Download, 
   Filter, 
@@ -60,34 +61,32 @@ const filterGroups = {
   ]
 }
 
-interface CallFiltersProps {
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
-  showTestCalls: boolean;
-  onTestCallsChange: (value: boolean) => void;
-  showConnectedOnly: boolean;
-  onConnectedOnlyChange: (value: boolean) => void;
-}
-
-export function CallFilters({ 
-  searchQuery,
-  onSearchChange,
-  showTestCalls,
-  onTestCallsChange,
-  showConnectedOnly,
-  onConnectedOnlyChange,
-}: CallFiltersProps) {
+export function CallFilters() {
+  const { 
+    callSearch: searchQuery,
+    setCallSearch: setSearchQuery,
+    showTestCalls,
+    setShowTestCalls,
+    showConnectedOnly,
+    setShowConnectedOnly
+  } = usePreferences();
+  
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [selectedExports, setSelectedExports] = useState<string[]>([])
   const [openFilter, setOpenFilter] = useState(false)
   const [openExport, setOpenExport] = useState(false)
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  const debouncedSearchQuery = useDebounce(localSearchQuery, 500);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 250);
 
   // Update parent's search query when debounced value changes
   useEffect(() => {
-    onSearchChange(debouncedSearchQuery);
-  }, [debouncedSearchQuery, onSearchChange]);
+    setSearchQuery(debouncedSearchQuery);
+  }, [debouncedSearchQuery, setSearchQuery]);
+
+  // Add effect to update local search when prop changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   const handleFilterSelect = (filterId: string) => {
     setSelectedFilters(current => 
@@ -129,7 +128,7 @@ export function CallFilters({
               <Switch
                 id="connected-calls"
                 checked={showConnectedOnly}
-                onCheckedChange={onConnectedOnlyChange}
+                onCheckedChange={setShowConnectedOnly}
               />
               <label
                 htmlFor="connected-calls"
@@ -143,7 +142,7 @@ export function CallFilters({
               <Switch
                 id="test-calls"
                 checked={showTestCalls}
-                onCheckedChange={onTestCallsChange}
+                onCheckedChange={setShowTestCalls}
               />
               <label
                 htmlFor="test-calls"

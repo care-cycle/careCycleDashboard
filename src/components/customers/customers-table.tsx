@@ -7,7 +7,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Phone, Mail, MapPin, ArrowUpDown, Play, GripVertical, MessageSquareOff, PhoneOff } from "lucide-react"
+import { Phone, Mail, MapPin, ArrowUpDown, PhoneForwarded, GripVertical, MessageSquareOff, PhoneOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
@@ -188,17 +188,7 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(({
         key: "calls", 
         label: "Total Calls", 
         render: (customer: Customer) => (
-          <div 
-            className="text-center w-full cursor-pointer hover:text-primary transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              const searchParams = new URLSearchParams();
-              searchParams.set('search', customer.callerId || '');
-              searchParams.set('from', '2024-10-15');
-              searchParams.set('to', new Date().toISOString().split('T')[0]);
-              navigate(`/calls?${searchParams.toString()}`);
-            }}
-          >
+          <div className="text-center w-full">
             {customer.totalCalls || 0}
           </div>
         )
@@ -276,6 +266,16 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(({
     }
   };
 
+  // Add this function to handle calls navigation
+  const handleCallsNavigation = (e: React.MouseEvent, callerId: string | undefined) => {
+    e.stopPropagation(); // Prevent row selection
+    const searchParams = new URLSearchParams();
+    searchParams.set('search', callerId || '');
+    searchParams.set('from', '2024-10-15');
+    searchParams.set('to', new Date().toISOString().split('T')[0]);
+    navigate(`/calls?${searchParams.toString()}`);
+  };
+
   return (
     <DndContext 
       sensors={sensors}
@@ -312,12 +312,19 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(({
                 >
                   <TableCell>
                     <div className="h-8 w-8 flex items-center justify-center">
-                      <Play className="h-4 w-4 text-muted-foreground" />
+                      <PhoneForwarded 
+                        className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer" 
+                        onClick={(e) => handleCallsNavigation(e, customer.callerId)}
+                      />
                     </div>
                   </TableCell>
                   {activeColumns.map((column) => (
                     <TableCell key={`cell-${customer.id}-${column.key}`}>
-                      {column.render(customer)}
+                      {column.key === 'calls' ? (
+                        <div className="text-center w-full">
+                          {customer.totalCalls || 0}
+                        </div>
+                      ) : column.render(customer)}
                     </TableCell>
                   ))}
                   <TableCell>

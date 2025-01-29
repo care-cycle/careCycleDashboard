@@ -6,6 +6,7 @@ import { CallFilters } from '@/components/calls/call-filters'
 import { CallDetails } from '@/components/calls/call-details'
 import { DateRange } from 'react-day-picker'
 import { useUI } from '@/contexts/ui-context'
+import { usePreferences } from '@/contexts/preferences-context'
 import { Call } from '@/types/calls'
 import { useInitialData } from '@/hooks/use-client-data'
 import { formatDuration } from '@/lib/utils'
@@ -97,21 +98,27 @@ export default function CallsPage() {
     callsError, 
     clientInfo 
   } = useInitialData();
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const location = useLocation()
+  const { setCallDetailsOpen } = useUI();
+  const { 
+    showTestCalls,
+    setShowTestCalls,
+    showConnectedOnly,
+    setShowConnectedOnly,
+    callSearch: searchQuery,
+    setCallSearch: setSearchQuery
+  } = usePreferences();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   // Define today and yesterday
-  const today = new Date()
-  const yesterday = subDays(today, 1)
+  const today = new Date();
+  const yesterday = subDays(today, 1);
 
   // Get search params
   const initialSearch = searchParams.get('search') || '';
   const fromDate = searchParams.get('from');
   const toDate = searchParams.get('to');
-
-  // Set initial search query if provided
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
 
   // Set initial date range if provided
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
@@ -130,9 +137,6 @@ export default function CallsPage() {
 
   // Move the dateRange state after useInitialData to ensure we have the calls data
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
-  const { setCallDetailsOpen } = useUI();
-  const [showTestCalls, setShowTestCalls] = useState(false);
-  const [showConnectedOnly, setShowConnectedOnly] = useState(true);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCampaignType, setSelectedCampaignType] = useState(() => {
@@ -147,6 +151,12 @@ export default function CallsPage() {
       ? clientInfo.campaigns[0].id 
       : "all";
   });
+
+  // Add sorting state
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  }>({ key: '', direction: null });
 
   // Add this function to handle campaign changes
   const handleCampaignChange = (campaignId: string) => {
@@ -188,36 +198,33 @@ export default function CallsPage() {
         'Pipeline Error'
       ].includes(call.disposition);
       
-      const searchMatch = !searchQuery || Object.values(call).some(value => {
+      if (!searchQuery) return campaignMatch && dateMatch && testMatch && connectedMatch;
+
+      // Convert search term to lowercase once
+      const searchLower = searchQuery.toLowerCase();
+      const searchDigits = searchQuery.replace(/\D/g, '');
+
+      // Check phone number fields first
+      if (call.callerId) {
+        const callerIdDigits = call.callerId.replace(/\D/g, '');
+        if (callerIdDigits === searchDigits) return true;
+      }
+
+      // Then check all other fields
+      const searchMatch = Object.entries(call).some(([key, value]) => {
         if (value === null || value === undefined) return false;
         
-        if (typeof value === 'string' && (
-          value.includes('+') || 
-          value.includes('-') || 
-          value.includes(' ')
-        )) {
-          // Normalize phone numbers by removing spaces and dashes
-          const normalizedValue = value.replace(/[\s-]/g, '');
-          const normalizedSearch = searchQuery.replace(/[\s-]/g, '');
-          return normalizedValue.includes(normalizedSearch);
-        }
-        
-        const searchStr = typeof value === 'object' 
+        // Convert value to lowercase string for comparison
+        const valueStr = typeof value === 'object' 
           ? JSON.stringify(value).toLowerCase()
           : String(value).toLowerCase();
           
-        return searchStr.includes(searchQuery.toLowerCase());
+        return valueStr.includes(searchLower);
       });
       
       return campaignMatch && dateMatch && testMatch && connectedMatch && searchMatch;
     });
   }, [calls?.data, selectedCampaignId, dateRange, showTestCalls, showConnectedOnly, searchQuery]);
-
-  // Add sorting state
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: 'asc' | 'desc' | null;
-  }>({ key: '', direction: null });
 
   // Move sorting logic before pagination
   const sortedAndFilteredCalls = useMemo(() => {

@@ -32,12 +32,17 @@ export function CustomerFilters({
   const [open, setOpen] = useState(false);
   const [checkedColumns, setCheckedColumns] = useState<string[]>(activeColumns);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  const debouncedSearchQuery = useDebounce(localSearchQuery, 500);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 250);
 
   // Keep checkedColumns in sync with activeColumns from parent
   useEffect(() => {
     setCheckedColumns(activeColumns);
   }, [activeColumns]);
+
+  // Add effect to update local search when prop changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   // Update parent's search query when debounced value changes
   useEffect(() => {
