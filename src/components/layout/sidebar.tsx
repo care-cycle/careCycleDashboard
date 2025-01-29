@@ -1,10 +1,12 @@
-import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard } from "lucide-react"
+import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard, RotateCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserProfile } from "@/components/layout/user-profile"
 import { Link } from "react-router-dom"
 import { useRedaction } from "@/contexts/redaction-context"
+import { useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 
 const navigationItems = [
   {
@@ -42,7 +44,25 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar({ className }: SidebarProps) {
   const { isRedacted } = useRedaction();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['todayMetrics'] }),
+        queryClient.invalidateQueries({ queryKey: ['clientInfo'] }),
+        queryClient.invalidateQueries({ queryKey: ['metrics'] }),
+        queryClient.invalidateQueries({ queryKey: ['calls'] }),
+        queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="relative h-full">
       {/* Animated orbs */}
@@ -107,6 +127,19 @@ export function Sidebar({ className }: SidebarProps) {
               </div>
             ))}
           </nav>
+        </div>
+
+        {/* Refresh Button */}
+        <div className="px-4 mb-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-white/50"
+            onClick={handleRefreshData}
+            disabled={isRefreshing}
+          >
+            <RotateCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+            <span>Refresh Data</span>
+          </Button>
         </div>
 
         {/* User Profile */}
