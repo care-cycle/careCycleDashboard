@@ -156,7 +156,7 @@ export function useInitialData() {
     })
   }
 
-  const isLoading = !isLoaded || todayMetricsLoading || clientInfoLoading || metricsLoading || callsLoading || customersLoading || isCampaignsLoading;
+  const isLoading = !isLoaded || todayMetricsLoading || clientInfoLoading;
 
   return {
     metrics: metrics?.data,
