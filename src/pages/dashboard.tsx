@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { DateRange } from 'react-day-picker'
 import { RootLayout } from '@/components/layout/root-layout'
 import { KPICard } from '@/components/metrics/kpi-card'
@@ -139,25 +139,6 @@ export default function Dashboard() {
       
       if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
         setDate(newDate)
-        
-        try {
-          const response = await fetchUniqueCallers(from, to)
-
-          if (response.data.success) {
-            const { currentPeriod, previousPeriod, comparison } = response.data.data
-            const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
-
-            setCustomersEngaged({
-              value: currentPeriod.uniqueCallers.toLocaleString(),
-              change: previousPeriod.uniqueCallers === 0 
-                ? `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`
-                : `${comparison.percentChange >= 0 ? '+' : ''}${comparison.percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-              description: `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), 'MMM d, yyyy')} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), 'MMM d, yyyy')}`
-            })
-          }
-        } catch (error) {
-          console.error('Error fetching unique callers:', error)
-        }
       } else {
         console.error('Invalid date selection:', newDate)
       }
@@ -170,6 +151,44 @@ export default function Dashboard() {
     change: "N/A",
     description: ""
   });
+
+  // Consolidated effect to update customersEngaged
+  useEffect(() => {
+    let isMounted = true;
+
+    if (date?.from && date?.to && !isLoading) {
+      const fetchCustomerData = async () => {
+        try {
+          const from = new Date(date.from);
+          const to = new Date(date.to);
+          const response = await fetchUniqueCallers(from, to);
+          
+          if (!isMounted) return;
+
+          if (response.data.success) {
+            const { currentPeriod, previousPeriod, comparison } = response.data.data;
+            const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            setCustomersEngaged({
+              value: currentPeriod.uniqueCallers.toLocaleString(),
+              change: previousPeriod.uniqueCallers === 0 
+                ? `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`
+                : `${comparison.percentChange >= 0 ? '+' : ''}${comparison.percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
+              description: `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), 'MMM d, yyyy')} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), 'MMM d, yyyy')}`
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching unique callers:', error);
+        }
+      };
+
+      fetchCustomerData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [date?.from, date?.to]);
 
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.campaigns) return [];

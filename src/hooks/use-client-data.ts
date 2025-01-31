@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import apiClient from '@/lib/api-client'
 import { format } from 'date-fns'
 import { useAuth } from '@clerk/clerk-react'
+import { useCallback } from 'react'
 
 interface CallsResponse {
   s: boolean;          
@@ -147,14 +148,14 @@ export function useInitialData() {
     retry: 1,
   });
 
-  const fetchUniqueCallers = async (from: Date, to: Date) => {
+  const fetchUniqueCallers = useCallback(async (from: Date, to: Date) => {
     const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
     const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
     
     return apiClient.get('/portal/client/metrics/unique-callers', {
       params: { from: fromStr, to: toStr }
     })
-  }
+  }, []); // No dependencies needed as apiClient and format are stable
 
   const isLoading = !isLoaded || todayMetricsLoading || clientInfoLoading;
 
