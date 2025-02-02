@@ -74,7 +74,7 @@ export function UserProfile({ isRedacted }: UserProfileProps) {
   const menuItems = [
     { 
       icon: User, 
-      label: 'Profile Settings',
+      label: 'Configuration',
       onClick: () => {
         setIsExpanded(false)
         navigate('/user/profile')

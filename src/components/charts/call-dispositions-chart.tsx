@@ -51,9 +51,10 @@ const NON_CONNECTED_DISPOSITIONS = [
 interface CallDispositionsChartProps {
   data: any[]
   dateRange: DateRange | undefined
+  isLoading?: boolean
 }
 
-export function CallDispositionsChart({ data, dateRange }: CallDispositionsChartProps) {
+export function CallDispositionsChart({ data, dateRange, isLoading }: CallDispositionsChartProps) {
   const [showConnectedOnly, setShowConnectedOnly] = useState(true)
 
   const processedData = useMemo(() => {
@@ -101,7 +102,7 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
     });
   }, [processedData, showConnectedOnly]);
 
-  if (!data?.length) {
+  if (isLoading) {
     return (
       <Card className="glass-panel interactive cursor-pointer h-full">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -122,6 +123,32 @@ export function CallDispositionsChart({ data, dateRange }: CallDispositionsChart
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!data?.length) {
+    return (
+      <Card className="glass-panel interactive cursor-pointer h-full">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-gray-900">Call Dispositions</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={showConnectedOnly}
+              onCheckedChange={setShowConnectedOnly}
+              id="connected-calls-filter"
+            />
+            <label 
+              htmlFor="connected-calls-filter" 
+              className="text-sm text-gray-600"
+            >
+              Show Connected Calls Only
+            </label>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
+          <p className="text-gray-500">No data over selected time period</p>
         </CardContent>
       </Card>
     )

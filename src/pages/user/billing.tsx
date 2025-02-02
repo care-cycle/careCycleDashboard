@@ -9,7 +9,7 @@ import { useInitialData } from '@/hooks/use-client-data'
 export default function BillingPage() {
   // Use the existing data from the app-level fetch
   const { clientInfo } = useInitialData();
-  const isAuthenticated = Boolean(clientInfo);
+  const isAuthenticated = Boolean(clientInfo?.id);
 
   const topMetrics = [
     { 

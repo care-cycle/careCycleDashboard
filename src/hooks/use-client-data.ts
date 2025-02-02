@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/lib/api-client'
 import { format } from 'date-fns'
 import { useAuth } from '@clerk/clerk-react'
@@ -63,6 +63,69 @@ interface CampaignsResponse {
   [key: string]: Campaign;
 }
 
+interface ClientInfo {
+  id: string;
+  name: string;
+  email?: string;
+  pricePerCallMs: string;
+  pricePerSms: string;
+  availableBalance: string;
+  totalCallSpend: string;
+  totalSmsSpend: string;
+  topUpThreshold?: string;
+  topUpAmount?: string;
+  enableTopUp: boolean;
+  associatedNumbers?: string[];
+  customDataSchema?: Record<string, unknown>;
+  createdAt: string;
+  businessHours: Array<{
+    dayOfWeek: number[]
+    startHour: number
+    endHour: number
+    timezone: string
+  }>;
+  specialHours: Array<{
+    type: 'special' | 'dateRange' | 'recurring'
+    name: string
+    date?: string
+    startDate?: string
+    endDate?: string
+    recurrence?: 'weekly' | 'monthly' | 'yearly'
+    dayOfMonth?: number
+    dayOfWeek?: number[]
+    hours: Array<{
+      startHour: number
+      endHour: number
+    }>
+  }>;
+  holidayGroups: Array<{
+    id: string
+    name: string
+    description?: string
+    holidays: Array<{
+      id: string
+      name: string
+      description?: string
+      type: 'fixed' | 'floating' | 'custom'
+      month?: number
+      dayOfMonth?: number
+      floatingRule?: {
+        weekOfMonth: number
+        dayOfWeek: number
+        month: number
+      }
+      modifiedHours: null | Array<{
+        startHour: number
+        endHour: number
+      }>
+    }>
+  }>;
+  timezone: string;
+  organizationId: string | null;
+  isPersonal: boolean;
+  default_payment_method: any | null;
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
 
@@ -76,11 +139,12 @@ export function useInitialData() {
   })
 
   // Client info - high priority
-  const { data: clientInfo, isLoading: clientInfoLoading } = useQuery({
+  const { data: clientInfo, isLoading: clientInfoLoading } = useQuery<ClientInfo>({
     queryKey: ['clientInfo'],
-    queryFn: () => apiClient.get('/portal/client/info'),
-    staleTime: Infinity,
-    cacheTime: Infinity,
+    queryFn: async () => {
+      const response = await apiClient.get('/portal/client/info')
+      return response.data
+    },
     enabled: isLoaded && isSignedIn,
   })
 
@@ -161,7 +225,7 @@ export function useInitialData() {
 
   return {
     metrics: metrics?.data,
-    clientInfo: clientInfo?.data,
+    clientInfo,
     calls,
     callsError,
     todayMetrics: todayMetrics?.data,
@@ -174,5 +238,48 @@ export function useInitialData() {
     isCustomersLoading: customersLoading,
     campaigns,
     isLoading,
+  }
+}
+
+export function useClientData() {
+  const queryClient = useQueryClient()
+
+  const { data: clientInfo, isLoading } = useQuery<ClientInfo>({
+    queryKey: ['clientInfo'],
+    queryFn: async () => {
+      const response = await apiClient.get('/portal/client/info')
+      return response.data
+    }
+  })
+
+  const mutation = useMutation({
+    mutationFn: async (data: Partial<ClientInfo>) => {
+      let endpoint = '/portal/client/info'
+      
+      // Use specific endpoints for different types of updates
+      if ('businessHours' in data) {
+        endpoint = '/portal/client/operating-hours'
+      } else if ('specialHours' in data) {
+        endpoint = '/portal/client/special-hours'
+      } else if ('holidayGroups' in data) {
+        endpoint = '/portal/client/holiday-groups'
+      }
+
+      const response = await apiClient.put(endpoint, data)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientInfo'] })
+    }
+  })
+
+  const mutate = async (data: Partial<ClientInfo>) => {
+    await mutation.mutateAsync(data)
+  }
+
+  return {
+    clientInfo,
+    isLoading,
+    mutate
   }
 } 

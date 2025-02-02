@@ -7,6 +7,7 @@ interface AssistantCountChartProps {
     name: string
     value: number
   }[]
+  isLoading?: boolean
 }
 
 interface TooltipProps {
@@ -67,8 +68,8 @@ const CustomXAxisTick = ({ x, y, payload }: any) => {
   );
 };
 
-export function AssistantCountChart({ data }: AssistantCountChartProps) {
-  if (!data?.length) {
+export function AssistantCountChart({ data, isLoading }: AssistantCountChartProps) {
+  if (isLoading) {
     return (
       <Card className="glass-panel interactive cursor-pointer h-[400px]">
         <CardHeader>
@@ -76,6 +77,19 @@ export function AssistantCountChart({ data }: AssistantCountChartProps) {
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!data?.length) {
+    return (
+      <Card className="glass-panel interactive cursor-pointer h-[400px]">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Assistant Types</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
+          <p className="text-gray-500">No data over selected time period</p>
         </CardContent>
       </Card>
     )

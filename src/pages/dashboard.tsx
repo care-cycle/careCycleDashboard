@@ -29,7 +29,7 @@ export default function Dashboard() {
     };
   });
   const [selectedCampaign, setSelectedCampaign] = useState("all");
-  const { metrics, clientInfo, isLoading, todayMetrics, fetchUniqueCallers } = useInitialData();
+  const { metrics, clientInfo, isLoading, isMetricsLoading, todayMetrics, fetchUniqueCallers } = useInitialData();
 
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
@@ -159,26 +159,39 @@ export default function Dashboard() {
     if (date?.from && date?.to && !isLoading) {
       const fetchCustomerData = async () => {
         try {
-          const from = new Date(date.from);
-          const to = new Date(date.to);
+          const from = new Date(date.from!);
+          const to = new Date(date.to!);
           const response = await fetchUniqueCallers(from, to);
           
           if (!isMounted) return;
 
-          if (response.data.success) {
+          if (response.data.success && response.data.data) {
             const { currentPeriod, previousPeriod, comparison } = response.data.data;
             const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
             setCustomersEngaged({
-              value: currentPeriod.uniqueCallers.toLocaleString(),
-              change: previousPeriod.uniqueCallers === 0 
+              value: (currentPeriod?.uniqueCallers ?? 0).toLocaleString(),
+              change: !previousPeriod?.uniqueCallers 
                 ? `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`
-                : `${comparison.percentChange >= 0 ? '+' : ''}${comparison.percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-              description: `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), 'MMM d, yyyy')} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), 'MMM d, yyyy')}`
+                : `${comparison?.percentChange >= 0 ? '+' : ''}${comparison?.percentChange?.toFixed(1) ?? 0}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
+              description: response.data.metadata?.timeRanges?.previousPeriod 
+                ? `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), 'MMM d, yyyy')} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), 'MMM d, yyyy')}`
+                : ''
+            });
+          } else {
+            setCustomersEngaged({
+              value: "0",
+              change: "No data available",
+              description: ""
             });
           }
         } catch (error) {
           console.error('Error fetching unique callers:', error);
+          setCustomersEngaged({
+            value: "0",
+            change: "Error loading data",
+            description: ""
+          });
         }
       };
 
@@ -394,12 +407,17 @@ export default function Dashboard() {
                 <CallDispositionsChart 
                   data={dispositionsData} 
                   dateRange={date}
+                  isLoading={isMetricsLoading}
                 />
                 <div className="space-y-6">
-                  <AssistantCountChart data={assistantCountData} />
+                  <AssistantCountChart 
+                    data={assistantCountData} 
+                    isLoading={isMetricsLoading}
+                  />
                   <CallVolumeChart 
                     data={callVolumeData} 
                     dateRange={date}
+                    isLoading={isMetricsLoading}
                   />
                 </div>
               </div>

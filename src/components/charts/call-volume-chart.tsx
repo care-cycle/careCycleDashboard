@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react"
 interface CallVolumeChartProps {
   data: CallVolumeDataPoint[]
   dateRange: DateRange | undefined
+  isLoading?: boolean
 }
 
 const volumeColors = {
@@ -32,7 +33,7 @@ const HeaderLegend = () => {
   )
 }
 
-export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
+export function CallVolumeChart({ data, dateRange, isLoading }: CallVolumeChartProps) {
 
   const processedData = useMemo(() => {
     if (!data?.length) return [];
@@ -71,7 +72,7 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
     return result;
   }, [data, dateRange]);
 
-  if (!data?.length || !processedData?.length) {
+  if (isLoading) {
     return (
       <Card className="glass-panel interactive cursor-pointer h-[400px]">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -80,6 +81,20 @@ export function CallVolumeChart({ data, dateRange }: CallVolumeChartProps) {
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!data?.length || !processedData?.length) {
+    return (
+      <Card className="glass-panel interactive cursor-pointer h-[400px]">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-gray-900">Call Volume</CardTitle>
+          <HeaderLegend />
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
+          <p className="text-gray-500">No data over selected time period</p>
         </CardContent>
       </Card>
     )
