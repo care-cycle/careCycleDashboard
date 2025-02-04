@@ -4,7 +4,6 @@ import { useAuth } from '@clerk/clerk-react';
 import { UIProvider } from './contexts/ui-context';
 import { AnimatePresence } from 'framer-motion';
 import { RedactionProvider } from './contexts/redaction-context';
-import { PublicRoute } from './components/auth/public-route';
 import { PrivateRoute } from './components/auth/private-route';
 import { VerifyEmail } from "./pages/sign-up/verify-email";
 import SignUpPage from './pages/sign-up';
@@ -18,6 +17,7 @@ import { useInitialData } from './hooks/use-client-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Customers from './pages/customers';
 import CampaignsPage from './pages/campaigns';
+import Appointments from './pages/appointments';
 import { FeedbackWidget } from './components/ui/feedback-widget';
 import { Toaster } from './components/ui/toaster';
 import { PreferencesProvider } from '@/contexts/preferences-context';
@@ -37,6 +37,7 @@ function NonAuthApp() {
           <Route path="/user/billing" element={<BillingPage />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/appointments" element={<Appointments />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -109,6 +110,7 @@ function AuthApp() {
             <Route path="/user/billing" element={<PrivateRoute><BillingPage /></PrivateRoute>} />
             <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
             <Route path="/campaigns" element={<PrivateRoute><CampaignsPage /></PrivateRoute>} />
+            <Route path="/appointments" element={<PrivateRoute><Appointments /></PrivateRoute>} />
             
             {/* Catch all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />

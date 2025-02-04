@@ -1,9 +1,9 @@
-import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard, RotateCw } from "lucide-react"
+import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard, RotateCw, Megaphone, Calendar, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserProfile } from "@/components/layout/user-profile"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { useRedaction } from "@/contexts/redaction-context"
 import { useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -23,6 +23,11 @@ const navigationItems = [
     title: "Customers",
     icon: Users,
     href: "/customers",
+  },
+  {
+    title: "Appointments",
+    icon: Calendar,
+    href: "/appointments",
   },
   {
     title: "Campaigns",
@@ -46,6 +51,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { isRedacted } = useRedaction();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
   
   const handleRefreshData = async () => {
     setIsRefreshing(true);

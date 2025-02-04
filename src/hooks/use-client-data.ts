@@ -126,91 +126,138 @@ interface ClientInfo {
   default_payment_method: any | null;
 }
 
+interface Appointment {
+  id: string
+  customerId: string
+  firstName: string | null
+  lastName: string | null
+  timezone: string | null
+  state: string | null
+  postalCode: string | null
+  appointmentDateTime: string
+  campaignId: string
+  campaignName: string
+  callerId: string | null
+}
+
+interface AppointmentsResponse {
+  results: Appointment[]
+  requestId: string
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
+  const enabled = isLoaded && isSignedIn
 
-  // Essential metrics for header - high priority
-  const { data: todayMetrics, isLoading: todayMetricsLoading } = useQuery({
-    queryKey: ['todayMetrics'],
-    queryFn: () => apiClient.get('/portal/client/metrics/today'),
-    enabled: isLoaded && isSignedIn,
-    refetchInterval: 5 * 60 * 1000,
-    staleTime: 4 * 60 * 1000, // Cache for 4 minutes
-  })
+  // Group all queries together to maintain consistent hook order
+  const queries = {
+    todayMetrics: useQuery({
+      queryKey: ['todayMetrics'],
+      queryFn: () => apiClient.get('/portal/client/metrics/today'),
+      enabled,
+      refetchInterval: 5 * 60 * 1000,
+      staleTime: 4 * 60 * 1000,
+    }),
 
-  // Client info - high priority
-  const { data: clientInfo, isLoading: clientInfoLoading } = useQuery<ClientInfo>({
-    queryKey: ['clientInfo'],
-    queryFn: async () => {
-      const response = await apiClient.get('/portal/client/info')
-      return response.data
-    },
-    enabled: isLoaded && isSignedIn,
-  })
+    clientInfo: useQuery<ClientInfo>({
+      queryKey: ['clientInfo'],
+      queryFn: async () => {
+        const response = await apiClient.get('/portal/client/info')
+        return response.data
+      },
+      enabled,
+    }),
 
-  // Historical metrics - lower priority
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['metrics'],
-    queryFn: () => apiClient.get('/portal/client/metrics'),
-    staleTime: 5 * 60 * 1000,
-    enabled: isLoaded && isSignedIn,
-  })
+    metrics: useQuery({
+      queryKey: ['metrics'],
+      queryFn: () => apiClient.get('/portal/client/metrics'),
+      staleTime: 5 * 60 * 1000,
+      enabled,
+    }),
 
-  // Calls data - lowest priority
-  const { data: calls, isLoading: callsLoading, error: callsError } = useQuery({
-    queryKey: ['calls'],
-    queryFn: async () => {
-      const response = await apiClient.get<CallsResponse>('/portal/client/calls');
-      return response;
-    },
-    enabled: isLoaded && isSignedIn,
-    // Add pagination to reduce initial load
-    select: (response) => {
-      if (!response?.data?.d?.c) {
-        return { data: [] };
-      }
+    calls: useQuery({
+      queryKey: ['calls'],
+      queryFn: async () => {
+        const response = await apiClient.get<CallsResponse>('/portal/client/calls')
+        return response
+      },
+      enabled,
+      select: (response) => {
+        if (!response?.data?.d?.c) {
+          return { data: [] }
+        }
 
-      const transformedData = {
-        data: response.data.d.c.map(call => ({
-          id: call.i,
-          campaignId: call.cid,
-          disposition: call.d,
-          callerId: call.ca,
-          createdAt: call.cr,
-          recordingUrl: call.r,
-          duration: call.du,
-          assistantType: call.at,
-          successEvaluation: call.se,
-          summary: call.su,
-          transcript: call.tr,
-          direction: call.di === 'i' ? 'inbound' : 'outbound',
-          cost: call.co,
-          testFlag: call.tf
-        }))
-      };
-      
-      return transformedData;
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: 1, // Reduce retry attempts
-  })
+        const transformedData = {
+          data: response.data.d.c.map((call: {
+            i: string
+            cid: string
+            d: string
+            ca: string
+            cr: string
+            r: string
+            du: string
+            at: string
+            se: string
+            su: string
+            tr: string
+            di: 'i' | 'o'
+            co: number
+            tf: boolean
+          }) => ({
+            id: call.i,
+            campaignId: call.cid,
+            disposition: call.d,
+            callerId: call.ca,
+            createdAt: call.cr,
+            recordingUrl: call.r,
+            duration: call.du,
+            assistantType: call.at,
+            successEvaluation: call.se,
+            summary: call.su,
+            transcript: call.tr,
+            direction: call.di === 'i' ? 'inbound' : 'outbound',
+            cost: call.co,
+            testFlag: call.tf
+          }))
+        }
+        
+        return transformedData
+      },
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }),
 
-  // Customers data - lowest priority
-  const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => apiClient.get<CustomersResponse>('/portal/client/customers/base'),
-    enabled: isLoaded && isSignedIn,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  })
+    customers: useQuery({
+      queryKey: ['customers'],
+      queryFn: () => apiClient.get<CustomersResponse>('/portal/client/customers/base'),
+      enabled,
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }),
 
-  const { data: campaigns, isLoading: isCampaignsLoading } = useQuery({
-    queryKey: ['campaigns'],
-    queryFn: () => apiClient.get<CampaignsResponse>('/portal/client/campaigns'),
-    staleTime: 5 * 60 * 1000,
-    enabled: isLoaded && isSignedIn,
-    retry: 1,
-  });
+    campaigns: useQuery({
+      queryKey: ['campaigns'],
+      queryFn: () => apiClient.get<CampaignsResponse>('/portal/client/campaigns'),
+      staleTime: 5 * 60 * 1000,
+      enabled,
+      retry: 1,
+    }),
+
+    appointments: useQuery({
+      queryKey: ['appointments'],
+      queryFn: async () => {
+        const response = await apiClient.get<AppointmentsResponse>(
+          '/portal/client/customers/appointments'
+        )
+        return response.data
+      },
+      enabled,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    }),
+  }
 
   const fetchUniqueCallers = useCallback(async (from: Date, to: Date) => {
     const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
@@ -219,24 +266,25 @@ export function useInitialData() {
     return apiClient.get('/portal/client/metrics/unique-callers', {
       params: { from: fromStr, to: toStr }
     })
-  }, []); // No dependencies needed as apiClient and format are stable
+  }, [])
 
-  const isLoading = !isLoaded || todayMetricsLoading || clientInfoLoading;
+  const isLoading = !isLoaded || queries.todayMetrics.isLoading || queries.clientInfo.isLoading
 
   return {
-    metrics: metrics?.data,
-    clientInfo,
-    calls,
-    callsError,
-    todayMetrics: todayMetrics?.data,
-    // Split loading states by priority
-    isHeaderLoading: !isLoaded || todayMetricsLoading || clientInfoLoading,
-    isMetricsLoading: metricsLoading,
-    isCallsLoading: callsLoading,
+    metrics: queries.metrics.data?.data,
+    clientInfo: queries.clientInfo.data,
+    calls: queries.calls.data,
+    callsError: queries.calls.error,
+    todayMetrics: queries.todayMetrics.data?.data,
+    appointments: queries.appointments.data?.results ?? [],
+    isHeaderLoading: !isLoaded || queries.todayMetrics.isLoading || queries.clientInfo.isLoading,
+    isMetricsLoading: queries.metrics.isLoading,
+    isCallsLoading: queries.calls.isLoading,
+    isAppointmentsLoading: queries.appointments.isLoading,
     fetchUniqueCallers,
-    customers: customers?.data,
-    isCustomersLoading: customersLoading,
-    campaigns,
+    customers: queries.customers.data?.data,
+    isCustomersLoading: queries.customers.isLoading,
+    campaigns: queries.campaigns.data,
     isLoading,
   }
 }
@@ -251,6 +299,13 @@ export function useClientData() {
       return response.data
     }
   })
+
+  const fetchAppointments = useCallback(async () => {
+    const response = await apiClient.get<AppointmentsResponse>(
+      '/portal/client/customers/appointments'
+    )
+    return response.data.results
+  }, [])
 
   const mutation = useMutation({
     mutationFn: async (data: Partial<ClientInfo>) => {
@@ -280,6 +335,7 @@ export function useClientData() {
   return {
     clientInfo,
     isLoading,
-    mutate
+    mutate,
+    fetchAppointments
   }
 } 
