@@ -19,6 +19,7 @@ const dispositionColors = {
   // High Volume Neutrals (make up bulk of chart)
   "Busy/No Answer": "#55C39D",                // Rich turquoise
   "Voicemail": "#4B9B8A",                     // Deep turquoise
+  "No Agents Available": "#E5BC47",           // Deep gold (similar to other warning states)
 
   // Warning States
   "Not Interested": "#FFD700",                // Bright gold
