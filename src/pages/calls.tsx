@@ -35,6 +35,7 @@ interface CallsTableProps {
     key: string;
     direction: 'asc' | 'desc' | null;
   };
+  hasSourceTracking: boolean;
 }
 
 const getPageNumbers = (currentPage: number, totalPages: number) => {
@@ -63,7 +64,8 @@ const MemoizedCallsTable = memo(function MemoizedCallsTable({
   showTestCalls,
   showConnectedOnly,
   onSort,
-  sortConfig
+  sortConfig,
+  hasSourceTracking
 }: CallsTableProps) {
   return (
     <CallsTable
@@ -73,6 +75,7 @@ const MemoizedCallsTable = memo(function MemoizedCallsTable({
       showConnectedOnly={showConnectedOnly}
       onSort={onSort}
       sortConfig={sortConfig}
+      hasSourceTracking={hasSourceTracking}
     />
   );
 });
@@ -402,8 +405,10 @@ export default function CallsPage() {
               calls={paginatedCalls}
               onCallSelect={handleCallSelect}
               showTestCalls={showTestCalls}
+              showConnectedOnly={showConnectedOnly}
               onSort={handleSort}
               sortConfig={sortConfig}
+              hasSourceTracking={calls?.hasSourceTracking ?? false}
             />
           )}
         </div>

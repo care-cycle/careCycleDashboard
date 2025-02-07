@@ -21,6 +21,7 @@ import Appointments from './pages/appointments';
 import { FeedbackWidget } from './components/ui/feedback-widget';
 import { Toaster } from './components/ui/toaster';
 import { PreferencesProvider } from '@/contexts/preferences-context';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Create a client
 const queryClient = new QueryClient()
@@ -124,7 +125,7 @@ function AuthApp() {
 // Main App component
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <RedactionProvider>
           {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
@@ -132,6 +133,6 @@ export default function App() {
           <Toaster />
         </RedactionProvider>
       </QueryClientProvider>
-    </>
+    </ErrorBoundary>
   );
 }

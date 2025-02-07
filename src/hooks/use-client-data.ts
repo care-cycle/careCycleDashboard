@@ -22,7 +22,9 @@ interface CallsResponse {
       di: 'i' | 'o';   
       co: number;      
       tf: boolean;     
+      s?: string | null;
     }>;
+    hasSourceTracking: boolean;
   };
 }
 
@@ -145,6 +147,50 @@ interface AppointmentsResponse {
   requestId: string
 }
 
+interface ContactRateDataPoint {
+  hour: string
+  formattedHour: string
+  formattedDate: string
+  totalCalls: number
+  uniqueCallers: number
+  totalCustomers: number
+  dispositionCounts: Record<string, number>
+}
+
+interface ContactRateResponse {
+  success: boolean
+  data: ContactRateDataPoint[]
+  metadata: {
+    timezone: string
+    timeRange: {
+      from: string
+      to: string
+    }
+    totalCustomers: number
+  }
+}
+
+interface TransformedCallsData {
+  data: Array<{
+    id: string;
+    campaignId: string;
+    disposition: string;
+    callerId: string;
+    createdAt: string;
+    recordingUrl: string;
+    duration: string;
+    assistantType: string;
+    successEvaluation: string;
+    summary: string;
+    transcript: string;
+    direction: 'inbound' | 'outbound';
+    cost: number;
+    testFlag: boolean;
+    source: string | null;
+  }>;
+  hasSourceTracking: boolean;
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
   const enabled = isLoaded && isSignedIn
@@ -182,9 +228,9 @@ export function useInitialData() {
         return response
       },
       enabled,
-      select: (response) => {
+      select: (response): TransformedCallsData => {
         if (!response?.data?.d?.c) {
-          return { data: [] }
+          return { data: [], hasSourceTracking: false }
         }
 
         const transformedData = {
@@ -203,6 +249,7 @@ export function useInitialData() {
             di: 'i' | 'o'
             co: number
             tf: boolean
+            s?: string | null
           }) => ({
             id: call.i,
             campaignId: call.cid,
@@ -217,8 +264,10 @@ export function useInitialData() {
             transcript: call.tr,
             direction: call.di === 'i' ? 'inbound' : 'outbound',
             cost: call.co,
-            testFlag: call.tf
-          }))
+            testFlag: call.tf,
+            source: call.s || null
+          })),
+          hasSourceTracking: response.data.d.hasSourceTracking
         }
         
         return transformedData
@@ -307,6 +356,19 @@ export function useClientData() {
     return response.data.results
   }, [])
 
+  const fetchContactRates = useCallback(async (from: Date, to: Date, campaignId: string) => {
+    const searchParams = new URLSearchParams({
+      from: from.toISOString(),
+      to: to.toISOString(),
+      campaignId
+    });
+
+    const response = await apiClient.get<ContactRateResponse>(
+      `/portal/client/metrics/contact-rates?${searchParams.toString()}`
+    )
+    return response.data
+  }, [])
+
   const mutation = useMutation({
     mutationFn: async (data: Partial<ClientInfo>) => {
       let endpoint = '/portal/client/info'
@@ -336,6 +398,7 @@ export function useClientData() {
     clientInfo,
     isLoading,
     mutate,
-    fetchAppointments
+    fetchAppointments,
+    fetchContactRates
   }
 } 

@@ -7,6 +7,7 @@ import { Link, useLocation } from "react-router-dom"
 import { useRedaction } from "@/contexts/redaction-context"
 import { useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
+import { useClientData } from "@/hooks/use-client-data"
 
 const navigationItems = [
   {
@@ -52,7 +53,14 @@ export function Sidebar({ className }: SidebarProps) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const location = useLocation();
+  const { clientInfo } = useClientData();
   
+  const isNodableClient = clientInfo?.id === "10c8d3d0-080d-4316-9787-37882c1c8624";
+  const logoSrc = isNodableClient 
+    ? "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/66bfa1f56b8fef22f0e4dfe5_Nodable%20Logo%20Black%20Text%2072%20ppi.png"
+    : "https://cdn.prod.website-files.com/67603aac125a925e647522be/67a63954975008de5cd2df32_dash-careCycle-logo.png";
+  const logoAlt = isNodableClient ? "Nodable Labs" : "CareCycle";
+
   const handleRefreshData = async () => {
     setIsRefreshing(true);
     try {
@@ -96,9 +104,9 @@ export function Sidebar({ className }: SidebarProps) {
       )}>
         <div className="p-6">
           <img 
-            src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/66bfa1f56b8fef22f0e4dfe5_Nodable%20Logo%20Black%20Text%2072%20ppi.png"
-            alt="Nodable Labs"
-            className="h-8 w-auto"
+            src={logoSrc}
+            alt={logoAlt}
+            className="h-12 w-auto"
           />
         </div>
         <div className="flex-1 px-4">

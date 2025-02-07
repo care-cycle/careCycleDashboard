@@ -13,4 +13,5 @@ export interface Call {
   direction: 'inbound' | 'outbound';
   cost: number;
   testFlag: boolean;
+  source?: string | null;
 } 

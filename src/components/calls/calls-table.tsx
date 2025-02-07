@@ -25,8 +25,8 @@ import { useRedaction } from '@/contexts/redaction-context';
 import { useNavigate } from 'react-router-dom';
 
 interface CallsTableProps {
-  onCallSelect: (call: Call) => void;
   calls: Call[];
+  onCallSelect: (call: Call) => void;
   showTestCalls: boolean;
   showConnectedOnly: boolean;
   onSort: (key: string, direction: 'asc' | 'desc' | null) => void;
@@ -34,6 +34,7 @@ interface CallsTableProps {
     key: string;
     direction: 'asc' | 'desc' | null;
   };
+  hasSourceTracking?: boolean;
 }
 
 const TestFlask = () => (
@@ -88,7 +89,7 @@ const redactData = (value: string) => {
   return value.replace(/./g, '*');
 };
 
-type ColumnKey = "Caller ID" | "Assistant Type" | "Direction" | "Duration" | "Disposition" | "Created At";
+type ColumnKey = "Caller ID" | "Assistant Type" | "Direction" | "Duration" | "Disposition" | "Created At" | "Source";
 
 export function CallsTable({ 
   calls, 
@@ -96,7 +97,8 @@ export function CallsTable({
   showTestCalls, 
   showConnectedOnly,
   onSort,
-  sortConfig 
+  sortConfig,
+  hasSourceTracking = false
 }: CallsTableProps) {
   const { isRedacted } = useRedaction();
   const navigate = useNavigate();
@@ -134,6 +136,25 @@ export function CallsTable({
     });
   }, [calls, showTestCalls, showConnectedOnly, nonConnectedDispositions]);
 
+  // Memoize the columns array
+  const columns = useMemo<ColumnKey[]>(() => {
+    const baseColumns: ColumnKey[] = [
+      "Caller ID",
+      "Assistant Type",
+      "Direction",
+      "Duration",
+      "Disposition",
+      "Created At"
+    ];
+
+    // Add Source column if campaign has source tracking
+    if (hasSourceTracking) {
+      baseColumns.push("Source");
+    }
+
+    return baseColumns;
+  }, [hasSourceTracking]);
+
   // Add this mapping object near the top of the component
   const columnToDataKeyMap = useMemo(() => ({
     "Caller ID": "callerId",
@@ -141,18 +162,9 @@ export function CallsTable({
     "Direction": "direction",
     "Duration": "duration",
     "Disposition": "disposition",
-    "Created At": "createdAt"
+    "Created At": "createdAt",
+    "Source": "source"
   } as const), []); // Use const assertion to preserve literal types
-
-  // Memoize the columns array
-  const columns = useMemo<ColumnKey[]>(() => [
-    "Caller ID",
-    "Assistant Type",
-    "Direction",
-    "Duration",
-    "Disposition",
-    "Created At"
-  ], []);
 
   // Add these sensors for drag and drop
   const sensors = useSensors(
@@ -240,6 +252,9 @@ export function CallsTable({
                     {column === "Duration" && call.duration}
                     {column === "Disposition" && call.disposition}
                     {column === "Created At" && format(new Date(call.createdAt), 'MMM d, yyyy h:mm a')}
+                    {column === "Source" && (
+                      <span className="flex items-center justify-center">{call.source || '-'}</span>
+                    )}
                   </TableCell>
                 ))}
                 <TableCell>

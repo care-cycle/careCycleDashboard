@@ -4,7 +4,7 @@ interface CampaignSelectProps {
   value: string
   onValueChange: (value: string) => void
   isLoading?: boolean
-  campaigns?: Array<{ type: string; name: string }>
+  campaigns?: Array<{ id: string; name: string }>
 }
 
 export function CampaignSelect({ 
@@ -32,8 +32,8 @@ export function CampaignSelect({
         <SelectItem value="all">All Campaigns</SelectItem>
         {campaigns?.map((campaign) => (
           <SelectItem 
-            key={campaign.type}
-            value={campaign.type}
+            key={campaign.id}
+            value={campaign.id}
           >
             {campaign.name}
           </SelectItem>

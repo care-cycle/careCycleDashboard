@@ -4,6 +4,7 @@ import { RootLayout } from '@/components/layout/root-layout'
 import { KPICard } from '@/components/metrics/kpi-card'
 import { CallDispositionsChart } from '@/components/charts/call-dispositions-chart'
 import { CallVolumeChart } from '@/components/charts/call-volume-chart'
+import { ContactRateChart } from '@/components/charts/contact-rate-chart'
 import { DateRangePicker } from '@/components/date-range-picker'
 import { CampaignSelect } from '@/components/campaign-select'
 import { CallsByCampaign } from '@/components/metrics/calls-by-campaign'
@@ -15,6 +16,69 @@ import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
 import { format, subDays } from 'date-fns';
 import { getTopMetrics } from '@/lib/metrics'
+
+interface Campaign {
+  id: string
+  name: string
+  type: string
+  hours: Array<{
+    hour: string
+    hourFormatted: string
+    dateFormatted: string
+    inbound: number
+    outbound: number
+    uniqueCallers: number
+    totalCustomers: number
+    totalMs: number
+    dispositionCounts: Record<string, number>
+    assistantTypeCounts: Record<string, number>
+  }>
+}
+
+interface MetricsData {
+  total: Campaign['hours']
+  campaigns?: Campaign[]
+}
+
+interface Metrics {
+  data?: MetricsData
+}
+
+interface ClientInfo {
+  id: string
+  name: string
+  internalName?: string
+  campaigns?: Campaign[]
+}
+
+interface TimeseriesDataPoint {
+  timestamp: Date
+  hour: string
+  formattedHour: string
+  formattedDate: string
+  [key: string]: any
+}
+
+interface CallVolumeDataPoint extends TimeseriesDataPoint {
+  Inbound: number
+  Outbound: number
+}
+
+interface ContactRateDataPoint extends TimeseriesDataPoint {
+  totalCalls: number
+  uniqueCallers: number
+  totalCustomers: number
+  dispositionCounts: Record<string, number>
+}
+
+interface AssistantCountDataPoint {
+  name: string
+  value: number
+}
+
+interface AssistantTypeLabels {
+  [key: string]: string
+}
 
 export default function Dashboard() {
   const today = new Date()
@@ -44,33 +108,36 @@ export default function Dashboard() {
     if (selectedCampaign === 'all') {
       campaignData = metrics.data.total;
     } else {
-      const campaign = metrics.data.campaigns?.find(c => c.type === selectedCampaign);
+      const campaign = metrics.data.campaigns?.find((c: Campaign) => c.id === selectedCampaign);
       campaignData = campaign?.hours;
     }
 
     if (!campaignData?.length) return [];
 
     const rawData = campaignData
-      .filter(metric => {
+      .filter((metric: Campaign['hours'][number]) => {
         const metricDate = new Date(metric.hour);
-        return metricDate >= startDate && metricDate <= endDate;
+        return date?.from && date?.to && metricDate >= date.from && metricDate <= date.to;
       })
-      .map(metric => ({
+      .map((metric: Campaign['hours'][number]) => ({
         timestamp: new Date(metric.hour),
+        hour: metric.hour,
         formattedHour: metric.hourFormatted,
         formattedDate: metric.dateFormatted,
         Inbound: Number(metric.inbound) || 0,
         Outbound: Number(metric.outbound) || 0
       }));
 
-    return aggregateTimeseriesData(
+    return aggregateTimeseriesData<CallVolumeDataPoint>(
       rawData,
-      date,
+      { from: date?.from || new Date(), to: date?.to || new Date() },
       (points) => ({
-        Inbound: points.reduce((sum, p) => sum + p.Inbound, 0),
-        Outbound: points.reduce((sum, p) => sum + p.Outbound, 0),
+        timestamp: points[0].timestamp,
+        hour: points[0].hour,
         formattedHour: points[0].formattedHour,
-        formattedDate: points[0].formattedDate
+        formattedDate: points[0].formattedDate,
+        Inbound: points.reduce((sum, p) => sum + p.Inbound, 0),
+        Outbound: points.reduce((sum, p) => sum + p.Outbound, 0)
       })
     );
   }, [date, metrics, selectedCampaign, isLoading]);
@@ -88,18 +155,18 @@ export default function Dashboard() {
     if (selectedCampaign === 'all') {
       campaignData = metrics.data.total;
     } else {
-      const campaign = metrics.data.campaigns?.find(c => c.type === selectedCampaign);
+      const campaign = metrics.data.campaigns?.find((c: Campaign) => c.id === selectedCampaign);
       campaignData = campaign?.hours;
     }
 
     if (!campaignData?.length) return [];
 
     const rawData = campaignData
-      .filter(metric => {
+      .filter((metric: Campaign['hours'][number]) => {
         const metricDate = new Date(metric.hour);
         return metricDate >= startDate && metricDate <= endDate;
       })
-      .map(metric => ({
+      .map((metric: Campaign['hours'][number]) => ({
         timestamp: new Date(metric.hour),
         formattedHour: metric.hourFormatted,
         formattedDate: metric.dateFormatted,
@@ -111,7 +178,7 @@ export default function Dashboard() {
 
     return aggregateTimeseriesData(
       rawData,
-      date,
+      { from: date?.from || new Date(), to: date?.to || new Date() },
       (points) => {
         // Aggregate all disposition counts
         const dispositions = points.reduce((acc, point) => {
@@ -211,25 +278,31 @@ export default function Dashboard() {
       ? metrics.data.campaigns
       : Object.values(metrics.data.campaigns);
       
-    return campaignsArray.map(campaign => {
+    return campaignsArray.map((campaign: Campaign) => {
       // Get all hours for this campaign
       const hours = campaign.hours || [];
       
       // Calculate total calls for current period
-      const currentPeriodCalls = hours.reduce((sum, hour) => {
+      const currentPeriodCalls = hours.reduce((sum: number, hour: Campaign['hours'][number]) => {
         const hourDate = new Date(hour.hour);
-        if (hourDate >= date?.from && hourDate <= date?.to) {
+        if (date?.from && date?.to && hourDate >= date.from && hourDate <= date.to) {
           return sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0));
         }
         return sum;
       }, 0);
 
       // Calculate previous period calls
-      const daysDiff = Math.ceil((date?.to?.getTime() - date?.from?.getTime()) / (1000 * 60 * 60 * 24));
-      const previousFrom = new Date(date?.from?.getTime() - (daysDiff * 24 * 60 * 60 * 1000));
-      const previousTo = new Date(date?.from?.getTime() - 1);
+      const daysDiff = date?.from && date?.to 
+        ? Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const previousFrom = date?.from 
+        ? new Date(date.from.getTime() - (daysDiff * 24 * 60 * 60 * 1000))
+        : new Date();
+      const previousTo = date?.from 
+        ? new Date(date.from.getTime() - 1)
+        : new Date();
       
-      const previousPeriodCalls = hours.reduce((sum, hour) => {
+      const previousPeriodCalls = hours.reduce((sum: number, hour: Campaign['hours'][number]) => {
         const hourDate = new Date(hour.hour);
         if (hourDate >= previousFrom && hourDate <= previousTo) {
           return sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0));
@@ -253,53 +326,42 @@ export default function Dashboard() {
     if (selectedCampaign === 'all') {
       campaignData = metrics.data.total;
     } else {
-      const campaign = metrics.data.campaigns?.find(c => c.type === selectedCampaign);
+      const campaign = metrics.data.campaigns?.find((c: Campaign) => c.id === selectedCampaign);
       campaignData = campaign?.hours;
     }
 
     if (!campaignData?.length) return { value: "0", change: "N/A", description: "" };
 
-    // Calculate current period duration
-    const currentPeriodMs = campaignData
-      .filter(metric => {
+    const rawData = campaignData
+      .filter((metric: Campaign['hours'][number]) => {
         const metricDate = new Date(metric.hour);
-        return metricDate >= date?.from && metricDate <= date?.to;
+        return date?.from && date?.to && metricDate >= date.from && metricDate <= date.to;
       })
-      .reduce((sum, metric) => sum + (Number(metric.totalMs) || 0), 0);
+      .map((metric: Campaign['hours'][number]) => ({
+        hour: metric.hour,
+        formattedHour: metric.hourFormatted,
+        formattedDate: metric.dateFormatted,
+        totalMs: Number(metric.totalMs || 0)
+      }));
 
-    // Calculate the duration of the selected period in days
-    const daysDiff = Math.ceil((date?.to?.getTime() - date?.from?.getTime()) / (1000 * 60 * 60 * 24)) + 1; // +1 because range is inclusive
-    
-    // Calculate the previous period
-    const previousFrom = new Date(date?.from?.getTime() - (daysDiff * 24 * 60 * 60 * 1000));
-    const previousTo = new Date(date?.from?.getTime() - 1);
-    
-    const previousPeriodMs = campaignData
-      .filter(metric => {
-        const metricDate = new Date(metric.hour);
-        return metricDate >= previousFrom && metricDate <= previousTo;
+    const aggregatedData = aggregateTimeseriesData(
+      rawData,
+      { from: date?.from || new Date(), to: date?.to || new Date() },
+      (points) => ({
+        hour: points[0].hour,
+        formattedHour: points[0].formattedHour,
+        formattedDate: points[0].formattedDate,
+        totalMs: points.reduce((sum, point) => sum + point.totalMs, 0)
       })
-      .reduce((sum, metric) => sum + (Number(metric.totalMs) || 0), 0);
+    );
 
     // Convert milliseconds to hours
-    const currentHours = Math.round(currentPeriodMs / (1000 * 60 * 60));
-    const previousHours = Math.round(previousPeriodMs / (1000 * 60 * 60));
+    const totalHours = Math.round(aggregatedData[0]?.totalMs / (1000 * 60 * 60)) || 0;
 
-    // If we have no previous data, just show the current hours
-    if (previousHours === 0) {
-      return {
-        value: `${currentHours.toLocaleString()} hrs`,
-        change: `No data for previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-        description: `${previousFrom.toLocaleDateString()} - ${previousTo.toLocaleDateString()}`
-      };
-    }
-
-    // Calculate percentage change
-    const percentChange = ((currentHours - previousHours) / previousHours * 100);
     return {
-      value: `${currentHours.toLocaleString()} hrs`,
-      change: `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? '' : 's'}`,
-      description: `${previousFrom.toLocaleDateString()} - ${previousTo.toLocaleDateString()}`
+      value: `${totalHours.toLocaleString()} hrs`,
+      change: "N/A",
+      description: ""
     };
   }, [date, metrics, selectedCampaign, isLoading]);
 
@@ -310,7 +372,7 @@ export default function Dashboard() {
     if (selectedCampaign === 'all') {
       campaignData = metrics.data.total;
     } else {
-      const campaign = metrics.data.campaigns?.find(c => c.type === selectedCampaign);
+      const campaign = metrics.data.campaigns?.find((c: Campaign) => c.id === selectedCampaign);
       campaignData = campaign?.hours;
     }
 
@@ -318,22 +380,22 @@ export default function Dashboard() {
 
     // Aggregate assistant type counts across the selected time period
     const typeCounts = campaignData
-      .filter(metric => {
+      .filter((metric: Campaign['hours'][number]) => {
         const metricDate = new Date(metric.hour);
-        return metricDate >= date?.from && metricDate <= date?.to;
+        return date?.from && date?.to && metricDate >= date.from && metricDate <= date.to;
       })
-      .reduce((acc, hour) => {
+      .reduce((acc: Record<string, number>, hour: Campaign['hours'][number]) => {
         Object.entries(hour.assistantTypeCounts || {}).forEach(([type, count]) => {
           acc[type] = (acc[type] || 0) + Number(count);
         });
         return acc;
-      }, {} as Record<string, number>);
+      }, {});
 
     // Convert to array format and map to friendly names
     return Object.entries(typeCounts)
-      .map(([type, count]) => ({
+      .map(([type, count]): AssistantCountDataPoint => ({
         name: assistantTypeLabels[type] || type,
-        value: count
+        value: Number(count)
       }))
       .sort((a, b) => b.value - a.value); // Sort by count descending
   }, [date, metrics, selectedCampaign, isLoading]);
@@ -349,7 +411,10 @@ export default function Dashboard() {
                 value={selectedCampaign}
                 onValueChange={setSelectedCampaign}
                 isLoading={isLoading}
-                campaigns={clientInfo?.campaigns}
+                campaigns={metrics?.data?.campaigns?.map((c: Campaign) => ({
+                  id: c.id,
+                  name: c.name
+                })) || []}
               />
               <DateRangePicker 
                 date={date} 
@@ -402,7 +467,6 @@ export default function Dashboard() {
                   info={`Total duration of all calls`}
                 />
               </div>
-
               <div className="grid gap-6 grid-cols-2">
                 <CallDispositionsChart 
                   data={dispositionsData} 
@@ -421,6 +485,10 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
+              <ContactRateChart 
+                dateRange={date}
+                campaignId={selectedCampaign === 'all' ? metrics?.data?.campaigns?.[0]?.id : metrics?.data?.campaigns?.find((c: Campaign) => c.id === selectedCampaign)?.id}
+              />
             </>
           )}
 
