@@ -75,7 +75,8 @@ export function Sidebar({ className }: SidebarProps) {
         queryClient.invalidateQueries({ queryKey: ['metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['calls'] }),
         queryClient.invalidateQueries({ queryKey: ['customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+        queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+        queryClient.invalidateQueries({ queryKey: ['inquiries'] })
       ]);
     } finally {
       setIsRefreshing(false);
