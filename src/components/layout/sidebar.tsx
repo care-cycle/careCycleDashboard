@@ -1,4 +1,4 @@
-import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard, RotateCw, Megaphone, Calendar, Settings } from "lucide-react"
+import { LayoutDashboard, Phone, GitBranch, Users, CircuitBoard, RotateCw, Megaphone, Calendar, Settings, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +29,11 @@ const navigationItems = [
     title: "Appointments",
     icon: Calendar,
     href: "/appointments",
+  },
+  {
+    title: "Inquiries",
+    icon: MessageSquare,
+    href: "/inquiries",
   },
   {
     title: "Campaigns",

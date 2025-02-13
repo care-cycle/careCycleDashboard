@@ -4,9 +4,9 @@ export function Toaster() {
   return (
     <Sonner
       position="top-center"
-      closeButton
       theme="light"
       expand={false}
+      richColors
       offset="6rem"
       style={{
         zIndex: 999999,
@@ -22,6 +22,8 @@ export function Toaster() {
         },
         duration: 4000,
       }}
+      visibleToasts={1}
+      closeButton={false}
     />
   )
 }

@@ -191,6 +191,24 @@ interface TransformedCallsData {
   hasSourceTracking: boolean;
 }
 
+interface Inquiry {
+  id: string;
+  customerCampaignId: string;
+  callId: string;
+  inquiry: string;
+  response?: string;
+  status: 'new' | 'pending_resolution' | 'unresolved' | 'resolved' | 'appointment_scheduled';
+  resolvedAt?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface InquiriesResponse {
+  success: boolean;
+  data: Inquiry[];
+}
+
 export function useInitialData() {
   const { isLoaded, isSignedIn } = useAuth()
   const enabled = isLoaded && isSignedIn
@@ -306,6 +324,18 @@ export function useInitialData() {
       refetchOnMount: false,
       refetchOnWindowFocus: false,
     }),
+
+    inquiries: useQuery<InquiriesResponse>({
+      queryKey: ['inquiries'],
+      queryFn: async () => {
+        const response = await apiClient.get('/portal/client/inquiries')
+        return response.data
+      },
+      enabled,
+      staleTime: 0, // Always consider data stale
+      refetchOnMount: true,
+      refetchOnWindowFocus: true
+    }),
   }
 
   const fetchUniqueCallers = useCallback(async (from: Date, to: Date) => {
@@ -335,6 +365,8 @@ export function useInitialData() {
     isCustomersLoading: queries.customers.isLoading,
     campaigns: queries.campaigns.data,
     isLoading,
+    inquiries: queries.inquiries.data?.data ?? [],
+    isInquiriesLoading: queries.inquiries.isLoading,
   }
 }
 
