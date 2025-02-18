@@ -73,6 +73,12 @@ export function UserProfile({ isRedacted, className, isParentExpanded = false }:
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (!isParentExpanded) {
+      setIsExpanded(false)
+    }
+  }, [isParentExpanded])
+
   const menuItems = [
     { 
       icon: User, 
@@ -161,7 +167,11 @@ export function UserProfile({ isRedacted, className, isParentExpanded = false }:
             "transition-opacity duration-300",
             isParentExpanded ? "opacity-100" : "opacity-0"
           )}>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            )}
           </div>
         </button>
       </div>
