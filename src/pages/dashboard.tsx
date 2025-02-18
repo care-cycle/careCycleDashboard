@@ -16,7 +16,6 @@ import { assistantTypeLabels } from '@/components/charts/assistant-count-chart'
 import { AssistantCountChart } from '@/components/charts/assistant-count-chart'
 import { format, subDays } from 'date-fns';
 import { getTopMetrics } from '@/lib/metrics'
-import { RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Campaign {
@@ -94,21 +93,8 @@ export default function Dashboard() {
       to: today
     };
   });
-  const [isInitialRender, setIsInitialRender] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState("all");
   const { metrics, clientInfo, isLoading, isMetricsLoading, todayMetrics, fetchUniqueCallers } = useInitialData();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialRender(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const isPageLoading = isLoading || isMetricsLoading || isInitialRender;
-  useEffect(() => {
-    console.log('Loading states:', { isLoading, isMetricsLoading, isPageLoading });
-  }, [isLoading, isMetricsLoading, isPageLoading]);
 
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
@@ -425,7 +411,7 @@ export default function Dashboard() {
               <CampaignSelect
                 value={selectedCampaign}
                 onValueChange={setSelectedCampaign}
-                isLoading={isPageLoading}
+                isLoading={isLoading || isMetricsLoading}
                 campaigns={metrics?.data?.campaigns?.map((c: Campaign) => ({
                   id: c.id,
                   name: c.name
@@ -446,57 +432,43 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {isPageLoading ? (
-            <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9999 }}>
-              <div className="absolute inset-0 bg-black opacity-50" />
-              <div className="relative flex flex-col items-center justify-center gap-4">
-                <div className="bg-white p-8 rounded-lg shadow-2xl flex flex-col items-center gap-4">
-                  <RotateCw className="h-16 w-16 animate-spin text-primary" />
-                  <p className="text-lg font-semibold text-gray-900">Loading dashboard data...</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-6 md:grid-cols-2">
-                <KPICard
-                  title="Customers Engaged"
-                  value={customersEngaged.value}
-                  change={customersEngaged.change}
-                  info={`Number of unique customers who interacted with our AI assistants`}
-                />
-                <KPICard
-                  title="Total Duration"
-                  value={totalDuration.value}
-                  change={totalDuration.change}
-                  info={`Total duration of all calls`}
-                />
-              </div>
-              <div className="grid gap-6 grid-cols-2">
-                <CallDispositionsChart 
-                  data={dispositionsData} 
-                  dateRange={date}
-                  isLoading={isMetricsLoading}
-                />
-                <div className="space-y-6">
-                  <AssistantCountChart 
-                    data={assistantCountData} 
-                    isLoading={isMetricsLoading}
-                  />
-                  <CallVolumeChart 
-                    data={callVolumeData} 
-                    dateRange={date}
-                    isLoading={isMetricsLoading}
-                  />
-                </div>
-              </div>
-              <ContactRateChart 
-                dateRange={date}
-                campaignId={selectedCampaign === 'all' ? metrics?.data?.campaigns?.[0]?.id : metrics?.data?.campaigns?.find((c: Campaign) => c.id === selectedCampaign)?.id}
+          <div className="grid gap-6 md:grid-cols-2">
+            <KPICard
+              title="Customers Engaged"
+              value={customersEngaged.value}
+              change={customersEngaged.change}
+              info={`Number of unique customers who interacted with our AI assistants`}
+            />
+            <KPICard
+              title="Total Duration"
+              value={totalDuration.value}
+              change={totalDuration.change}
+              info={`Total duration of all calls`}
+            />
+          </div>
+          <div className="grid gap-6 grid-cols-2">
+            <CallDispositionsChart 
+              data={dispositionsData} 
+              dateRange={date}
+              isLoading={isMetricsLoading}
+            />
+            <div className="space-y-6">
+              <AssistantCountChart 
+                data={assistantCountData} 
+                isLoading={isMetricsLoading}
               />
-              <CallsByCampaign data={campaignMetrics || []} />
-            </>
-          )}
+              <CallVolumeChart 
+                data={callVolumeData} 
+                dateRange={date}
+                isLoading={isMetricsLoading}
+              />
+            </div>
+          </div>
+          <ContactRateChart 
+            dateRange={date}
+            campaignId={selectedCampaign === 'all' ? metrics?.data?.campaigns?.[0]?.id : metrics?.data?.campaigns?.find((c: Campaign) => c.id === selectedCampaign)?.id}
+          />
+          <CallsByCampaign data={campaignMetrics || []} />
         </div>
       </PageTransition>
     </RootLayout>

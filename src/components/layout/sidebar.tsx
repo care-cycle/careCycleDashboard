@@ -59,16 +59,24 @@ const navigationItems = [
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 function useSidebarState() {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const saved = localStorage.getItem('sidebar-expanded');
-    return saved ? JSON.parse(saved) : false;
-  });
-
+  // Force initial state to be false (collapsed) and ignore localStorage on first load
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Store the user's last manual interaction preference
   useEffect(() => {
-    localStorage.setItem('sidebar-expanded', JSON.stringify(isExpanded));
-  }, [isExpanded]);
+    const saved = localStorage.getItem('sidebar-expanded');
+    if (saved === null) {
+      localStorage.setItem('sidebar-expanded', 'false');
+    }
+  }, []);
 
-  return [isExpanded, setIsExpanded] as const;
+  // Only save to localStorage when user explicitly interacts
+  const handleExpand = (expanded: boolean) => {
+    setIsExpanded(expanded);
+    localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
+  };
+
+  return [isExpanded, handleExpand] as const;
 }
 
 // Helper function to check if a navigation item is active
