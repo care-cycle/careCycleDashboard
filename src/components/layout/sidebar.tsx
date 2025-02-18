@@ -6,14 +6,14 @@ import { UserProfile } from "@/components/layout/user-profile"
 import { Link, useLocation } from "react-router-dom"
 import { useRedaction } from "@/contexts/redaction-context"
 import { useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useClientData } from "@/hooks/use-client-data"
 
 const navigationItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
   },
   {
     title: "Calls",
@@ -58,10 +58,32 @@ const navigationItems = [
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
+function useSidebarState() {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const saved = localStorage.getItem('sidebar-expanded');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-expanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
+
+  return [isExpanded, setIsExpanded] as const;
+}
+
+// Helper function to check if a navigation item is active
+const isPathActive = (itemHref: string, currentPath: string) => {
+  if (itemHref === "/" && currentPath === "/") return true;
+  if (itemHref === "/") return false;
+  return currentPath.startsWith(itemHref);
+};
+
 export function Sidebar({ className }: SidebarProps) {
   const { isRedacted } = useRedaction();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isExpanded, setIsExpanded] = useSidebarState();
+  const location = useLocation();
   
   const logoSrc = {
     collapsed: "/carecyclelogo.svg",
@@ -122,18 +144,24 @@ export function Sidebar({ className }: SidebarProps) {
           "shadow-[0_0_15px_rgba(0,0,0,0.03)]",
           "transition-all duration-300 ease-in-out",
           "flex flex-col",
-          "w-[80px] hover:w-[260px] group/sidebar",
-          "hover:shadow-lg hover:bg-white/60",
+          isExpanded ? "w-[260px]" : "w-[80px]",
+          isExpanded ? "shadow-lg bg-white/60" : "",
           "overflow-hidden",
           className
         )}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
       >
         <div className="px-2 pt-4 pb-2 flex items-center">
           <div className="relative w-[260px] h-10">
             <img 
               src={logoSrc.expanded}
               alt={logoAlt}
-              className="absolute top-0 left-0 h-10 w-[260px] transition-all duration-300 opacity-0 group-hover/sidebar:opacity-100 object-contain object-left bg-white/40 left-[10px]"
+              className={cn(
+                "absolute top-0 left-0 h-10 w-[260px] transition-all duration-300",
+                "object-contain object-left bg-white/40 left-[10px]",
+                isExpanded ? "opacity-100" : "opacity-0"
+              )}
             />
             <img 
               src={logoSrc.collapsed}
@@ -162,13 +190,17 @@ export function Sidebar({ className }: SidebarProps) {
                     <div className="relative flex items-center w-[260px]">
                       <item.icon className={cn(
                         "h-4 w-4 absolute left-[15px]",
-                        item.disabled && "text-gray-500 opacity-50"
+                        item.disabled && "text-gray-500 opacity-50",
+                        isPathActive(item.href, location.pathname) ? "text-primary" : "text-muted-foreground"
                       )} />
                       <span className={cn(
                         "absolute left-[44px] whitespace-nowrap flex items-center gap-2",
                         "transition-all duration-300 ease-in-out",
-                        item.disabled ? "opacity-0 group-hover/sidebar:opacity-50" : "opacity-0 group-hover/sidebar:opacity-100",
-                        item.disabled && "text-gray-500"
+                        item.disabled 
+                          ? isExpanded ? "opacity-50" : "opacity-0" 
+                          : isExpanded ? "opacity-100" : "opacity-0",
+                        item.disabled && "text-gray-500",
+                        isPathActive(item.href, location.pathname) && "text-primary font-medium"
                       )}>
                         {item.title}
                         {item.badge && (
@@ -209,7 +241,7 @@ export function Sidebar({ className }: SidebarProps) {
               <span className={cn(
                 "absolute left-[44px] whitespace-nowrap",
                 "transition-all duration-300 ease-in-out",
-                "opacity-0 group-hover/sidebar:opacity-100"
+                isExpanded ? "opacity-100" : "opacity-0"
               )}>
                 Refresh Data
               </span>
