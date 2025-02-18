@@ -1,11 +1,13 @@
 interface PageHeaderProps {
   title: string
   description?: string
+  className?: string
+  noBorder?: boolean
 }
 
-export function PageHeader({ title, description }: PageHeaderProps) {
+export function PageHeader({ title, description, className, noBorder }: PageHeaderProps) {
   return (
-    <div className="border-b pb-5">
+    <div className={`${!noBorder ? 'border-b pb-5' : ''} ${className || ''}`}>
       <div className="max-w-[800px]">
         <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
         {description && (
