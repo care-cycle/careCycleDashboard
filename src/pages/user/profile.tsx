@@ -41,37 +41,37 @@ function AuthProfilePage() {
   
   return (
     <RootLayout hideKnowledgeSearch>
-      <div className="space-y-6">
+      <div className="space-y-6 relative z-20">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="organization">Organization</TabsTrigger>
-            <TabsTrigger value="operating-hours">Operating Hours</TabsTrigger>
+          <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="profile">Profile</TabsTrigger>
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="organization">Organization</TabsTrigger>
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="operating-hours">Operating Hours</TabsTrigger>
           </TabsList>
-          <TabsContent value="profile" className="space-y-6">
+          <TabsContent value="profile" className="space-y-6 relative z-30">
             <UserProfile />
           </TabsContent>
-          <TabsContent value="organization" className="space-y-6">
+          <TabsContent value="organization" className="space-y-6 relative z-30">
             {organization ? <OrganizationProfile /> : <CreateOrganization />}
           </TabsContent>
-          <TabsContent value="operating-hours" className="space-y-6">
+          <TabsContent value="operating-hours" className="space-y-6 relative z-30">
             <Tabs defaultValue="regular">
-              <TabsList>
-                <TabsTrigger value="regular">Regular Hours</TabsTrigger>
-                <TabsTrigger value="special">Special Hours</TabsTrigger>
-                <TabsTrigger value="holidays">Holidays</TabsTrigger>
+              <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="regular">Regular Hours</TabsTrigger>
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="special">Special Hours</TabsTrigger>
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="holidays">Holidays</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="regular">
+              <TabsContent value="regular" className="relative z-30">
                 <RegularHoursConfig />
               </TabsContent>
               
-              <TabsContent value="special">
+              <TabsContent value="special" className="relative z-30">
                 <SpecialHoursConfig />
               </TabsContent>
               
-              <TabsContent value="holidays">
+              <TabsContent value="holidays" className="relative z-30">
                 <HolidayConfig />
               </TabsContent>
             </Tabs>
@@ -86,37 +86,37 @@ function AuthProfilePage() {
 function NonAuthProfilePage() {
   return (
     <RootLayout hideKnowledgeSearch>
-      <div className="space-y-6">
+      <div className="space-y-6 relative z-20">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="organization">Organization</TabsTrigger>
-            <TabsTrigger value="operating-hours">Operating Hours</TabsTrigger>
+          <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="profile">Profile</TabsTrigger>
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="organization">Organization</TabsTrigger>
+            <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="operating-hours">Operating Hours</TabsTrigger>
           </TabsList>
-          <TabsContent value="profile" className="space-y-6">
+          <TabsContent value="profile" className="space-y-6 relative z-30">
             <DemoProfile />
           </TabsContent>
-          <TabsContent value="organization" className="space-y-6">
+          <TabsContent value="organization" className="space-y-6 relative z-30">
             <DemoProfile />
           </TabsContent>
-          <TabsContent value="operating-hours" className="space-y-6">
+          <TabsContent value="operating-hours" className="space-y-6 relative z-30">
             <Tabs defaultValue="regular">
-              <TabsList>
-                <TabsTrigger value="regular">Regular Hours</TabsTrigger>
-                <TabsTrigger value="special">Special Hours</TabsTrigger>
-                <TabsTrigger value="holidays">Holidays</TabsTrigger>
+              <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="regular">Regular Hours</TabsTrigger>
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="special">Special Hours</TabsTrigger>
+                <TabsTrigger className="relative data-[state=active]:bg-white/80 hover:bg-white/60" value="holidays">Holidays</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="regular">
+              <TabsContent value="regular" className="relative z-30">
                 <RegularHoursConfig />
               </TabsContent>
               
-              <TabsContent value="special">
+              <TabsContent value="special" className="relative z-30">
                 <SpecialHoursConfig />
               </TabsContent>
               
-              <TabsContent value="holidays">
+              <TabsContent value="holidays" className="relative z-30">
                 <HolidayConfig />
               </TabsContent>
             </Tabs>

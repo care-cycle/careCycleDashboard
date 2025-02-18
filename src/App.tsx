@@ -19,6 +19,7 @@ import Customers from './pages/customers';
 import CampaignsPage from './pages/campaigns';
 import Appointments from './pages/appointments';
 import InquiriesPage from './pages/inquiries';
+import SourcesPage from './pages/sources';
 import { FeedbackWidget } from './components/ui/feedback-widget';
 import { PreferencesProvider } from '@/contexts/preferences-context';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -40,6 +41,7 @@ function NonAuthApp() {
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/inquiries" element={<InquiriesPage />} />
+          <Route path="/sources" element={<SourcesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -114,6 +116,7 @@ function AuthApp() {
             <Route path="/campaigns" element={<PrivateRoute><CampaignsPage /></PrivateRoute>} />
             <Route path="/appointments" element={<PrivateRoute><Appointments /></PrivateRoute>} />
             <Route path="/inquiries" element={<PrivateRoute><InquiriesPage /></PrivateRoute>} />
+            <Route path="/sources" element={<PrivateRoute><SourcesPage /></PrivateRoute>} />
             
             {/* Catch all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />

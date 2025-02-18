@@ -8,9 +8,10 @@ import { useUser, useClerk } from '@clerk/clerk-react'
 
 interface UserProfileProps {
   isRedacted: boolean;
+  className?: string;
 }
 
-export function UserProfile({ isRedacted }: UserProfileProps) {
+export function UserProfile({ isRedacted, className }: UserProfileProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -98,7 +99,7 @@ export function UserProfile({ isRedacted }: UserProfileProps) {
 
   return (
     <>
-      <div ref={containerRef} className="relative">
+      <div ref={containerRef} className={cn("relative", className)}>
         {/* Expanded Menu */}
         <div className={cn(
           "absolute bottom-full left-0 right-0",
@@ -128,34 +129,30 @@ export function UserProfile({ isRedacted }: UserProfileProps) {
         {/* Profile Card */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={cn(
-            "w-full p-4 flex items-center gap-3",
-            "border-t border-white/20",
-            "transition-colors duration-200",
-            "hover:bg-white/50",
-            isExpanded && "bg-white/30"
-          )}
+          className="w-full p-2 flex items-center gap-3 border-t border-white/20 transition-all duration-200 hover:bg-white/50 justify-center"
         >
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
             <img
               src={userData.imageUrl}
               alt={userData.fullName}
-              className="w-6 h-6 rounded-md"
+              className="w-5 h-5 rounded-md"
             />
           </div>
-          <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-gray-900">
-              {userData.fullName}
+          <div className="hidden group-hover/sidebar:flex flex-1 text-left transition-all duration-300">
+            <div>
+              <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                {userData.fullName}
+              </div>
+              <div className="text-xs text-gray-500 whitespace-nowrap">
+                {userData.email}
+              </div>
             </div>
-            <div className="text-xs text-gray-500">
-              {userData.email}
-            </div>
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+            ) : (
+              <ChevronUp className="h-4 w-4 text-gray-400 ml-2" />
+            )}
           </div>
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          ) : (
-            <ChevronUp className="h-4 w-4 text-gray-400" />
-          )}
         </button>
       </div>
     </>

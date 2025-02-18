@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { AppointmentCalendar } from '@/components/ui/appointment-calendar';
-import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Calendar as CalendarIcon, UserSearch } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -176,95 +175,91 @@ export default function Appointments() {
 
   return (
     <RootLayout hideKnowledgeSearch topMetrics={getTopMetrics(todayMetrics)}>
-      <div className="flex flex-col lg:flex-row gap-6 px-6 py-4 min-h-[calc(100vh-8rem)] lg:h-[calc(100vh-8rem)]">
-        {/* Left Column - Appointments List */}
-        <Card className="relative overflow-hidden lg:w-1/5 h-[500px] lg:h-auto">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-xl" />
-          <div className="relative p-4 h-full">
-            <div className="flex flex-col gap-3">
-              <h2 className="text-lg font-semibold">Upcoming Appointments</h2>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <Input
-                  placeholder="Search by phone number or name..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="pl-8"
-                />
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column - Appointments List */}
+          <div className="lg:w-[300px] flex-shrink-0 h-[500px] lg:h-[calc(100vh-12rem)] rounded-lg border">
+            <div className="p-4 h-full">
+              <div className="flex flex-col gap-3">
+                <h2 className="text-lg font-semibold">Upcoming Appointments</h2>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <Input
+                    placeholder="Search by phone number or name..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 space-y-2 overflow-y-auto h-[calc(100%-5rem)]">
+                {isAppointmentsLoading ? (
+                  <div className="flex items-center justify-center h-24">
+                    <div className="animate-pulse text-gray-500">Loading appointments...</div>
+                  </div>
+                ) : filteredAppointments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-24 text-gray-500">
+                    <CalendarIcon className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">No appointments found</p>
+                  </div>
+                ) : (
+                  filteredAppointments.map((appointment: Appointment) => (
+                    <div 
+                      key={appointment.id}
+                      className={cn(
+                        "relative group cursor-pointer",
+                        "border rounded-lg p-3",
+                        "hover:bg-black/5 transition-all duration-200"
+                      )}
+                      onClick={() => navigateToCustomer(appointment.customerId, appointment.callerId)}
+                    >
+                      <div className="flex justify-between items-start gap-1">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-gray-900 text-sm">
+                            {appointment.firstName || appointment.lastName ? (
+                              `${appointment.firstName || ''} ${appointment.lastName || ''}`
+                            ) : (
+                              'Unnamed Customer'
+                            )}
+                          </h3>
+                          <div className="mt-0.5 space-y-0.5">
+                            <p className="text-xs font-medium text-gray-900">
+                              {formatAppointmentTime(appointment.appointmentDateTime)}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {appointment.campaignName}
+                            </p>
+                            {appointment.callerId && (
+                              <p className="text-xs text-gray-600">
+                                {appointment.callerId}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigateToCustomer(appointment.customerId, appointment.callerId);
+                          }}
+                          className={cn(
+                            "text-gray-400 hover:text-gray-900",
+                            "transition-colors duration-200",
+                            "flex-shrink-0 ml-2"
+                          )}
+                          title={appointment.callerId ? `Search by ${appointment.callerId}` : "Search customer"}
+                        >
+                          <UserSearch size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-            <div className="mt-3 space-y-2 overflow-y-auto h-[calc(100%-5rem)]">
-              {isAppointmentsLoading ? (
-                <div className="flex items-center justify-center h-24">
-                  <div className="animate-pulse text-gray-500">Loading appointments...</div>
-                </div>
-              ) : filteredAppointments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-24 text-gray-500">
-                  <CalendarIcon className="h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No appointments found</p>
-                </div>
-              ) : (
-                filteredAppointments.map((appointment: Appointment) => (
-                  <div 
-                    key={appointment.id}
-                    className={cn(
-                      "relative group cursor-pointer",
-                      "border border-white/30 rounded-lg p-3",
-                      "bg-white/40 backdrop-blur-sm",
-                      "hover:bg-white/60 transition-all duration-200",
-                      "shadow-sm hover:shadow-md"
-                    )}
-                    onClick={() => navigateToCustomer(appointment.customerId, appointment.callerId)}
-                  >
-                    <div className="flex justify-between items-start gap-1">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-gray-900 text-sm">
-                          {appointment.firstName || appointment.lastName ? (
-                            `${appointment.firstName || ''} ${appointment.lastName || ''}`
-                          ) : (
-                            'Unnamed Customer'
-                          )}
-                        </h3>
-                        <div className="mt-0.5 space-y-0.5">
-                          <p className="text-xs font-medium text-gray-900">
-                            {formatAppointmentTime(appointment.appointmentDateTime)}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {appointment.campaignName}
-                          </p>
-                          {appointment.callerId && (
-                            <p className="text-xs text-gray-600">
-                              {appointment.callerId}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigateToCustomer(appointment.customerId, appointment.callerId);
-                        }}
-                        className={cn(
-                          "text-gray-400 hover:text-gray-900",
-                          "transition-colors duration-200",
-                          "flex-shrink-0 ml-2"
-                        )}
-                        title={appointment.callerId ? `Search by ${appointment.callerId}` : "Search customer"}
-                      >
-                        <UserSearch size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
-        </Card>
 
-        {/* Right Column - Calendar */}
-        <Card className="relative overflow-hidden flex-1 flex flex-col">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-xl" />
-          <div className="relative flex-1 flex flex-col">
+          {/* Right Column - Calendar */}
+          <div className="flex-1 rounded-lg border min-h-[calc(100vh-12rem)]">
             <AppointmentCalendar
               selected={selectedDate}
               onSelect={handleDateSelect}
@@ -273,7 +268,7 @@ export default function Appointments() {
               onAppointmentClick={handleAppointmentClick}
             />
           </div>
-        </Card>
+        </div>
       </div>
     </RootLayout>
   );

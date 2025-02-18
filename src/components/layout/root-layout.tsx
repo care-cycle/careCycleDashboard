@@ -13,24 +13,55 @@ interface RootLayoutProps {
 
 export function RootLayout({ children, topMetrics, hideKnowledgeSearch }: RootLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="hidden lg:flex lg:w-64 lg:flex-col">
-        <Sidebar />
+    <>
+      {/* Background orbs in their own stacking context */}
+      <div className="fixed inset-0 overflow-hidden isolate">
+        {/* Left orb */}
+        <div 
+          aria-hidden="true"
+          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#74E0BB] left-32 top-32"
+          style={{
+            animation: "float2 20s ease-in-out infinite alternate",
+            animationDelay: '-2.5s',
+            zIndex: -9999,
+            pointerEvents: "none",
+            userSelect: "none",
+            WebkitUserSelect: "none"
+          }}
+        />
+        {/* Right orb */}
+        <div 
+          aria-hidden="true"
+          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#293AF9] right-32 bottom-32"
+          style={{
+            animation: "float2 20s ease-in-out infinite alternate",
+            animationDelay: '-5s',
+            zIndex: -9999,
+            pointerEvents: "none",
+            userSelect: "none",
+            WebkitUserSelect: "none"
+          }}
+        />
       </div>
-      <div className="flex flex-1 flex-col overflow-hidden relative">
-        {topMetrics && <TopMetricsBar metrics={topMetrics} className="left-0 lg:left-64" />}
-        <main className="flex-1 overflow-auto">
-          <div className="floating-orb w-[600px] h-[600px] -left-64 top-32 fixed" />
-          <div 
-            className="floating-orb w-[500px] h-[500px] right-32 bottom-32 fixed" 
-            style={{ animationDelay: '-5s' }}
-          />
-          <div className="relative z-10 p-4">
-            {children}
-          </div>
-        </main>
-        {!hideKnowledgeSearch && <KnowledgeSearch />}
+
+      {/* Main app layout in its own stacking context */}
+      <div className="relative flex h-screen overflow-hidden isolate" style={{ zIndex: 1 }}>
+        {/* Fixed sidebar */}
+        <div className="fixed top-0 left-0 h-full z-50">
+          <Sidebar />
+        </div>
+        
+        {/* Main content */}
+        <div className="flex flex-1 flex-col overflow-hidden relative ml-[80px] z-20">
+          {topMetrics && <TopMetricsBar metrics={topMetrics} className="left-0" />}
+          <main className="flex-1 overflow-auto">
+            <div className="p-4">
+              {children}
+            </div>
+          </main>
+          {!hideKnowledgeSearch && <KnowledgeSearch />}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

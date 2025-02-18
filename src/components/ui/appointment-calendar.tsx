@@ -1,7 +1,7 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker as DayPickerComponent } from "react-day-picker"
-import type { DayPickerSingleProps, DayContentProps } from "react-day-picker"
+import type { DayPickerSingleProps, DayContentProps, SelectSingleEventHandler } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -84,11 +84,11 @@ export function AppointmentCalendar({
     onMonthChange?.(month);
   };
 
-  const handleSelect = (date: Date | undefined) => {
+  const handleSelect: SelectSingleEventHandler = (date, selectedDay, modifiers, e) => {
     if (date && onSelect) {
       // Only allow selection if the date is in the current month view
       if (date.getMonth() === currentMonth.getMonth()) {
-        onSelect(date);
+        onSelect(date, selectedDay, modifiers, e);
       }
     }
   };
@@ -112,7 +112,7 @@ export function AppointmentCalendar({
       <DayPickerComponent
         mode="single"
         showOutsideDays={showOutsideDays}
-        className={cn("p-0 flex-1 flex flex-col h-full", className)}
+        className={cn("p-3 flex-1", className)}
         month={currentMonth}
         onMonthChange={handleMonthChange}
         onSelect={handleSelect}
@@ -135,9 +135,9 @@ export function AppointmentCalendar({
           }
         }}
         classNames={{
-          months: "flex-1 flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-          month: "flex-1 flex flex-col",
-          caption: "flex justify-center pt-1 relative items-center h-14 border-b border-border/20 flex-none",
+          months: "flex-1 flex flex-col space-y-4",
+          month: "flex-1 flex flex-col space-y-4",
+          caption: "flex justify-center pt-1 relative items-center h-14 border-b border-border/20",
           caption_label: "text-xl font-semibold",
           nav: "space-x-1 flex items-center absolute inset-x-4",
           nav_button: cn(
@@ -147,19 +147,17 @@ export function AppointmentCalendar({
           ),
           nav_button_previous: "absolute left-0",
           nav_button_next: "absolute right-0",
-          table: "flex-1 h-full flex flex-col",
-          head: "flex-none",
-          tbody: "flex-1 flex flex-col h-full",
+          table: "w-full h-full border-collapse space-y-1",
           head_row: "flex w-full",
           head_cell: cn(
             "text-muted-foreground font-medium",
             "w-[calc(100%/7)] h-10 flex items-center justify-center"
           ),
-          row: "flex w-full flex-1",
+          row: "flex w-full flex-1 min-h-[8rem]",
           cell: cn(
-            "relative w-[calc(100%/7)] h-full p-0",
+            "relative w-[calc(100%/7)] p-0 first:rounded-l-lg last:rounded-r-lg",
             "[&:nth-child(7n)]:bg-gray-100/70 [&:nth-child(1)]:bg-gray-100/70",
-            "rounded-lg overflow-hidden"
+            "border-r last:border-r-0 border-border/10"
           ),
           day: cn(
             "h-full w-full inline-flex flex-col items-start justify-start p-2",

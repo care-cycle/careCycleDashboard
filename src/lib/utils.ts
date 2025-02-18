@@ -43,3 +43,11 @@ export function formatDate(date: string | Date) {
   if (!date) return '-';
   return format(new Date(date), 'MMM d, yyyy h:mm a');
 }
+
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(value);
+}

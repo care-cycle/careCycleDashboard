@@ -53,7 +53,7 @@ export function InquiryFilters({
           <SelectTrigger className="w-[200px] ml-4 bg-white/50">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border shadow-md">
             {STATUSES.map((status) => (
               <SelectItem key={status.value} value={status.value}>
                 {status.label}
