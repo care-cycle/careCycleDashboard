@@ -9,9 +9,10 @@ import { useUser, useClerk } from '@clerk/clerk-react'
 interface UserProfileProps {
   isRedacted: boolean;
   className?: string;
+  isParentExpanded?: boolean;
 }
 
-export function UserProfile({ isRedacted, className }: UserProfileProps) {
+export function UserProfile({ isRedacted, className, isParentExpanded = false }: UserProfileProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -129,29 +130,38 @@ export function UserProfile({ isRedacted, className }: UserProfileProps) {
         {/* Profile Card */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full p-2 flex items-center gap-3 border-t border-white/20 transition-all duration-200 hover:bg-white/50 justify-center"
+          className={cn(
+            "w-full h-[48px] flex items-center border-t border-white/20 transition-all duration-200 hover:bg-white/50",
+            isParentExpanded ? "px-4" : "pl-[19px]"
+          )}
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+          <div className={cn(
+            "w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shrink-0",
+            !isParentExpanded && "left-[5px]"
+          )}>
             <img
               src={userData.imageUrl}
               alt={userData.fullName}
-              className="w-5 h-5 rounded-md"
+              className="w-6 h-6 rounded-md"
             />
           </div>
-          <div className="hidden group-hover/sidebar:flex flex-1 text-left transition-all duration-300">
-            <div>
-              <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                {userData.fullName}
-              </div>
-              <div className="text-xs text-gray-500 whitespace-nowrap">
-                {userData.email}
-              </div>
+          <div className={cn(
+            "ml-3 flex-1 overflow-hidden",
+            isParentExpanded ? "opacity-100" : "opacity-0",
+            "transition-opacity duration-300 ease-in-out"
+          )}>
+            <div className="text-sm font-medium text-gray-900 truncate">
+              {userData.fullName}
             </div>
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
-            ) : (
-              <ChevronUp className="h-4 w-4 text-gray-400 ml-2" />
-            )}
+            <div className="text-xs text-gray-500 truncate">
+              {userData.email}
+            </div>
+          </div>
+          <div className={cn(
+            "transition-opacity duration-300",
+            isParentExpanded ? "opacity-100" : "opacity-0"
+          )}>
+            <ChevronDown className="h-4 w-4 text-gray-400" />
           </div>
         </button>
       </div>

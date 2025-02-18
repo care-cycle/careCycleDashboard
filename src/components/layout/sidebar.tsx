@@ -252,7 +252,8 @@ export function Sidebar({ className }: SidebarProps) {
         {/* User Profile */}
         <UserProfile 
           isRedacted={isRedacted} 
-          className="group-hover/sidebar:[&>div>button]:p-4" 
+          className="group-hover/sidebar:[&>div>button]:p-4"
+          isParentExpanded={isExpanded}
         />
       </div>
     </div>

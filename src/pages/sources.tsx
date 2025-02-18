@@ -3,7 +3,7 @@ import { SourcesTable } from "@/components/sources/sources-table"
 import { PageHeader } from "@/components/layout/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, InboxIcon } from "lucide-react"
 import { RootLayout } from "@/components/layout/root-layout"
 import { useInitialData } from "@/hooks/use-client-data"
 import { getTopMetrics } from "@/lib/metrics"
@@ -43,8 +43,14 @@ export default function SourcesPage() {
               {error instanceof Error ? error.message : 'There was an error loading the sources data. Please try again later.'}
             </AlertDescription>
           </Alert>
+        ) : !sources || sources.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[400px] border rounded-lg bg-muted/10">
+            <InboxIcon className="h-10 w-10 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground">No Sources Found</h3>
+            <p className="text-sm text-muted-foreground mt-2">You don't have any sources configured yet.</p>
+          </div>
         ) : (
-          <SourcesTable sources={sources || []} />
+          <SourcesTable sources={sources} />
         )}
       </div>
     </RootLayout>
