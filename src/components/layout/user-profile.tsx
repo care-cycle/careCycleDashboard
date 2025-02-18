@@ -110,7 +110,7 @@ export function UserProfile({ isRedacted, className, isParentExpanded = false }:
         {/* Expanded Menu */}
         <div className={cn(
           "absolute bottom-full left-0 right-0",
-          "glass-panel backdrop-blur-md bg-white/40",
+          "glass-panel backdrop-blur-md bg-white/100",
           "border border-white/20 rounded-t-xl",
           "transition-all duration-150 ease-in-out",
           "overflow-hidden",
