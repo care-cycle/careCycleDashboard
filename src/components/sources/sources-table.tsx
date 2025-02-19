@@ -72,8 +72,8 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
 
   const columns = [
     { key: 'name', label: 'Source Name' },
+    { key: 'spend', label: 'Spend' },
     { key: 'billable_calls', label: 'Billable Calls' },
-    { key: 'spend', label: 'Total Spend' },
     { key: 'new_transfers', label: 'Transfers from 1st Call' },
     { key: 'appointment_transfers', label: 'Transfers from Appt.' },
     { key: 'total_transfers', label: 'Total Transfers' },
@@ -149,7 +149,9 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
             {columns.map((column) => (
               <TableHead
                 key={column.key}
-                className="text-sm text-muted-foreground cursor-pointer hover:text-foreground text-right"
+                className={`text-sm text-muted-foreground cursor-pointer hover:text-foreground ${
+                  column.key === 'name' ? 'text-center' : 'text-right'
+                }`}
                 onClick={() => handleSort(column.key)}
               >
                 {column.label} ↑↓
@@ -158,14 +160,14 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody className="relative">
-          <div 
-            className="absolute top-0 bottom-0 right-0 w-[400px] backdrop-blur-xl border-l border-white/30 flex items-center justify-center z-10"
+          <div className="absolute top-0 bottom-0 right-0 border-l border-white/30 flex items-center justify-center z-10"
             style={{
               background: 'rgba(255, 255, 255, 0.9)',
               backdropFilter: 'blur(16px)',
+              width: 'calc(250% / 12)',  // Increased from 200% to 250% to better cover the columns
             }}
           >
-            <span className="text-sm font-bold text-gray-600">Activate Welcome Calls to unlock</span>
+            <span className="text-sm font-bold text-gray-600 whitespace-nowrap">Activate Welcome Calls to unlock</span>
           </div>
           {sortedSources.map((source) => (
             <TableRow key={source.sourceId} className="hover:bg-muted/30">
@@ -177,24 +179,30 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
                   />
                 </div>
               </TableCell>
-              <TableCell className="font-medium">
+              <TableCell className="font-medium text-center">
                 {source.name || source.sourceId}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="space-y-1">
+                  <div className="text-right text-sm">
+                    <span className="text-muted-foreground">Per Transfer: </span>
+                    <span className="font-medium">
+                      {source.total_transfers > 0 
+                        ? formatCurrency(source.spend / source.total_transfers) 
+                        : formatCurrency(0)}
+                    </span>
+                  </div>
+                  <div className="text-right text-sm">
+                    <span className="text-muted-foreground">Total: </span>
+                    <span className="font-medium">{formatCurrency(source.spend)}</span>
+                  </div>
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <MetricCell 
                   numerator={source.billable_calls}
                   denominator={source.total_calls}
                   percentage={source.billable_percentage}
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(source.spend)}
-              </TableCell>
-              <TableCell className="text-right border-l">
-                <MetricCell 
-                  numerator={source.new_transfers}
-                  denominator={source.new_calls}
-                  percentage={source.new_transfer_percentage}
                 />
               </TableCell>
               <TableCell className="text-right">
