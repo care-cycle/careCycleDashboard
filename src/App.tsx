@@ -9,6 +9,7 @@ import { VerifyEmail } from "./pages/sign-up/verify-email";
 import SignUpPage from "./pages/sign-up";
 import Dashboard from "./pages/dashboard";
 import Calls from "./pages/calls";
+import SMS from "./pages/sms";
 import SignIn from "./pages/sign-in";
 import ProfilePage from "./pages/user/profile";
 import BillingPage from "./pages/user/billing";
@@ -36,6 +37,7 @@ function NonAuthApp() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/calls" element={<Calls />} />
+          <Route path="/sms" element={<SMS />} />
           <Route path="/user/profile" element={<ProfilePage />} />
           <Route path="/user/billing" element={<BillingPage />} />
           <Route path="/customers" element={<Customers />} />
@@ -116,6 +118,14 @@ function AuthApp() {
               element={
                 <PrivateRoute>
                   <Calls />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/sms"
+              element={
+                <PrivateRoute>
+                  <SMS />
                 </PrivateRoute>
               }
             />

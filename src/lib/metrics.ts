@@ -5,7 +5,7 @@ interface MetricsData {
     totalCalls?: number;
     totalDurationMs?: number;
     totalSpend?: number;
-    totalVapiCost?: number;
+    transferredCalls?: number;
   };
 }
 
@@ -23,12 +23,12 @@ export function getTopMetrics(
     totalCalls = 0,
     totalDurationMs = 0,
     totalSpend = 0,
-    totalVapiCost = 0,
+    transferredCalls = 0,
   } = metricsData.data;
 
   return [
     {
-      title: "Total Calls",
+      title: "Today's Total Calls",
       value: totalCalls.toString(),
     },
     {
@@ -40,8 +40,8 @@ export function getTopMetrics(
       value: `$${totalSpend.toFixed(2)}`,
     },
     {
-      title: "VAPI Cost",
-      value: `$${totalVapiCost.toFixed(2)}`,
+      title: "Today's Transfers",
+      value: transferredCalls.toString(),
     },
   ];
 }

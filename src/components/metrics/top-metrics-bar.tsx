@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 interface TopMetricsBarProps extends React.HTMLAttributes<HTMLDivElement> {
   metrics?: {
     title: string;
-    value: string;
+    value: string | number;
   }[];
 }
 

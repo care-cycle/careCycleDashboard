@@ -29,8 +29,9 @@ export function DateRangePicker({
   const [open, setOpen] = useState(false);
   const today = new Date();
 
-  // Only disable dates before minDate
+  // Disable future dates and dates before minDate
   const disabledDays = {
+    after: today,
     before: minDate,
   };
 
