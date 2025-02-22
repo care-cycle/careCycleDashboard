@@ -4,15 +4,19 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 interface AgentSelectProps {
-  agents: string[]
-  value: string
-  onValueChange: (value: string) => void
+  agents: string[];
+  value: string;
+  onValueChange: (value: string) => void;
 }
 
-export function AgentSelect({ agents, value, onValueChange }: AgentSelectProps) {
+export function AgentSelect({
+  agents,
+  value,
+  onValueChange,
+}: AgentSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-[180px] glass-panel">
@@ -27,5 +31,5 @@ export function AgentSelect({ agents, value, onValueChange }: AgentSelectProps) 
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }

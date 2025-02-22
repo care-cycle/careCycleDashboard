@@ -5,16 +5,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useState, useMemo } from "react"
-import { toast } from "sonner"
-import apiClient from "@/lib/api-client"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Pencil, Plus, Save, X, Copy, Check, ArrowUpDown } from "lucide-react"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
+import apiClient from "@/lib/api-client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Plus, Save, X, Copy, Check, ArrowUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,27 +22,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface Source {
-  id: string
-  sourceId: string
-  name: string
-  enabled: boolean
-  createdAt: string
-  dealType: string
-  payout: number
-  durationSeconds: number
+  id: string;
+  sourceId: string;
+  name: string;
+  enabled: boolean;
+  createdAt: string;
+  dealType: string;
+  payout: number;
+  durationSeconds: number;
   phoneNumbers: Array<{
-    id: number
-    phoneNumber: string
-    phoneNumberId: string
-  }> | null
+    id: number;
+    phoneNumber: string;
+    phoneNumberId: string;
+  }> | null;
 }
 
 type SortConfig = {
-  key: keyof Source | '';
-  direction: 'asc' | 'desc' | null;
+  key: keyof Source | "";
+  direction: "asc" | "desc" | null;
 };
 
 interface SourceEntry {
@@ -52,86 +52,100 @@ interface SourceEntry {
 }
 
 export function ManageSources() {
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState("")
-  const [editPayout, setEditPayout] = useState<number>(0)
-  const [editDuration, setEditDuration] = useState<number>(0)
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [newSourceName, setNewSourceName] = useState("")
-  const [isCreating, setIsCreating] = useState(false)
-  const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: '', direction: null })
-  const queryClient = useQueryClient()
-  const [sourceEntries, setSourceEntries] = useState<SourceEntry[]>([{ name: '', payout: 0, durationSeconds: 0 }])
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPayout, setEditPayout] = useState<number>(0);
+  const [editDuration, setEditDuration] = useState<number>(0);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newSourceName, setNewSourceName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "",
+    direction: null,
+  });
+  const queryClient = useQueryClient();
+  const [sourceEntries, setSourceEntries] = useState<SourceEntry[]>([
+    { name: "", payout: 0, durationSeconds: 0 },
+  ]);
 
   const { data: sources, isLoading } = useQuery({
-    queryKey: ['sources-management'],
+    queryKey: ["sources-management"],
     queryFn: async () => {
-      const response = await apiClient.get('/portal/client/sources/all')
-      return response.data.data as Source[]
-    }
-  })
+      const response = await apiClient.get("/portal/client/sources/all");
+      return response.data.data as Source[];
+    },
+  });
 
   const handleEdit = (source: Source) => {
-    setEditingId(source.id)
-    setEditName(source.name || "")
-    setEditPayout(source.payout ?? 0)
-    setEditDuration(source.durationSeconds ?? 0)
-  }
+    setEditingId(source.id);
+    setEditName(source.name || "");
+    setEditPayout(source.payout ?? 0);
+    setEditDuration(source.durationSeconds ?? 0);
+  };
 
   const handleCancel = () => {
-    setEditingId(null)
-    setEditName("")
-    setEditPayout(0)
-    setEditDuration(0)
-  }
+    setEditingId(null);
+    setEditName("");
+    setEditPayout(0);
+    setEditDuration(0);
+  };
 
   const handleSave = async (source: Source) => {
     try {
       await apiClient.put(`/portal/client/sources/${source.id}`, {
         name: editName.trim() || undefined,
         payout: editPayout,
-        durationSeconds: editDuration
-      })
-      await queryClient.invalidateQueries({ queryKey: ['sources-management'] })
-      setEditingId(null)
-      setEditName("")
-      setEditPayout(0)
-      setEditDuration(0)
-      toast.success("Source updated successfully")
+        durationSeconds: editDuration,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
+      setEditingId(null);
+      setEditName("");
+      setEditPayout(0);
+      setEditDuration(0);
+      toast.success("Source updated successfully");
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Failed to update source"
-      toast.error(errorMessage)
+      const errorMessage =
+        error.response?.data?.error || "Failed to update source";
+      toast.error(errorMessage);
     }
-  }
+  };
 
   const handleToggleEnabled = async (source: Source) => {
     try {
       await apiClient.put(`/portal/client/sources/${source.id}`, {
-        enabled: !source.enabled
-      })
-      await queryClient.invalidateQueries({ queryKey: ['sources-management'] })
-      toast.success(source.enabled ? "Source disabled" : "Source enabled")
+        enabled: !source.enabled,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
+      toast.success(source.enabled ? "Source disabled" : "Source enabled");
     } catch (error: any) {
-      console.error('Error toggling source:', error)
-      const errorMessage = error.response?.data?.error || "Failed to update source"
-      toast.error(errorMessage)
+      console.error("Error toggling source:", error);
+      const errorMessage =
+        error.response?.data?.error || "Failed to update source";
+      toast.error(errorMessage);
     }
-  }
+  };
 
   const handleAddEntry = () => {
-    setSourceEntries([...sourceEntries, { name: '', payout: 0, durationSeconds: 0 }]);
+    setSourceEntries([
+      ...sourceEntries,
+      { name: "", payout: 0, durationSeconds: 0 },
+    ]);
   };
 
   const handleRemoveEntry = (index: number) => {
     setSourceEntries(sourceEntries.filter((_, i) => i !== index));
   };
 
-  const handleEntryChange = (index: number, field: keyof SourceEntry, value: string) => {
+  const handleEntryChange = (
+    index: number,
+    field: keyof SourceEntry,
+    value: string,
+  ) => {
     const newEntries = [...sourceEntries];
-    if (field === 'payout') {
+    if (field === "payout") {
       newEntries[index][field] = parseFloat(value) || 0;
-    } else if (field === 'durationSeconds') {
+    } else if (field === "durationSeconds") {
       newEntries[index][field] = parseInt(value) || 0;
     } else {
       newEntries[index][field] = value;
@@ -139,33 +153,36 @@ export function ManageSources() {
     setSourceEntries(newEntries);
   };
 
-  const handleNamePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+  const handleNamePaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData('text');
-    const rows = pasteData.split(/\n/).filter(row => row.trim());
-    
+    const pasteData = e.clipboardData.getData("text");
+    const rows = pasteData.split(/\n/).filter((row) => row.trim());
+
     if (rows.length > 1) {
-      const newEntries = rows.map(row => {
-        const [name, payout, duration] = row.split(/[,\t]/).map(item => {
+      const newEntries = rows.map((row) => {
+        const [name, payout, duration] = row.split(/[,\t]/).map((item) => {
           // Remove quotes from start and end of the item
-          return item.trim().replace(/^["']|["']$/g, '');
+          return item.trim().replace(/^["']|["']$/g, "");
         });
         return {
-          name: name || '',
-          payout: parseFloat(payout || '0'),
-          durationSeconds: parseInt(duration || '0', 10)
+          name: name || "",
+          payout: parseFloat(payout || "0"),
+          durationSeconds: parseInt(duration || "0", 10),
         };
       });
       setSourceEntries(newEntries);
     } else {
       // Also strip quotes when pasting a single value
-      const cleanValue = pasteData.trim().replace(/^["']|["']$/g, '');
-      handleEntryChange(index, 'name', cleanValue);
+      const cleanValue = pasteData.trim().replace(/^["']|["']$/g, "");
+      handleEntryChange(index, "name", cleanValue);
     }
   };
 
   const handleCreate = async () => {
-    const validEntries = sourceEntries.filter(entry => entry.name.trim());
+    const validEntries = sourceEntries.filter((entry) => entry.name.trim());
 
     if (validEntries.length === 0) {
       toast.error("Please enter at least one source");
@@ -174,14 +191,20 @@ export function ManageSources() {
 
     setIsCreating(true);
     try {
-      const response = await apiClient.post('/portal/client/sources/bulk', validEntries);
-      
-      await queryClient.invalidateQueries({ queryKey: ['sources-management'] });
+      const response = await apiClient.post(
+        "/portal/client/sources/bulk",
+        validEntries,
+      );
+
+      await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
       setShowCreateDialog(false);
-      setSourceEntries([{ name: '', payout: 0, durationSeconds: 0 }]);
-      toast.success(`Successfully created ${validEntries.length} source${validEntries.length > 1 ? 's' : ''}`);
+      setSourceEntries([{ name: "", payout: 0, durationSeconds: 0 }]);
+      toast.success(
+        `Successfully created ${validEntries.length} source${validEntries.length > 1 ? "s" : ""}`,
+      );
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Failed to create sources";
+      const errorMessage =
+        error.response?.data?.error || "Failed to create sources";
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
@@ -190,26 +213,26 @@ export function ManageSources() {
 
   const handleCopySourceId = async (sourceId: string) => {
     try {
-      await navigator.clipboard.writeText(sourceId)
-      setCopiedId(sourceId)
-      setTimeout(() => setCopiedId(null), 2000)
-      toast.success("Source ID copied to clipboard")
+      await navigator.clipboard.writeText(sourceId);
+      setCopiedId(sourceId);
+      setTimeout(() => setCopiedId(null), 2000);
+      toast.success("Source ID copied to clipboard");
     } catch (error) {
-      toast.error("Failed to copy to clipboard")
+      toast.error("Failed to copy to clipboard");
     }
-  }
+  };
 
   const handleSort = (key: keyof Source) => {
-    let direction: 'asc' | 'desc' | null = 'asc';
-    
+    let direction: "asc" | "desc" | null = "asc";
+
     if (sortConfig.key === key) {
-      if (sortConfig.direction === 'asc') {
-        direction = 'desc';
-      } else if (sortConfig.direction === 'desc') {
+      if (sortConfig.direction === "asc") {
+        direction = "desc";
+      } else if (sortConfig.direction === "desc") {
         direction = null;
       }
     }
-    
+
     setSortConfig({ key, direction });
   };
 
@@ -219,44 +242,44 @@ export function ManageSources() {
     }
 
     return [...sources].sort((a, b) => {
-      if (sortConfig.key === 'name') {
-        return sortConfig.direction === 'asc'
-          ? (a.name || '').localeCompare(b.name || '')
-          : (b.name || '').localeCompare(a.name || '');
+      if (sortConfig.key === "name") {
+        return sortConfig.direction === "asc"
+          ? (a.name || "").localeCompare(b.name || "")
+          : (b.name || "").localeCompare(a.name || "");
       }
-      
-      if (sortConfig.key === 'sourceId') {
-        return sortConfig.direction === 'asc'
+
+      if (sortConfig.key === "sourceId") {
+        return sortConfig.direction === "asc"
           ? a.sourceId.localeCompare(b.sourceId)
           : b.sourceId.localeCompare(a.sourceId);
       }
 
-      if (sortConfig.key === 'dealType') {
-        return sortConfig.direction === 'asc'
-          ? (a.dealType || '').localeCompare(b.dealType || '')
-          : (b.dealType || '').localeCompare(a.dealType || '');
+      if (sortConfig.key === "dealType") {
+        return sortConfig.direction === "asc"
+          ? (a.dealType || "").localeCompare(b.dealType || "")
+          : (b.dealType || "").localeCompare(a.dealType || "");
       }
 
-      if (sortConfig.key === 'payout') {
-        return sortConfig.direction === 'asc'
+      if (sortConfig.key === "payout") {
+        return sortConfig.direction === "asc"
           ? (a.payout || 0) - (b.payout || 0)
           : (b.payout || 0) - (a.payout || 0);
       }
 
-      if (sortConfig.key === 'durationSeconds') {
-        return sortConfig.direction === 'asc'
+      if (sortConfig.key === "durationSeconds") {
+        return sortConfig.direction === "asc"
           ? (a.durationSeconds || 0) - (b.durationSeconds || 0)
           : (b.durationSeconds || 0) - (a.durationSeconds || 0);
       }
 
-      if (sortConfig.key === 'createdAt') {
-        return sortConfig.direction === 'asc'
+      if (sortConfig.key === "createdAt") {
+        return sortConfig.direction === "asc"
           ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
 
-      if (sortConfig.key === 'enabled') {
-        return sortConfig.direction === 'asc'
+      if (sortConfig.key === "enabled") {
+        return sortConfig.direction === "asc"
           ? Number(a.enabled) - Number(b.enabled)
           : Number(b.enabled) - Number(a.enabled);
       }
@@ -266,25 +289,28 @@ export function ManageSources() {
   }, [sources, sortConfig]);
 
   const getSortIndicator = (key: keyof Source) => {
-    if (sortConfig.key !== key) return '↕';
-    if (sortConfig.direction === 'asc') return '↑';
-    if (sortConfig.direction === 'desc') return '↓';
-    return '↕';
+    if (sortConfig.key !== key) return "↕";
+    if (sortConfig.direction === "asc") return "↑";
+    if (sortConfig.direction === "desc") return "↓";
+    return "↕";
   };
 
-  const columns = useMemo(() => [
-    { key: 'name' as keyof Source, label: 'Name' },
-    { key: 'sourceId' as keyof Source, label: 'Source ID' },
-    { key: 'phoneNumbers' as keyof Source, label: 'Phone Number(s)' },
-    { key: 'dealType' as keyof Source, label: 'Deal Type' },
-    { key: 'payout' as keyof Source, label: 'Payout' },
-    { key: 'durationSeconds' as keyof Source, label: 'Duration (s)' },
-    { key: 'createdAt' as keyof Source, label: 'Created' },
-    { key: 'enabled' as keyof Source, label: 'Status' },
-  ], []);
+  const columns = useMemo(
+    () => [
+      { key: "name" as keyof Source, label: "Name" },
+      { key: "sourceId" as keyof Source, label: "Source ID" },
+      { key: "phoneNumbers" as keyof Source, label: "Phone Number(s)" },
+      { key: "dealType" as keyof Source, label: "Deal Type" },
+      { key: "payout" as keyof Source, label: "Payout" },
+      { key: "durationSeconds" as keyof Source, label: "Duration (s)" },
+      { key: "createdAt" as keyof Source, label: "Created" },
+      { key: "enabled" as keyof Source, label: "Status" },
+    ],
+    [],
+  );
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   return (
@@ -359,7 +385,10 @@ export function ManageSources() {
                   {source.phoneNumbers?.length ? (
                     <div className="space-y-1">
                       {source.phoneNumbers.map((phone) => (
-                        <div key={phone.id} className="font-mono text-sm text-muted-foreground">
+                        <div
+                          key={phone.id}
+                          className="font-mono text-sm text-muted-foreground"
+                        >
                           {phone.phoneNumber}
                         </div>
                       ))}
@@ -369,20 +398,22 @@ export function ManageSources() {
                   )}
                 </TableCell>
                 <TableCell className="text-sm font-mono">
-                  {source.dealType || 'CPL'}
+                  {source.dealType || "CPL"}
                 </TableCell>
                 <TableCell>
                   {editingId === source.id ? (
                     <Input
                       type="number"
                       value={editPayout}
-                      onChange={(e) => setEditPayout(parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        setEditPayout(parseFloat(e.target.value))
+                      }
                       className="max-w-[100px]"
                       min={0}
                       step={0.01}
                     />
                   ) : (
-                    `$${(parseFloat(source.payout?.toString() || '0')).toFixed(2)}`
+                    `$${parseFloat(source.payout?.toString() || "0").toFixed(2)}`
                   )}
                 </TableCell>
                 <TableCell>
@@ -390,7 +421,9 @@ export function ManageSources() {
                     <Input
                       type="number"
                       value={editDuration}
-                      onChange={(e) => setEditDuration(parseInt(e.target.value))}
+                      onChange={(e) =>
+                        setEditDuration(parseInt(e.target.value))
+                      }
                       className="max-w-[100px]"
                       min={0}
                     />
@@ -441,18 +474,22 @@ export function ManageSources() {
         </Table>
       </div>
 
-      <Dialog open={showCreateDialog} onOpenChange={(open) => {
-        setShowCreateDialog(open);
-        if (!open) {
-          setSourceEntries([{ name: '', payout: 0, durationSeconds: 0 }]);
-        }
-      }}>
+      <Dialog
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) {
+            setSourceEntries([{ name: "", payout: 0, durationSeconds: 0 }]);
+          }
+        }}
+      >
         <DialogContent className="max-w-[800px] p-0 rounded-xl max-h-[85vh] flex flex-col">
           <div className="p-6">
             <DialogHeader>
               <DialogTitle>Create Source</DialogTitle>
               <DialogDescription>
-                Copy and paste directly from Excel, CSV, or spreadsheets into the name field to create multiple sources at once.
+                Copy and paste directly from Excel, CSV, or spreadsheets into
+                the name field to create multiple sources at once.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -466,20 +503,24 @@ export function ManageSources() {
                   <div className="w-32">Duration (s)</div>
                   <div className="w-10"></div>
                 </div>
-                
+
                 {sourceEntries.map((entry, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <Input
                       value={entry.name}
-                      onChange={(e) => handleEntryChange(index, 'name', e.target.value)}
+                      onChange={(e) =>
+                        handleEntryChange(index, "name", e.target.value)
+                      }
                       onPaste={(e) => handleNamePaste(e, index)}
                       className="flex-1"
                       placeholder="Source name"
                     />
                     <Input
                       type="number"
-                      value={entry.payout || ''}
-                      onChange={(e) => handleEntryChange(index, 'payout', e.target.value)}
+                      value={entry.payout || ""}
+                      onChange={(e) =>
+                        handleEntryChange(index, "payout", e.target.value)
+                      }
                       className="w-32"
                       min={0}
                       step={0.01}
@@ -487,8 +528,14 @@ export function ManageSources() {
                     />
                     <Input
                       type="number"
-                      value={entry.durationSeconds || ''}
-                      onChange={(e) => handleEntryChange(index, 'durationSeconds', e.target.value)}
+                      value={entry.durationSeconds || ""}
+                      onChange={(e) =>
+                        handleEntryChange(
+                          index,
+                          "durationSeconds",
+                          e.target.value,
+                        )
+                      }
                       className="w-32"
                       min={0}
                       placeholder="0"
@@ -504,7 +551,7 @@ export function ManageSources() {
                     </Button>
                   </div>
                 ))}
-                
+
                 <Button
                   variant="outline"
                   onClick={handleAddEntry}
@@ -520,8 +567,12 @@ export function ManageSources() {
           <div className="border-t">
             <DialogFooter className="px-6 py-4">
               <div className="flex justify-end gap-3 w-full">
-                <Button onClick={handleCreate} disabled={isCreating} className="min-w-[120px]">
-                  {isCreating ? 'Creating...' : 'Create Sources'}
+                <Button
+                  onClick={handleCreate}
+                  disabled={isCreating}
+                  className="min-w-[120px]"
+                >
+                  {isCreating ? "Creating..." : "Create Sources"}
                 </Button>
               </div>
             </DialogFooter>
@@ -529,5 +580,5 @@ export function ManageSources() {
         </DialogContent>
       </Dialog>
     </div>
-  )
-} 
+  );
+}

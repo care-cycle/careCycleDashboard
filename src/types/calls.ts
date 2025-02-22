@@ -10,8 +10,8 @@ export interface Call {
   successEvaluation: string;
   summary: string;
   transcript: string;
-  direction: 'inbound' | 'outbound';
+  direction: "inbound" | "outbound";
   cost: number;
   testFlag: boolean;
   source?: string | null;
-} 
+}

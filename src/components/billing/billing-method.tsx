@@ -1,17 +1,17 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CreditCard as CardIcon } from "lucide-react"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CreditCard as CardIcon } from "lucide-react";
 
 interface PaymentMethod {
-  last4: string
-  expMonth: number
-  expYear: number
-  brand: string
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  brand: string;
 }
 
 interface BillingMethodProps {
-  paymentMethod: PaymentMethod | null
-  onPaymentMethodUpdate: (paymentMethod: PaymentMethod) => void
+  paymentMethod: PaymentMethod | null;
+  onPaymentMethodUpdate: (paymentMethod: PaymentMethod) => void;
 }
 
 export function BillingMethod({ paymentMethod }: BillingMethodProps) {
@@ -28,11 +28,17 @@ export function BillingMethod({ paymentMethod }: BillingMethodProps) {
                 <CardIcon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="font-medium">{paymentMethod.brand} ending in {paymentMethod.last4}</p>
-                <p className="text-sm text-gray-500">Expires {paymentMethod.expMonth}/{paymentMethod.expYear}</p>
+                <p className="font-medium">
+                  {paymentMethod.brand} ending in {paymentMethod.last4}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Expires {paymentMethod.expMonth}/{paymentMethod.expYear}
+                </p>
               </div>
             </div>
-            <Button variant="outline" disabled>Update</Button>
+            <Button variant="outline" disabled>
+              Update
+            </Button>
           </div>
         ) : (
           <div className="text-center py-4">
@@ -41,5 +47,5 @@ export function BillingMethod({ paymentMethod }: BillingMethodProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

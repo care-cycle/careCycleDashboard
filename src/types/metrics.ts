@@ -3,7 +3,7 @@ export interface MetricsResponse {
   data: {
     total: HourlyMetric[];
     [campaignId: string]: HourlyMetric[];
-  }
+  };
 }
 
 export interface HourlyMetric {
@@ -16,8 +16,8 @@ export interface HourlyMetric {
   dispositionCounts: {
     Voicemail?: number;
     Transferred?: number;
-    'Busy/No Answer'?: number;
-    'Not Interested'?: number;
+    "Busy/No Answer"?: number;
+    "Not Interested"?: number;
     [key: string]: number | undefined;
   };
-} 
+}

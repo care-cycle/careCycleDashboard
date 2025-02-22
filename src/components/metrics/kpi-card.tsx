@@ -1,17 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Info } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface KPICardProps {
-  title: string
-  value: string
-  change?: string
-  info?: string
+  title: string;
+  value: string;
+  change?: string;
+  info?: string;
 }
 
 export function KPICard({ title, value, change, info }: KPICardProps) {
-  const isPositiveChange = change?.startsWith("+")
+  const isPositiveChange = change?.startsWith("+");
 
   return (
     <Card className="glass-panel interactive cursor-pointer overflow-visible">
@@ -26,7 +31,7 @@ export function KPICard({ title, value, change, info }: KPICardProps) {
                     <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent 
+                <TooltipContent
                   side="top"
                   align="center"
                   sideOffset={4}
@@ -40,18 +45,18 @@ export function KPICard({ title, value, change, info }: KPICardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-gray-900">
-          {value}
-        </div>
+        <div className="text-2xl font-bold text-gray-900">{value}</div>
         {change && (
-          <p className={cn(
-            "text-xs font-medium",
-            isPositiveChange ? "text-emerald-600" : "text-red-600"
-          )}>
+          <p
+            className={cn(
+              "text-xs font-medium",
+              isPositiveChange ? "text-emerald-600" : "text-red-600",
+            )}
+          >
             {change}
           </p>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,15 +1,10 @@
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { RootLayout } from "@/components/layout/root-layout";
-import { CallsTable } from "@/components/calls/calls-table";
-import { CallMetrics } from "@/components/calls/call-metrics";
-import { CallFilters } from "@/components/calls/call-filters";
-import { CallDetails } from "@/components/calls/call-details";
 import { DateRange } from "react-day-picker";
 import { useUI } from "@/contexts/ui-context";
 import { usePreferences } from "@/contexts/preferences-context";
-import { Call } from "@/types/calls";
+import { SMS } from "@/types/sms";
 import { useInitialData } from "@/hooks/use-client-data";
-import { formatDuration } from "@/lib/utils";
 import { DownloadIcon } from "@radix-ui/react-icons";
 import {
   Select,
@@ -24,18 +19,17 @@ import { CampaignSelect } from "@/components/campaign-select";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-interface CallsTableProps {
-  calls: Call[];
-  onCallSelect: (call: Call) => void;
-  showTestCalls: boolean;
-  showConnectedOnly?: boolean;
+interface SMSTableProps {
+  messages: SMS[];
   onSort: (key: string, direction: "asc" | "desc" | null) => void;
   sortConfig: {
     key: string;
     direction: "asc" | "desc" | null;
   };
-  hasSourceTracking: boolean;
 }
 
 const getPageNumbers = (currentPage: number, totalPages: number) => {
@@ -57,59 +51,110 @@ const getPageNumbers = (currentPage: number, totalPages: number) => {
   return range;
 };
 
-// Create a memoized wrapper component for CallsTable
-const MemoizedCallsTable = memo(function MemoizedCallsTable({
-  calls,
-  onCallSelect,
-  showTestCalls,
-  showConnectedOnly,
+// Create a memoized wrapper component for SMSTable
+const MemoizedSMSTable = memo(function MemoizedSMSTable({
+  messages,
   onSort,
   sortConfig,
-  hasSourceTracking,
-}: CallsTableProps) {
+}: SMSTableProps) {
   return (
-    <CallsTable
-      calls={calls}
-      onCallSelect={onCallSelect}
-      showTestCalls={showTestCalls}
-      showConnectedOnly={showConnectedOnly}
-      onSort={onSort}
-      sortConfig={sortConfig}
-      hasSourceTracking={hasSourceTracking}
-    />
+    <div className="rounded-md border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-muted/50">
+            <th className="py-3 px-4 text-left">Direction</th>
+            <th className="py-3 px-4 text-left">From</th>
+            <th className="py-3 px-4 text-left">To</th>
+            <th className="py-3 px-4 text-left">Content</th>
+            <th className="py-3 px-4 text-left">Campaign</th>
+            <th className="py-3 px-4 text-left">Cost</th>
+            <th className="py-3 px-4 text-left">Sent At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {messages.map((message) => (
+            <tr key={message.id} className="border-b hover:bg-muted/50">
+              <td className="py-3 px-4">
+                <Badge
+                  variant={
+                    message.direction === "inbound" ? "default" : "secondary"
+                  }
+                >
+                  {message.direction}
+                </Badge>
+              </td>
+              <td className="py-3 px-4">{message.fromNumber}</td>
+              <td className="py-3 px-4">{message.toNumber}</td>
+              <td className="py-3 px-4 max-w-md truncate">{message.content}</td>
+              <td className="py-3 px-4">{message.campaign?.name || "-"}</td>
+              <td className="py-3 px-4">${message.smsCost}</td>
+              <td className="py-3 px-4">
+                {format(
+                  new Date(message.sentAt || message.createdAt),
+                  "MMM d, yyyy h:mm a",
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 });
 
-// Create a memoized wrapper component for CallDetails
-const MemoizedCallDetails = memo(function MemoizedCallDetails({
-  call,
-  onClose,
+// SMS Filters Component
+const SMSFilters = memo(function SMSFilters({
+  searchQuery,
+  onSearchChange,
+  direction,
+  onDirectionChange,
 }: {
-  call: Call;
-  onClose: () => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  direction: string;
+  onDirectionChange: (value: string) => void;
 }) {
-  return <CallDetails call={call} onClose={onClose} />;
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex-1">
+        <Input
+          placeholder="Search messages..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+      <Select value={direction} onValueChange={onDirectionChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Direction" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Messages</SelectItem>
+          <SelectItem value="inbound">Inbound</SelectItem>
+          <SelectItem value="outbound">Outbound</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 });
 
-export default function CallsPage() {
-  const {
-    todayMetrics,
-    metrics,
-    isLoading,
-    isCallsLoading,
-    calls,
-    callsError,
-    clientInfo,
-  } = useInitialData();
+interface MetricsData {
+  totalCalls: number;
+  totalDuration: number;
+  totalCost: number;
+  averageDuration: number;
+  averageCost: number;
+  successRate: number;
+  transferRate: number;
+  // Add any other metrics fields that are needed
+}
+
+export default function SMSPage() {
+  const { todayMetrics, metrics, isLoading, sms, smsError, clientInfo } =
+    useInitialData();
   const { setCallDetailsOpen } = useUI();
-  const {
-    showTestCalls,
-    setShowTestCalls,
-    showConnectedOnly,
-    setShowConnectedOnly,
-    callSearch: searchQuery,
-    setCallSearch: setSearchQuery,
-  } = usePreferences();
+  const { smsSearch: searchQuery, setSmsSearch: setSearchQuery } =
+    usePreferences();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -146,22 +191,10 @@ export default function CallsPage() {
     };
   });
 
-  // Move the dateRange state after useInitialData to ensure we have the calls data
-  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCampaignType, setSelectedCampaignType] = useState(() => {
-    // If there's exactly one campaign, use its type, otherwise use 'all'
-    return clientInfo?.campaigns?.length === 1
-      ? clientInfo.campaigns[0].type
-      : "all";
-  });
-  const [selectedCampaignId, setSelectedCampaignId] = useState(() => {
-    // If there's exactly one campaign, use its ID, otherwise use 'all'
-    return clientInfo?.campaigns?.length === 1
-      ? clientInfo.campaigns[0].id
-      : "all";
-  });
+  const [selectedCampaignId, setSelectedCampaignId] = useState("all");
+  const [direction, setDirection] = useState("all");
 
   // Add sorting state
   const [sortConfig, setSortConfig] = useState<{
@@ -169,66 +202,32 @@ export default function CallsPage() {
     direction: "asc" | "desc" | null;
   }>({ key: "", direction: null });
 
-  // Add this function to handle campaign changes
-  const handleCampaignChange = (campaignId: string) => {
-    setSelectedCampaignId(campaignId);
-  };
-
-  // At the top of your component, define the campaign options
-  const campaignOptions = useMemo(() => {
-    if (!clientInfo?.campaigns) return [];
-
-    return [
-      { value: "all", label: "All Campaigns" },
-      ...clientInfo.campaigns.map((campaign) => ({
-        value: campaign.id,
-        label: campaign.name || campaign.description,
-      })),
-    ];
-  }, [clientInfo?.campaigns]);
-
-  // Update the filteredCalls useMemo to include search filtering
-  const filteredCalls = useMemo(() => {
-    return (calls?.data || []).filter((call) => {
+  // Update the filteredMessages useMemo to include search filtering
+  const filteredMessages = useMemo(() => {
+    return (sms?.data || []).filter((message) => {
       const campaignMatch =
-        selectedCampaignId === "all" || call.campaignId === selectedCampaignId;
+        selectedCampaignId === "all" ||
+        message.campaignId === selectedCampaignId;
 
       // Add date range filtering
-      const callDate = new Date(call.createdAt);
+      const messageDate = new Date(message.sentAt || message.createdAt);
       const dateMatch =
         dateRange?.from && dateRange?.to
-          ? callDate >= dateRange.from &&
-            callDate <= new Date(dateRange.to.setHours(23, 59, 59, 999))
+          ? messageDate >= dateRange.from &&
+            messageDate <= new Date(dateRange.to.setHours(23, 59, 59, 999))
           : true;
 
-      const testMatch = showTestCalls || !call.testFlag;
+      // Add direction filtering
+      const directionMatch =
+        direction === "all" || message.direction === direction;
 
-      // Add connected calls filtering
-      const connectedMatch =
-        !showConnectedOnly ||
-        ![
-          "Busy/No Answer",
-          "Voicemail",
-          "Telephony Block",
-          "Customer Did Not Answer",
-          "Pipeline Error",
-        ].includes(call.disposition);
-
-      if (!searchQuery)
-        return campaignMatch && dateMatch && testMatch && connectedMatch;
+      if (!searchQuery) return campaignMatch && dateMatch && directionMatch;
 
       // Convert search term to lowercase once
       const searchLower = searchQuery.toLowerCase();
-      const searchDigits = searchQuery.replace(/\D/g, "");
 
-      // Check phone number fields first
-      if (call.callerId) {
-        const callerIdDigits = call.callerId.replace(/\D/g, "");
-        if (callerIdDigits === searchDigits) return true;
-      }
-
-      // Then check all other fields
-      const searchMatch = Object.entries(call).some(([key, value]) => {
+      // Check all fields
+      const searchMatch = Object.entries(message).some(([key, value]) => {
         if (value === null || value === undefined) return false;
 
         // Convert value to lowercase string for comparison
@@ -240,31 +239,22 @@ export default function CallsPage() {
         return valueStr.includes(searchLower);
       });
 
-      return (
-        campaignMatch && dateMatch && testMatch && connectedMatch && searchMatch
-      );
+      return campaignMatch && dateMatch && directionMatch && searchMatch;
     });
-  }, [
-    calls?.data,
-    selectedCampaignId,
-    dateRange,
-    showTestCalls,
-    showConnectedOnly,
-    searchQuery,
-  ]);
+  }, [sms?.data, selectedCampaignId, dateRange, direction, searchQuery]);
 
   // Move sorting logic before pagination
-  const sortedAndFilteredCalls = useMemo(() => {
-    let result = filteredCalls;
+  const sortedAndFilteredMessages = useMemo(() => {
+    let result = filteredMessages;
 
     // Apply sorting if configured
     if (sortConfig.key && sortConfig.direction) {
       result = [...result].sort((a, b) => {
-        let aValue = a[sortConfig.key as keyof Call];
-        let bValue = b[sortConfig.key as keyof Call];
+        let aValue = a[sortConfig.key as keyof SMS];
+        let bValue = b[sortConfig.key as keyof SMS];
 
         // Handle special cases for date fields
-        if (sortConfig.key === "createdAt") {
+        if (sortConfig.key === "sentAt" || sortConfig.key === "createdAt") {
           aValue = new Date(aValue as string).getTime();
           bValue = new Date(bValue as string).getTime();
         }
@@ -279,18 +269,21 @@ export default function CallsPage() {
     }
 
     return result;
-  }, [filteredCalls, sortConfig]);
+  }, [filteredMessages, sortConfig]);
 
   // Update pagination to use sorted results
-  const paginatedCalls = useMemo(() => {
+  const paginatedMessages = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return sortedAndFilteredCalls.slice(startIndex, endIndex);
-  }, [sortedAndFilteredCalls, currentPage, rowsPerPage]);
+    return sortedAndFilteredMessages.slice(startIndex, endIndex);
+  }, [sortedAndFilteredMessages, currentPage, rowsPerPage]);
 
   // Add these calculations before the useEffect
-  const totalFilteredCalls = sortedAndFilteredCalls.length;
-  const totalPages = Math.max(1, Math.ceil(totalFilteredCalls / rowsPerPage));
+  const totalFilteredMessages = sortedAndFilteredMessages.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalFilteredMessages / rowsPerPage),
+  );
 
   // Ensure current page is within bounds
   useEffect(() => {
@@ -299,32 +292,17 @@ export default function CallsPage() {
     }
   }, [currentPage, totalPages]);
 
-  const handleCallSelect = useCallback(
-    (call: Call) => {
-      setSelectedCall(call);
-      setCallDetailsOpen(true);
-      // Add call ID to URL without navigation
-      navigate(`?id=${call.id}`, { replace: true });
-    },
-    [setCallDetailsOpen, navigate],
-  );
-
-  const handleCallClose = useCallback(() => {
-    setCallDetailsOpen(false);
-    setSelectedCall(null);
-    // Remove call ID from URL
-    navigate("", { replace: true });
-  }, [setCallDetailsOpen, navigate]);
-
   const handleDateRangeChange = (date: DateRange | undefined) => {
     setDateRange(date);
   };
 
   const exportToCsv = () => {
-    // Convert calls to CSV format
-    const headers = Object.keys(filteredCalls[0] || {}).join(",");
-    const rows = filteredCalls.map((call) =>
-      Object.values(call)
+    if (!filteredMessages.length) return;
+
+    // Convert messages to CSV format
+    const headers = Object.keys(filteredMessages[0] || {}).join(",");
+    const rows = filteredMessages.map((message) =>
+      Object.values(message)
         .map((value) => {
           if (value === null || value === undefined) return "";
           if (typeof value === "object")
@@ -338,31 +316,19 @@ export default function CallsPage() {
     // Create and trigger download
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    const fileName = `calls_${format(new Date(), "yyyyMMdd")}.csv`;
+    const fileName = `sms_${format(new Date(), "yyyyMMdd")}.csv`;
 
-    if (navigator.msSaveBlob) {
-      // IE 10+
-      navigator.msSaveBlob(blob, fileName);
-    } else {
+    try {
+      // Modern browsers
       link.href = URL.createObjectURL(blob);
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
     }
   };
-
-  // Add effect to handle initial URL with call ID
-  useEffect(() => {
-    const callId = searchParams.get("id");
-    if (callId && calls?.data) {
-      const call = calls.data.find((c) => c.id === callId);
-      if (call) {
-        setSelectedCall(call);
-        setCallDetailsOpen(true);
-      }
-    }
-  }, [calls?.data, searchParams, setCallDetailsOpen]);
 
   // Add handler for sorting
   const handleSort = (key: string, direction: "asc" | "desc" | null) => {
@@ -370,32 +336,17 @@ export default function CallsPage() {
   };
 
   return (
-    <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
+    <RootLayout
+      topMetrics={getTopMetrics(todayMetrics?.data)}
+      hideKnowledgeSearch
+    >
       <div className="space-y-6">
-        {selectedCall && (
-          <MemoizedCallDetails
-            key={selectedCall.id}
-            call={selectedCall}
-            onClose={handleCallClose}
-          />
-        )}
-
         <div className="flex items-start justify-end gap-4">
-          <Select
+          <CampaignSelect
             value={selectedCampaignId}
             onValueChange={setSelectedCampaignId}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Campaign" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border shadow-md">
-              {campaignOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            campaigns={clientInfo?.campaigns ?? []}
+          />
           <DateRangePicker
             date={dateRange}
             onChange={handleDateRangeChange}
@@ -403,37 +354,26 @@ export default function CallsPage() {
               from: yesterday,
               to: today,
             }}
-            minDate={
-              calls?.data?.[calls.data.length - 1]?.createdAt
-                ? new Date(calls.data[calls.data.length - 1].createdAt)
-                : undefined
-            }
           />
         </div>
 
-        <CallFilters
+        <SMSFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          showTestCalls={showTestCalls}
-          onTestCallsChange={setShowTestCalls}
-          showConnectedOnly={showConnectedOnly}
-          onConnectedOnlyChange={setShowConnectedOnly}
+          direction={direction}
+          onDirectionChange={setDirection}
         />
 
         <div className="mt-0">
-          {isCallsLoading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <p>Loading calls...</p>
+              <p>Loading messages...</p>
             </div>
           ) : (
-            <MemoizedCallsTable
-              calls={paginatedCalls}
-              onCallSelect={handleCallSelect}
-              showTestCalls={showTestCalls}
-              showConnectedOnly={showConnectedOnly}
+            <MemoizedSMSTable
+              messages={paginatedMessages}
               onSort={handleSort}
               sortConfig={sortConfig}
-              hasSourceTracking={calls?.hasSourceTracking ?? false}
             />
           )}
         </div>
@@ -459,8 +399,8 @@ export default function CallsPage() {
             </Select>
             <span className="text-sm text-gray-600">
               Showing {(currentPage - 1) * rowsPerPage + 1} to{" "}
-              {Math.min(currentPage * rowsPerPage, totalFilteredCalls)} of{" "}
-              {totalFilteredCalls} entries
+              {Math.min(currentPage * rowsPerPage, totalFilteredMessages)} of{" "}
+              {totalFilteredMessages} entries
             </span>
           </div>
 

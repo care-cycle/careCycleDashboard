@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface PreferencesContextType {
   // Customer table preferences
@@ -6,7 +6,7 @@ interface PreferencesContextType {
   setCustomerColumns: (columns: string[]) => void;
   customerSearch: string;
   setCustomerSearch: (search: string) => void;
-  
+
   // Call table preferences
   showTestCalls: boolean;
   setShowTestCalls: (show: boolean) => void;
@@ -14,21 +14,35 @@ interface PreferencesContextType {
   setShowConnectedOnly: (show: boolean) => void;
   callSearch: string;
   setCallSearch: (search: string) => void;
+
+  // SMS table preferences
+  smsSearch: string;
+  setSmsSearch: (search: string) => void;
 }
 
-const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
+const PreferencesContext = createContext<PreferencesContextType | undefined>(
+  undefined,
+);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   // Customer table state
   const [customerColumns, setCustomerColumns] = useState<string[]>([
-    'customer', 'contact', 'location', 'campaigns', 'calls', 'last-contact'
+    "customer",
+    "contact",
+    "location",
+    "campaigns",
+    "calls",
+    "last-contact",
   ]);
-  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerSearch, setCustomerSearch] = useState("");
 
   // Call table state
   const [showTestCalls, setShowTestCalls] = useState(false);
   const [showConnectedOnly, setShowConnectedOnly] = useState(true);
-  const [callSearch, setCallSearch] = useState('');
+  const [callSearch, setCallSearch] = useState("");
+
+  // SMS table state
+  const [smsSearch, setSmsSearch] = useState("");
 
   return (
     <PreferencesContext.Provider
@@ -43,6 +57,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setShowConnectedOnly,
         callSearch,
         setCallSearch,
+        smsSearch,
+        setSmsSearch,
       }}
     >
       {children}
@@ -53,7 +69,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 export function usePreferences() {
   const context = useContext(PreferencesContext);
   if (context === undefined) {
-    throw new Error('usePreferences must be used within a PreferencesProvider');
+    throw new Error("usePreferences must be used within a PreferencesProvider");
   }
   return context;
-} 
+}

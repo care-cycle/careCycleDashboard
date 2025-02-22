@@ -1,14 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
-import { AppointmentCalendar } from '@/components/ui/appointment-calendar';
-import { useToast } from '@/hooks/use-toast';
-import { Search, Calendar as CalendarIcon, UserSearch } from 'lucide-react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import moment from 'moment-timezone';
-import { useClientData, useInitialData } from '@/hooks/use-client-data';
-import { RootLayout } from '@/components/layout/root-layout';
-import { cn } from '@/lib/utils';
-import { getTopMetrics } from '@/lib/metrics';
-import { Input } from '@/components/ui/input';
+import { useEffect, useState, useMemo } from "react";
+import { AppointmentCalendar } from "@/components/ui/appointment-calendar";
+import { useToast } from "@/hooks/use-toast";
+import { Search, Calendar as CalendarIcon, UserSearch } from "lucide-react";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import moment from "moment-timezone";
+import { useClientData, useInitialData } from "@/hooks/use-client-data";
+import { RootLayout } from "@/components/layout/root-layout";
+import { cn } from "@/lib/utils";
+import { getTopMetrics } from "@/lib/metrics";
+import { Input } from "@/components/ui/input";
 
 interface Appointment {
   id: string;
@@ -31,15 +31,24 @@ export default function Appointments() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clientInfo, fetchAppointments } = useClientData();
-  const { todayMetrics, appointments: initialAppointments, isAppointmentsLoading } = useInitialData();
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>(initialAppointments);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
+  const {
+    todayMetrics,
+    appointments: initialAppointments,
+    isAppointmentsLoading,
+  } = useInitialData();
+  const [allAppointments, setAllAppointments] =
+    useState<Appointment[]>(initialAppointments);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date(),
+  );
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get("search") || "",
+  );
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   // Handle URL search param
   useEffect(() => {
-    const searchFromUrl = searchParams.get('search');
+    const searchFromUrl = searchParams.get("search");
     if (searchFromUrl) {
       setSearchQuery(searchFromUrl);
     }
@@ -53,9 +62,9 @@ export default function Appointments() {
         setAllAppointments(appointments);
       } catch (error) {
         toast({
-          title: 'Error',
-          description: 'Failed to load appointments',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load appointments",
+          variant: "destructive",
         });
       }
     };
@@ -65,10 +74,12 @@ export default function Appointments() {
 
   // Filter appointments for the current month view
   const appointments = useMemo(() => {
-    return allAppointments.filter(appointment => {
+    return allAppointments.filter((appointment) => {
       const appointmentDate = new Date(appointment.appointmentDateTime);
-      return appointmentDate.getMonth() === currentMonth.getMonth() &&
-             appointmentDate.getFullYear() === currentMonth.getFullYear();
+      return (
+        appointmentDate.getMonth() === currentMonth.getMonth() &&
+        appointmentDate.getFullYear() === currentMonth.getFullYear()
+      );
     });
   }, [allAppointments, currentMonth]);
 
@@ -84,7 +95,7 @@ export default function Appointments() {
     // Always use callerId for search if available, as it's the phone number
     if (callerId) {
       // Remove any formatting from the phone number
-      const cleanNumber = callerId.replace(/\D/g, '');
+      const cleanNumber = callerId.replace(/\D/g, "");
       navigate(`/customers?search=${encodeURIComponent(cleanNumber)}`);
     } else {
       navigate(`/customers?search=${encodeURIComponent(customerId)}`);
@@ -92,7 +103,9 @@ export default function Appointments() {
   };
 
   const handleAppointmentClick = (appointmentId: string) => {
-    const appointment = allAppointments.find((apt: Appointment) => apt.id === appointmentId);
+    const appointment = allAppointments.find(
+      (apt: Appointment) => apt.id === appointmentId,
+    );
     if (appointment) {
       navigateToCustomer(appointment.customerId, appointment.callerId);
     }
@@ -105,32 +118,32 @@ export default function Appointments() {
     if (value) {
       navigate(`?search=${encodeURIComponent(value)}`, { replace: true });
     } else {
-      navigate('', { replace: true });
+      navigate("", { replace: true });
     }
   };
 
   const convertTimezone = (timezone: string | null): string => {
-    if (!timezone) return 'America/New_York';
-    
+    if (!timezone) return "America/New_York";
+
     // Convert common timezone names to IANA format
     const timezoneMap: Record<string, string> = {
-      'Eastern': 'America/New_York',
-      'Central': 'America/Chicago',
-      'Mountain': 'America/Denver',
-      'Pacific': 'America/Los_Angeles',
+      Eastern: "America/New_York",
+      Central: "America/Chicago",
+      Mountain: "America/Denver",
+      Pacific: "America/Los_Angeles",
     };
 
     return timezoneMap[timezone] || timezone;
   };
 
   const formatAppointmentTime = (dateTime: string) => {
-    if (!clientInfo?.timezone) return moment(dateTime).format('LLL');
+    if (!clientInfo?.timezone) return moment(dateTime).format("LLL");
     try {
       const ianaTimezone = convertTimezone(clientInfo.timezone);
-      return moment(dateTime).tz(ianaTimezone).format('LLL z');
+      return moment(dateTime).tz(ianaTimezone).format("LLL z");
     } catch (e) {
-      console.warn('Invalid timezone:', clientInfo.timezone);
-      return moment(dateTime).format('LLL');
+      console.warn("Invalid timezone:", clientInfo.timezone);
+      return moment(dateTime).format("LLL");
     }
   };
 
@@ -138,37 +151,41 @@ export default function Appointments() {
   const filteredAppointments = useMemo(() => {
     if (!searchQuery) {
       // If no search query, show future appointments
-      return allAppointments.filter(appointment => {
+      return allAppointments.filter((appointment) => {
         let appointmentDate;
         try {
           const ianaTimezone = convertTimezone(appointment.timezone);
-          appointmentDate = moment(appointment.appointmentDateTime).tz(ianaTimezone);
+          appointmentDate = moment(appointment.appointmentDateTime).tz(
+            ianaTimezone,
+          );
         } catch (e) {
-          console.warn('Invalid timezone:', appointment.timezone);
-          appointmentDate = moment(appointment.appointmentDateTime).tz('America/New_York');
+          console.warn("Invalid timezone:", appointment.timezone);
+          appointmentDate = moment(appointment.appointmentDateTime).tz(
+            "America/New_York",
+          );
         }
-        
+
         return appointmentDate.isAfter(moment());
       });
     }
 
     // If there's a search query, search through all appointments
     const searchLower = searchQuery.toLowerCase();
-    const searchDigits = searchQuery.replace(/\D/g, '');
-    
-    return allAppointments.filter(appointment => {
+    const searchDigits = searchQuery.replace(/\D/g, "");
+
+    return allAppointments.filter((appointment) => {
       // Check phone number (callerId)
       if (appointment.callerId) {
-        const callerIdDigits = appointment.callerId.replace(/\D/g, '');
+        const callerIdDigits = appointment.callerId.replace(/\D/g, "");
         if (callerIdDigits.includes(searchDigits)) return true;
       }
 
       // Then check other fields
       return (
-        (appointment.firstName?.toLowerCase() || '').includes(searchLower) ||
-        (appointment.lastName?.toLowerCase() || '').includes(searchLower) ||
-        (appointment.customerId.toLowerCase()).includes(searchLower) ||
-        (appointment.campaignName.toLowerCase()).includes(searchLower)
+        (appointment.firstName?.toLowerCase() || "").includes(searchLower) ||
+        (appointment.lastName?.toLowerCase() || "").includes(searchLower) ||
+        appointment.customerId.toLowerCase().includes(searchLower) ||
+        appointment.campaignName.toLowerCase().includes(searchLower)
       );
     });
   }, [allAppointments, searchQuery]);
@@ -195,7 +212,9 @@ export default function Appointments() {
               <div className="mt-3 space-y-2 overflow-y-auto h-[calc(100%-5rem)]">
                 {isAppointmentsLoading ? (
                   <div className="flex items-center justify-center h-24">
-                    <div className="animate-pulse text-gray-500">Loading appointments...</div>
+                    <div className="animate-pulse text-gray-500">
+                      Loading appointments...
+                    </div>
                   </div>
                 ) : filteredAppointments.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-24 text-gray-500">
@@ -204,27 +223,32 @@ export default function Appointments() {
                   </div>
                 ) : (
                   filteredAppointments.map((appointment: Appointment) => (
-                    <div 
+                    <div
                       key={appointment.id}
                       className={cn(
                         "relative group cursor-pointer",
                         "border rounded-lg p-3",
-                        "hover:bg-black/5 transition-all duration-200"
+                        "hover:bg-black/5 transition-all duration-200",
                       )}
-                      onClick={() => navigateToCustomer(appointment.customerId, appointment.callerId)}
+                      onClick={() =>
+                        navigateToCustomer(
+                          appointment.customerId,
+                          appointment.callerId,
+                        )
+                      }
                     >
                       <div className="flex justify-between items-start gap-1">
                         <div className="min-w-0 flex-1">
                           <h3 className="font-medium text-gray-900 text-sm">
-                            {appointment.firstName || appointment.lastName ? (
-                              `${appointment.firstName || ''} ${appointment.lastName || ''}`
-                            ) : (
-                              'Unnamed Customer'
-                            )}
+                            {appointment.firstName || appointment.lastName
+                              ? `${appointment.firstName || ""} ${appointment.lastName || ""}`
+                              : "Unnamed Customer"}
                           </h3>
                           <div className="mt-0.5 space-y-0.5">
                             <p className="text-xs font-medium text-gray-900">
-                              {formatAppointmentTime(appointment.appointmentDateTime)}
+                              {formatAppointmentTime(
+                                appointment.appointmentDateTime,
+                              )}
                             </p>
                             <p className="text-xs text-gray-600">
                               {appointment.campaignName}
@@ -239,14 +263,21 @@ export default function Appointments() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigateToCustomer(appointment.customerId, appointment.callerId);
+                            navigateToCustomer(
+                              appointment.customerId,
+                              appointment.callerId,
+                            );
                           }}
                           className={cn(
                             "text-gray-400 hover:text-gray-900",
                             "transition-colors duration-200",
-                            "flex-shrink-0 ml-2"
+                            "flex-shrink-0 ml-2",
                           )}
-                          title={appointment.callerId ? `Search by ${appointment.callerId}` : "Search customer"}
+                          title={
+                            appointment.callerId
+                              ? `Search by ${appointment.callerId}`
+                              : "Search customer"
+                          }
                         >
                           <UserSearch size={16} />
                         </button>

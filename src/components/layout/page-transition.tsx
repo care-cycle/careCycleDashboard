@@ -1,8 +1,8 @@
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 
 interface PageTransitionProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function PageTransition({ children, className }: PageTransitionProps) {
@@ -11,13 +11,13 @@ export function PageTransition({ children, className }: PageTransitionProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      transition={{ 
+      transition={{
         duration: 0.2,
-        ease: "easeOut"
+        ease: "easeOut",
       }}
       className={className}
     >
       {children}
     </motion.div>
-  )
-} 
+  );
+}

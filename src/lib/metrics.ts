@@ -1,29 +1,47 @@
-import { formatDuration } from './utils'
+import { formatDuration } from "./utils";
 
-type MetricsData = {
-  uniqueCustomers?: number
-  uniqueCalls?: number
-  totalCalls?: number
-  totalSpend?: number
-  totalDurationMs?: number
-  averageDurationMs?: number
+interface MetricsData {
+  data?: {
+    totalCalls?: number;
+    totalDurationMs?: number;
+    totalSpend?: number;
+    totalVapiCost?: number;
+  };
 }
 
-export const getTopMetrics = (todayMetrics: MetricsData | null | undefined) => [
-  { 
-    title: "Today's Total Calls", 
-    value: todayMetrics?.totalCalls?.toLocaleString() || '0'
-  },
-  { 
-    title: "Today's Total Spend", 
-    value: `$${Number(todayMetrics?.totalSpend || 0).toFixed(2)}`
-  },
-  { 
-    title: "Today's Total Duration", 
-    value: formatDuration(todayMetrics?.totalDurationMs || 0)
-  },
-  { 
-    title: "Today's Avg Duration", 
-    value: formatDuration(todayMetrics?.averageDurationMs || 0)
-  }
-] 
+interface TopMetric {
+  title: string;
+  value: string;
+}
+
+export function getTopMetrics(
+  metricsData: MetricsData | undefined | null,
+): TopMetric[] {
+  if (!metricsData?.data) return [];
+
+  const {
+    totalCalls = 0,
+    totalDurationMs = 0,
+    totalSpend = 0,
+    totalVapiCost = 0,
+  } = metricsData.data;
+
+  return [
+    {
+      title: "Total Calls",
+      value: totalCalls.toString(),
+    },
+    {
+      title: "Total Duration",
+      value: formatDuration(totalDurationMs),
+    },
+    {
+      title: "Total Cost",
+      value: `$${totalSpend.toFixed(2)}`,
+    },
+    {
+      title: "VAPI Cost",
+      value: `$${totalVapiCost.toFixed(2)}`,
+    },
+  ];
+}

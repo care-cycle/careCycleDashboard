@@ -1,6 +1,6 @@
-import { Input } from "@/components/ui/input"
-import { Search, Columns } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input";
+import { Search, Columns } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -21,13 +21,13 @@ interface CustomerFiltersProps {
   isLoading?: boolean;
 }
 
-export function CustomerFilters({ 
+export function CustomerFilters({
   searchQuery,
   onSearchChange,
   availableColumns,
   activeColumns,
   onColumnToggle,
-  isLoading = false
+  isLoading = false,
 }: CustomerFiltersProps) {
   const [open, setOpen] = useState(false);
   const [checkedColumns, setCheckedColumns] = useState<string[]>(activeColumns);
@@ -54,7 +54,7 @@ export function CustomerFilters({
     if (checkedColumns.includes(columnKey) && checkedColumns.length <= 1) {
       return;
     }
-    
+
     onColumnToggle(columnKey);
   };
 
@@ -72,17 +72,13 @@ export function CustomerFilters({
         </div>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="ml-4"
-              disabled={isLoading}
-            >
+            <Button variant="outline" className="ml-4" disabled={isLoading}>
               <Columns className="h-4 w-4 mr-2" />
               Manage Columns
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
+          <DropdownMenuContent
+            align="end"
             className="w-56 bg-white border rounded-md shadow-md"
           >
             <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
@@ -107,4 +103,4 @@ export function CustomerFilters({
       </div>
     </div>
   );
-} 
+}

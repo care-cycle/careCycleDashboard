@@ -1,27 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import apiClient from '@/lib/api-client'
-import { format } from 'date-fns'
-import { useAuth } from '@clerk/clerk-react'
-import { useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import apiClient from "@/lib/api-client";
+import { format } from "date-fns";
+import { useAuth } from "@clerk/clerk-react";
+import { useCallback } from "react";
 
 interface CallsResponse {
-  s: boolean;          
-  d: {                 
-    c: Array<{         
-      i: string;       
-      cid: string;     
-      d: string;       
-      ca: string;      
-      cr: string;      
-      r: string;       
-      du: string;      
-      at: string;      
-      se: string;      
-      su: string;      
-      tr: string;      
-      di: 'i' | 'o';   
-      co: number;      
-      tf: boolean;     
+  s: boolean;
+  d: {
+    c: Array<{
+      i: string;
+      cid: string;
+      d: string;
+      ca: string;
+      cr: string;
+      r: string;
+      du: string;
+      at: string;
+      se: string;
+      su: string;
+      tr: string;
+      di: "i" | "o";
+      co: number;
+      tf: boolean;
       s?: string | null;
     }>;
     hasSourceTracking: boolean;
@@ -81,93 +81,100 @@ interface ClientInfo {
   customDataSchema?: Record<string, unknown>;
   createdAt: string;
   businessHours: Array<{
-    dayOfWeek: number[]
-    startHour: number
-    endHour: number
-    timezone: string
+    dayOfWeek: number[];
+    startHour: number;
+    endHour: number;
+    timezone: string;
   }>;
   specialHours: Array<{
-    type: 'special' | 'dateRange' | 'recurring'
-    name: string
-    date?: string
-    startDate?: string
-    endDate?: string
-    recurrence?: 'weekly' | 'monthly' | 'yearly'
-    dayOfMonth?: number
-    dayOfWeek?: number[]
+    type: "special" | "dateRange" | "recurring";
+    name: string;
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    recurrence?: "weekly" | "monthly" | "yearly";
+    dayOfMonth?: number;
+    dayOfWeek?: number[];
     hours: Array<{
-      startHour: number
-      endHour: number
-    }>
+      startHour: number;
+      endHour: number;
+    }>;
   }>;
   holidayGroups: Array<{
-    id: string
-    name: string
-    description?: string
+    id: string;
+    name: string;
+    description?: string;
     holidays: Array<{
-      id: string
-      name: string
-      description?: string
-      type: 'fixed' | 'floating' | 'custom'
-      month?: number
-      dayOfMonth?: number
+      id: string;
+      name: string;
+      description?: string;
+      type: "fixed" | "floating" | "custom";
+      month?: number;
+      dayOfMonth?: number;
       floatingRule?: {
-        weekOfMonth: number
-        dayOfWeek: number
-        month: number
-      }
+        weekOfMonth: number;
+        dayOfWeek: number;
+        month: number;
+      };
       modifiedHours: null | Array<{
-        startHour: number
-        endHour: number
-      }>
-    }>
+        startHour: number;
+        endHour: number;
+      }>;
+    }>;
   }>;
   timezone: string;
   organizationId: string | null;
   isPersonal: boolean;
   default_payment_method: any | null;
+  campaigns?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    description?: string;
+    status: string;
+  }>;
 }
 
 interface Appointment {
-  id: string
-  customerId: string
-  firstName: string | null
-  lastName: string | null
-  timezone: string | null
-  state: string | null
-  postalCode: string | null
-  appointmentDateTime: string
-  campaignId: string
-  campaignName: string
-  callerId: string | null
+  id: string;
+  customerId: string;
+  firstName: string | null;
+  lastName: string | null;
+  timezone: string | null;
+  state: string | null;
+  postalCode: string | null;
+  appointmentDateTime: string;
+  campaignId: string;
+  campaignName: string;
+  callerId: string | null;
 }
 
 interface AppointmentsResponse {
-  results: Appointment[]
-  requestId: string
+  results: Appointment[];
+  requestId: string;
 }
 
 interface ContactRateDataPoint {
-  hour: string
-  formattedHour: string
-  formattedDate: string
-  totalCalls: number
-  uniqueCallers: number
-  totalCustomers: number
-  dispositionCounts: Record<string, number>
+  hour: string;
+  formattedHour: string;
+  formattedDate: string;
+  totalCalls: number;
+  uniqueCallers: number;
+  totalCustomers: number;
+  dispositionCounts: Record<string, number>;
 }
 
 interface ContactRateResponse {
-  success: boolean
-  data: ContactRateDataPoint[]
+  success: boolean;
+  data: ContactRateDataPoint[];
   metadata: {
-    timezone: string
+    timezone: string;
     timeRange: {
-      from: string
-      to: string
-    }
-    totalCustomers: number
-  }
+      from: string;
+      to: string;
+    };
+    totalCustomers: number;
+  };
 }
 
 interface TransformedCallsData {
@@ -183,7 +190,7 @@ interface TransformedCallsData {
     successEvaluation: string;
     summary: string;
     transcript: string;
-    direction: 'inbound' | 'outbound';
+    direction: "inbound" | "outbound";
     cost: number;
     testFlag: boolean;
     source: string | null;
@@ -197,7 +204,12 @@ interface Inquiry {
   callId: string;
   inquiry: string;
   response?: string;
-  status: 'new' | 'pending_resolution' | 'unresolved' | 'resolved' | 'appointment_scheduled';
+  status:
+    | "new"
+    | "pending_resolution"
+    | "unresolved"
+    | "resolved"
+    | "appointment_scheduled";
   resolvedAt?: string;
   resolvedBy?: string;
   createdAt: string;
@@ -209,66 +221,103 @@ interface InquiriesResponse {
   data: Inquiry[];
 }
 
+interface SMSResponse {
+  data: Array<{
+    id: string;
+    clientId: string;
+    campaignId: string | null;
+    fromNumber: string;
+    toNumber: string;
+    direction: "inbound" | "outbound";
+    tellsSmsId: string | null;
+    smsType: string | null;
+    smsCost: number;
+    content: string | null;
+    sentAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    campaign?: {
+      id: string;
+      name: string;
+      type: string;
+      status: string;
+    } | null;
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+interface CallData {
+  i: string;
+  cid: string;
+  d: string;
+  ca: string;
+  cr: string;
+  r: string;
+  du: string;
+  at: string;
+  se: string;
+  su: string;
+  tr: string;
+  di: "i" | "o";
+  co: number;
+  tf: boolean;
+  s?: string | null;
+}
+
 export function useInitialData() {
-  const { isLoaded, isSignedIn } = useAuth()
-  const enabled = isLoaded && isSignedIn
+  const { isLoaded, isSignedIn } = useAuth();
+  const enabled = isLoaded && isSignedIn;
 
   // Group all queries together to maintain consistent hook order
   const queries = {
     todayMetrics: useQuery({
-      queryKey: ['todayMetrics'],
-      queryFn: () => apiClient.get('/portal/client/metrics/today'),
+      queryKey: ["todayMetrics"],
+      queryFn: () => apiClient.get("/portal/client/metrics/today"),
       enabled,
       refetchInterval: 5 * 60 * 1000,
       staleTime: 4 * 60 * 1000,
     }),
 
     clientInfo: useQuery<ClientInfo>({
-      queryKey: ['clientInfo'],
+      queryKey: ["clientInfo"],
       queryFn: async () => {
-        const response = await apiClient.get('/portal/client/info')
-        return response.data
+        const response = await apiClient.get("/portal/client/info");
+        return response.data;
       },
       enabled,
     }),
 
     metrics: useQuery({
-      queryKey: ['metrics'],
-      queryFn: () => apiClient.get('/portal/client/metrics'),
+      queryKey: ["metrics"],
+      queryFn: () => apiClient.get("/portal/client/metrics"),
       staleTime: 5 * 60 * 1000,
       enabled,
     }),
 
     calls: useQuery({
-      queryKey: ['calls'],
+      queryKey: ["calls"],
       queryFn: async () => {
-        const response = await apiClient.get<CallsResponse>('/portal/client/calls')
-        return response
+        const response = await apiClient.get<CallsResponse>(
+          "/portal/client/calls",
+        );
+        return response;
       },
       enabled,
       select: (response): TransformedCallsData => {
         if (!response?.data?.d?.c) {
-          return { data: [], hasSourceTracking: false }
+          return {
+            data: [],
+            hasSourceTracking: false,
+          };
         }
 
-        const transformedData = {
-          data: response.data.d.c.map((call: {
-            i: string
-            cid: string
-            d: string
-            ca: string
-            cr: string
-            r: string
-            du: string
-            at: string
-            se: string
-            su: string
-            tr: string
-            di: 'i' | 'o'
-            co: number
-            tf: boolean
-            s?: string | null
-          }) => ({
+        return {
+          data: response.data.d.c.map((call: CallData) => ({
             id: call.i,
             campaignId: call.cid,
             disposition: call.d,
@@ -280,43 +329,50 @@ export function useInitialData() {
             successEvaluation: call.se,
             summary: call.su,
             transcript: call.tr,
-            direction: call.di === 'i' ? 'inbound' : 'outbound',
+            direction: call.di === "i" ? "inbound" : "outbound",
             cost: call.co,
             testFlag: call.tf,
-            source: call.s || null
+            source: call.s,
           })),
-          hasSourceTracking: response.data.d.hasSourceTracking
-        }
-        
-        return transformedData
+          hasSourceTracking: response.data.d.hasSourceTracking,
+        };
       },
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
+    }),
+
+    sms: useQuery<SMSResponse>({
+      queryKey: ["sms"],
+      queryFn: async () => {
+        const response = await apiClient.get("/portal/client/sms");
+        return response.data;
+      },
+      enabled,
     }),
 
     customers: useQuery({
-      queryKey: ['customers'],
-      queryFn: () => apiClient.get<CustomersResponse>('/portal/client/customers/base'),
+      queryKey: ["customers"],
+      queryFn: () =>
+        apiClient.get<CustomersResponse>("/portal/client/customers/base"),
       enabled,
       staleTime: 5 * 60 * 1000,
       retry: 1,
     }),
 
     campaigns: useQuery({
-      queryKey: ['campaigns'],
-      queryFn: () => apiClient.get<CampaignsResponse>('/portal/client/campaigns'),
+      queryKey: ["campaigns"],
+      queryFn: () =>
+        apiClient.get<CampaignsResponse>("/portal/client/campaigns"),
       staleTime: 5 * 60 * 1000,
       enabled,
       retry: 1,
     }),
 
     appointments: useQuery({
-      queryKey: ['appointments'],
+      queryKey: ["appointments"],
       queryFn: async () => {
         const response = await apiClient.get<AppointmentsResponse>(
-          '/portal/client/customers/appointments'
-        )
-        return response.data
+          "/portal/client/customers/appointments",
+        );
+        return response.data;
       },
       enabled,
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -326,111 +382,121 @@ export function useInitialData() {
     }),
 
     inquiries: useQuery<InquiriesResponse>({
-      queryKey: ['inquiries'],
+      queryKey: ["inquiries"],
       queryFn: async () => {
-        const response = await apiClient.get('/portal/client/inquiries')
-        return response.data
+        const response = await apiClient.get("/portal/client/inquiries");
+        return response.data;
       },
       enabled,
       staleTime: 0, // Always consider data stale
       refetchOnMount: true,
-      refetchOnWindowFocus: true
+      refetchOnWindowFocus: true,
     }),
-  }
+  };
 
   const fetchUniqueCallers = useCallback(async (from: Date, to: Date) => {
-    const fromStr = format(from, 'yyyy-MM-dd HH:mm:ss')
-    const toStr = format(to, 'yyyy-MM-dd HH:mm:ss')
-    
-    return apiClient.get('/portal/client/metrics/unique-callers', {
-      params: { from: fromStr, to: toStr }
-    })
-  }, [])
+    const fromStr = format(from, "yyyy-MM-dd HH:mm:ss");
+    const toStr = format(to, "yyyy-MM-dd HH:mm:ss");
 
-  const isLoading = !isLoaded || queries.todayMetrics.isLoading || queries.clientInfo.isLoading
+    return apiClient.get("/portal/client/metrics/unique-callers", {
+      params: { from: fromStr, to: toStr },
+    });
+  }, []);
+
+  const isLoading =
+    !isLoaded || queries.todayMetrics.isLoading || queries.clientInfo.isLoading;
 
   return {
-    metrics: queries.metrics.data?.data,
+    todayMetrics: queries.todayMetrics.data,
+    metrics: queries.metrics.data,
     clientInfo: queries.clientInfo.data,
     calls: queries.calls.data,
-    callsError: queries.calls.error,
-    todayMetrics: queries.todayMetrics.data?.data,
-    appointments: queries.appointments.data?.results ?? [],
-    isHeaderLoading: !isLoaded || queries.todayMetrics.isLoading || queries.clientInfo.isLoading,
-    isMetricsLoading: queries.metrics.isLoading,
+    sms: queries.sms.data,
+    isLoading,
     isCallsLoading: queries.calls.isLoading,
+    isSmsLoading: queries.sms.isLoading,
+    callsError: queries.calls.error,
+    smsError: queries.sms.error,
+    appointments: queries.appointments.data?.results ?? [],
+    isHeaderLoading:
+      !isLoaded ||
+      queries.todayMetrics.isLoading ||
+      queries.clientInfo.isLoading,
+    isMetricsLoading: queries.metrics.isLoading,
     isAppointmentsLoading: queries.appointments.isLoading,
     fetchUniqueCallers,
     customers: queries.customers.data?.data,
     isCustomersLoading: queries.customers.isLoading,
     campaigns: queries.campaigns.data,
-    isLoading,
     inquiries: queries.inquiries.data?.data ?? [],
     isInquiriesLoading: queries.inquiries.isLoading,
-  }
+  };
 }
 
 export function useClientData() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const { data: clientInfo, isLoading } = useQuery<ClientInfo>({
-    queryKey: ['clientInfo'],
+    queryKey: ["clientInfo"],
     queryFn: async () => {
-      const response = await apiClient.get('/portal/client/info')
-      return response.data
-    }
-  })
+      const response = await apiClient.get("/portal/client/info");
+      return response.data;
+    },
+  });
 
   const fetchAppointments = useCallback(async () => {
     const response = await apiClient.get<AppointmentsResponse>(
-      '/portal/client/customers/appointments'
-    )
-    return response.data.results
-  }, [])
+      "/portal/client/customers/appointments",
+    );
+    return response.data.results;
+  }, []);
 
-  const fetchContactRates = useCallback(async (from: Date, to: Date, campaignId: string) => {
-    const searchParams = new URLSearchParams({
-      from: from.toISOString(),
-      to: to.toISOString(),
-      campaignId
-    });
+  const fetchContactRates = useCallback(
+    async (from: Date, to: Date, campaignId: string) => {
+      const searchParams = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        campaignId,
+      });
 
-    const response = await apiClient.get<ContactRateResponse>(
-      `/portal/client/metrics/contact-rates?${searchParams.toString()}`
-    )
-    return response.data
-  }, [])
+      const response = await apiClient.get<ContactRateResponse>(
+        `/portal/client/metrics/contact-rates?${searchParams.toString()}`,
+      );
+      return response.data;
+    },
+    [],
+  );
 
   const mutation = useMutation({
     mutationFn: async (data: Partial<ClientInfo>) => {
-      let endpoint = '/portal/client/info'
-      
+      let endpoint = "/portal/client/info";
+
       // Use specific endpoints for different types of updates
-      if ('businessHours' in data) {
-        endpoint = '/portal/client/operating-hours'
-      } else if ('specialHours' in data) {
-        endpoint = '/portal/client/special-hours'
-      } else if ('holidayGroups' in data) {
-        endpoint = '/portal/client/holiday-groups'
+      if ("businessHours" in data) {
+        endpoint = "/portal/client/operating-hours";
+      } else if ("specialHours" in data) {
+        endpoint = "/portal/client/special-hours";
+      } else if ("holidayGroups" in data) {
+        endpoint = "/portal/client/holiday-groups";
       }
 
-      const response = await apiClient.put(endpoint, data)
-      return response.data
+      const response = await apiClient.put(endpoint, data);
+      return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientInfo'] })
-    }
-  })
+      queryClient.invalidateQueries({ queryKey: ["clientInfo"] });
+    },
+  });
 
   const mutate = async (data: Partial<ClientInfo>) => {
-    await mutation.mutateAsync(data)
-  }
+    await mutation.mutateAsync(data);
+  };
 
   return {
     clientInfo,
     isLoading,
     mutate,
     fetchAppointments,
-    fetchContactRates
-  }
-} 
+    fetchContactRates,
+  };
+}

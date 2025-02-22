@@ -27,4 +27,4 @@ export interface Customer {
   customData?: {
     [key: string]: any;
   };
-} 
+}

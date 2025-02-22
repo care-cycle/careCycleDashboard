@@ -1,4 +1,12 @@
-import { startOfHour, startOfDay, startOfWeek, endOfWeek, isSameDay, isSameHour, differenceInDays } from 'date-fns';
+import {
+  startOfHour,
+  startOfDay,
+  startOfWeek,
+  endOfWeek,
+  isSameDay,
+  isSameHour,
+  differenceInDays,
+} from "date-fns";
 
 type TimeseriesDataPoint = {
   timestamp: Date;
@@ -8,12 +16,12 @@ type TimeseriesDataPoint = {
 export function aggregateTimeseriesData<T extends TimeseriesDataPoint>(
   data: T[],
   dateRange: { from: Date; to: Date } | undefined,
-  aggregateValues: (points: T[]) => Omit<T, 'timestamp'>
+  aggregateValues: (points: T[]) => Omit<T, "timestamp">,
 ): T[] {
   if (!dateRange?.from || !dateRange?.to || !data.length) return data;
 
   const diffDays = differenceInDays(dateRange.to, dateRange.from);
-  
+
   // Group data points based on the time period
   const groupedData = data.reduce((acc, point) => {
     let key: Date;
@@ -40,20 +48,20 @@ export function aggregateTimeseriesData<T extends TimeseriesDataPoint>(
   return Array.from(groupedData.entries())
     .map(([timestamp, points]) => {
       const aggregated = aggregateValues(points);
-      
+
       if (diffDays > 14) {
         // For weekly data, include weekEnd
         return {
           timestamp: new Date(timestamp),
           weekEnd: endOfWeek(new Date(timestamp)),
-          ...aggregated
+          ...aggregated,
         } as T;
       }
 
       return {
         timestamp: new Date(timestamp),
-        ...aggregated
+        ...aggregated,
       } as T;
     })
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-} 
+}

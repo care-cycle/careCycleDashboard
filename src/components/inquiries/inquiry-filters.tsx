@@ -1,12 +1,12 @@
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 interface InquiryFiltersProps {
   searchQuery: string;
@@ -17,20 +17,20 @@ interface InquiryFiltersProps {
 }
 
 const STATUSES = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'new', label: 'New' },
-  { value: 'pending_resolution', label: 'Pending Resolution' },
-  { value: 'unresolved', label: 'Unresolved' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'appointment_scheduled', label: 'Appointment Scheduled' }
+  { value: "all", label: "All Statuses" },
+  { value: "new", label: "New" },
+  { value: "pending_resolution", label: "Pending Resolution" },
+  { value: "unresolved", label: "Unresolved" },
+  { value: "resolved", label: "Resolved" },
+  { value: "appointment_scheduled", label: "Appointment Scheduled" },
 ];
 
-export function InquiryFilters({ 
+export function InquiryFilters({
   searchQuery,
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
-  isLoading = false
+  isLoading = false,
 }: InquiryFiltersProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -64,4 +64,4 @@ export function InquiryFilters({
       </div>
     </div>
   );
-} 
+}

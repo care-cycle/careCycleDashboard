@@ -1,13 +1,13 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 
 const pricingTiers = [
-  { range: "0 - 50,000", rate: 0.20 },
+  { range: "0 - 50,000", rate: 0.2 },
   { range: "50,001 - 500,000", rate: 0.18 },
-  { range: "500,001+", rate: 0.16 }
-]
+  { range: "500,001+", rate: 0.16 },
+];
 
 export function ReplenishSettings() {
   return (
@@ -30,12 +30,7 @@ export function ReplenishSettings() {
         <div className="space-y-4">
           <div>
             <Label>Current Usage Tier</Label>
-            <Slider 
-              defaultValue={[20]} 
-              max={100} 
-              step={1}
-              className="mt-2" 
-            />
+            <Slider defaultValue={[20]} max={100} step={1} className="mt-2" />
             <p className="text-sm text-primary font-medium mt-2">
               Current tier: $0.20/minute
             </p>
@@ -47,7 +42,9 @@ export function ReplenishSettings() {
               {pricingTiers.map((tier, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span className="text-gray-500">{tier.range}</span>
-                  <span className="font-medium">${tier.rate.toFixed(2)}/minute</span>
+                  <span className="font-medium">
+                    ${tier.rate.toFixed(2)}/minute
+                  </span>
                 </div>
               ))}
             </div>
@@ -55,5 +52,5 @@ export function ReplenishSettings() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

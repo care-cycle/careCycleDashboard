@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 export const useNavigationDebug = (componentName: string) => {
   const location = useLocation();
@@ -17,4 +17,4 @@ export const useNavigationDebug = (componentName: string) => {
       });
     };
   }, [location.pathname, componentName]);
-}; 
+};

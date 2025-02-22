@@ -23,7 +23,7 @@ export interface ClientInfo {
   // Required fields
   id: string;
   name: string;
-  
+
   // Optional fields
   email?: string;
   pricePerCallMs: string;

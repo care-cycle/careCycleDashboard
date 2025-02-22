@@ -1,17 +1,23 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CampaignSelectProps {
-  value: string
-  onValueChange: (value: string) => void
-  isLoading?: boolean
-  campaigns?: Array<{ id: string; name: string }>
+  value: string;
+  onValueChange: (value: string) => void;
+  isLoading?: boolean;
+  campaigns?: Array<{ id: string; name: string }>;
 }
 
-export function CampaignSelect({ 
-  value, 
-  onValueChange, 
+export function CampaignSelect({
+  value,
+  onValueChange,
   isLoading,
-  campaigns 
+  campaigns,
 }: CampaignSelectProps) {
   if (isLoading) {
     return (
@@ -31,14 +37,11 @@ export function CampaignSelect({
       <SelectContent className="glass-panel">
         <SelectItem value="all">All Campaigns</SelectItem>
         {campaigns?.map((campaign) => (
-          <SelectItem 
-            key={campaign.id}
-            value={campaign.id}
-          >
+          <SelectItem key={campaign.id} value={campaign.id}>
             {campaign.name}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
-  )
-} 
+  );
+}

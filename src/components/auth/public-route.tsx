@@ -9,7 +9,7 @@ export function PublicRoute({ children }: PublicRouteProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const location = useLocation();
 
-  console.log('[PublicRoute] Render', {
+  console.log("[PublicRoute] Render", {
     path: location.pathname,
     isSignedIn,
     isLoaded,
@@ -17,8 +17,9 @@ export function PublicRoute({ children }: PublicRouteProps) {
   });
 
   // Simplified path checking
-  const isAuthPath = location.pathname.startsWith('/sign-in') || 
-                    location.pathname.startsWith('/sign-up');
+  const isAuthPath =
+    location.pathname.startsWith("/sign-in") ||
+    location.pathname.startsWith("/sign-up");
 
   if (!isLoaded) {
     return <div>Loading...</div>;

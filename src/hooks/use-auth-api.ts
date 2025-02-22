@@ -1,9 +1,9 @@
 // src/hooks/use-auth-api.ts
-import { useState, useEffect, useRef } from 'react';
-import { isAuthEnabled } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import apiClient from '@/lib/api-client';
-import { useAuth } from '@clerk/clerk-react';
+import { useState, useEffect, useRef } from "react";
+import { isAuthEnabled } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import apiClient from "@/lib/api-client";
+import { useAuth } from "@clerk/clerk-react";
 
 interface UseAuthApiOptions {
   onError?: (error: any) => void;
@@ -20,10 +20,13 @@ const nonAuthState = {
   isLoading: false,
   error: null,
   isAuthenticated: true,
-  refetch: () => Promise.resolve(null)
+  refetch: () => Promise.resolve(null),
 };
 
-export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {}) {
+export function useAuthApi<T>(
+  endpoint: string,
+  options: UseAuthApiOptions = {},
+) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -64,7 +67,7 @@ export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {})
           toast({
             title: "Error",
             description: err.message || "An error occurred",
-            variant: "destructive"
+            variant: "destructive",
           });
         }
       } finally {
@@ -86,7 +89,7 @@ export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {})
     // Clear cache for this endpoint
     apiCache.delete(endpoint);
     fetchCount.current = 0;
-    
+
     if (auth.isLoaded && auth.isSignedIn) {
       try {
         setIsLoading(true);
@@ -101,7 +104,7 @@ export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {})
           toast({
             title: "Error",
             description: err.message || "An error occurred",
-            variant: "destructive"
+            variant: "destructive",
           });
         }
       } finally {
@@ -115,6 +118,6 @@ export function useAuthApi<T>(endpoint: string, options: UseAuthApiOptions = {})
     isLoading,
     error,
     isAuthenticated: auth.isLoaded && auth.isSignedIn,
-    refetch
+    refetch,
   };
-} 
+}

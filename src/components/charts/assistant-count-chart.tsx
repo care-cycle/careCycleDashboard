@@ -1,13 +1,21 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts"
-import { Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
+import { Loader2 } from "lucide-react";
 
 interface AssistantCountChartProps {
   data: {
-    name: string
-    value: number
-  }[]
-  isLoading?: boolean
+    name: string;
+    value: number;
+  }[];
+  isLoading?: boolean;
 }
 
 interface TooltipProps {
@@ -21,15 +29,15 @@ interface TooltipProps {
 }
 
 export const assistantTypeLabels: Record<string, string> = {
-  'appointment_callback': 'Appointment',
-  'inbound_afterhours_existing': 'After Hours Inbound',
-  'inbound_afterhours_new': 'After Hours New Customer',
-  'inbound_existing': 'Inbound',
-  'inbound_new': 'New Customer',
-  'outbound_afterhours_existing': 'After Hours Outbound',
-  'outbound_existing': 'Outbound',
-  'triggered_outbound_existing': 'Requested Call from SMS'
-}
+  appointment_callback: "Appointment",
+  inbound_afterhours_existing: "After Hours Inbound",
+  inbound_afterhours_new: "After Hours New Customer",
+  inbound_existing: "Inbound",
+  inbound_new: "New Customer",
+  outbound_afterhours_existing: "After Hours Outbound",
+  outbound_existing: "Outbound",
+  triggered_outbound_existing: "Requested Call from SMS",
+};
 
 const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (!active || !payload || !payload.length || !payload[0]) return null;
@@ -41,14 +49,16 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
     <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
       <div className="flex flex-col gap-1">
         <span className="text-sm text-gray-600">{data.payload.name}</span>
-        <span className="text-sm font-medium">{data.value.toLocaleString()} {data.value === 1 ? 'call' : 'calls'}</span>
+        <span className="text-sm font-medium">
+          {data.value.toLocaleString()} {data.value === 1 ? "call" : "calls"}
+        </span>
       </div>
     </div>
   );
 };
 
 const CustomXAxisTick = ({ x, y, payload }: any) => {
-  const words = payload.value.split(' ');
+  const words = payload.value.split(" ");
   return (
     <g transform={`translate(${x},${y})`}>
       {words.map((word: string, index: number) => (
@@ -68,7 +78,10 @@ const CustomXAxisTick = ({ x, y, payload }: any) => {
   );
 };
 
-export function AssistantCountChart({ data, isLoading }: AssistantCountChartProps) {
+export function AssistantCountChart({
+  data,
+  isLoading,
+}: AssistantCountChartProps) {
   if (isLoading) {
     return (
       <Card className="glass-panel interactive cursor-pointer h-[400px]">
@@ -79,7 +92,7 @@ export function AssistantCountChart({ data, isLoading }: AssistantCountChartProp
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!data?.length) {
@@ -92,9 +105,9 @@ export function AssistantCountChart({ data, isLoading }: AssistantCountChartProp
           <p className="text-gray-500">No data over selected time period</p>
         </CardContent>
       </Card>
-    )
+    );
   }
-  
+
   return (
     <Card className="glass-panel interactive cursor-pointer h-[400px]">
       <CardHeader>
@@ -102,35 +115,35 @@ export function AssistantCountChart({ data, isLoading }: AssistantCountChartProp
       </CardHeader>
       <CardContent className="flex-1 h-[calc(100%-65px)]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={data} 
+          <BarChart
+            data={data}
             margin={{ top: 20, right: 30, left: 40, bottom: 0 }}
             barSize={40}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-            <XAxis 
-              dataKey="name" 
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#E2E8F0"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="name"
               height={60}
               interval={0}
               tick={<CustomXAxisTick />}
               tickLine={false}
-              axisLine={{ stroke: '#E2E8F0' }}
+              axisLine={{ stroke: "#E2E8F0" }}
             />
-            <YAxis 
-              tick={{ fontSize: 12, fill: '#64748B' }}
+            <YAxis
+              tick={{ fontSize: 12, fill: "#64748B" }}
               tickFormatter={(value) => value.toLocaleString()}
               tickLine={false}
-              axisLine={{ stroke: '#E2E8F0' }}
+              axisLine={{ stroke: "#E2E8F0" }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar 
-              dataKey="value" 
-              fill="#74E0BB"
-              radius={[4, 4, 0, 0]}
-            />
+            <Bar dataKey="value" fill="#74E0BB" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

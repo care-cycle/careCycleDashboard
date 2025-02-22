@@ -1,22 +1,22 @@
-import { CalendarIcon, TimerReset } from "lucide-react"
-import { DateRange } from "react-day-picker"
-import { format, addDays } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon, TimerReset } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { format, addDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { useState } from "react"
+} from "@/components/ui/popover";
+import { useState } from "react";
 
 interface DateRangePickerProps {
-  date: DateRange | undefined
-  onChange: (date: DateRange | undefined) => void
-  className?: string
-  defaultDate?: DateRange
-  minDate?: Date
+  date: DateRange | undefined;
+  onChange: (date: DateRange | undefined) => void;
+  className?: string;
+  defaultDate?: DateRange;
+  minDate?: Date;
 }
 
 export function DateRangePicker({
@@ -26,14 +26,13 @@ export function DateRangePicker({
   defaultDate,
   minDate,
 }: DateRangePickerProps) {
-  const [open, setOpen] = useState(false)
-  const today = new Date()
+  const [open, setOpen] = useState(false);
+  const today = new Date();
 
-  // Disable future dates and dates before minDate
+  // Only disable dates before minDate
   const disabledDays = {
-    after: today,
-    before: minDate
-  }
+    before: minDate,
+  };
 
   // Add handler for calendar selection
   const handleSelect = (selectedDate: DateRange | undefined) => {
@@ -44,9 +43,12 @@ export function DateRangePicker({
     }
 
     // If we're clicking on the existing start date, keep it as anchor and allow selecting in either direction
-    if (selectedDate?.from && date.from && 
-        selectedDate.from.getTime() === date.from.getTime() && 
-        !selectedDate.to) {
+    if (
+      selectedDate?.from &&
+      date.from &&
+      selectedDate.from.getTime() === date.from.getTime() &&
+      !selectedDate.to
+    ) {
       // Keep the existing selection
       return;
     }
@@ -68,7 +70,7 @@ export function DateRangePicker({
             variant={"outline"}
             className={cn(
               "w-[260px] justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !date && "text-muted-foreground",
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -86,8 +88,8 @@ export function DateRangePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-0 bg-white/95 backdrop-blur-xl shadow-lg border border-gray-200" 
+        <PopoverContent
+          className="w-auto p-0 bg-white/95 backdrop-blur-xl shadow-lg border border-gray-200"
           align="end"
         >
           <Calendar
@@ -113,5 +115,5 @@ export function DateRangePicker({
         </PopoverContent>
       </Popover>
     </div>
-  )
+  );
 }

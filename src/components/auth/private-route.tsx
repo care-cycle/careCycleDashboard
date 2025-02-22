@@ -1,6 +1,6 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
-import { isAuthEnabled } from '@/lib/utils';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
+import { isAuthEnabled } from "@/lib/utils";
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
