@@ -278,27 +278,24 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
       renderCustomerName,
       renderCustomerId,
       renderContact,
-      navigate,
       isRedacted,
     ]);
 
-    // Get active columns for display
-    const activeColumns = useMemo(
-      () => allColumns.filter((col) => activeColumnKeys.includes(col.key)),
-      [allColumns, activeColumnKeys],
+    // State for ordered columns
+    const [orderedColumns, setOrderedColumns] = useState(() =>
+      activeColumnKeys
+        .map((key) => allColumns.find((col) => col.key === key))
+        .filter((col): col is (typeof allColumns)[0] => col !== undefined),
     );
 
-    // Expose the table interface
-    useImperativeHandle(
-      ref,
-      () => ({
-        availableColumns: allColumns.map((col) => ({
-          key: col.key,
-          label: col.label,
-        })),
-      }),
-      [allColumns],
-    );
+    // Update ordered columns when activeColumnKeys changes
+    useEffect(() => {
+      setOrderedColumns(
+        activeColumnKeys
+          .map((key) => allColumns.find((col) => col.key === key))
+          .filter((col): col is (typeof allColumns)[0] => col !== undefined),
+      );
+    }, [activeColumnKeys, allColumns]);
 
     const handleSort = (key: string) => {
       let direction: "asc" | "desc" | null = "asc";
@@ -323,7 +320,11 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
       const { active, over } = event;
 
       if (active.id !== over?.id && over?.id) {
-        onColumnToggle(String(active.id));
+        setOrderedColumns((items) => {
+          const oldIndex = items.findIndex((col) => col.key === active.id);
+          const newIndex = items.findIndex((col) => col.key === over.id);
+          return arrayMove(items, oldIndex, newIndex);
+        });
       }
     };
 
@@ -357,10 +358,10 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
               <TableRow>
                 <TableHead className="w-12" />
                 <SortableContext
-                  items={activeColumns.map((col) => col.key)}
+                  items={orderedColumns.map((col) => col.key)}
                   strategy={horizontalListSortingStrategy}
                 >
-                  {activeColumns.map((column) => (
+                  {orderedColumns.map((column) => (
                     <SortableHeader
                       key={column.key}
                       header={column}
@@ -389,15 +390,9 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
                         />
                       </div>
                     </TableCell>
-                    {activeColumns.map((column) => (
+                    {orderedColumns.map((column) => (
                       <TableCell key={`cell-${customer.id}-${column.key}`}>
-                        {column.key === "calls" ? (
-                          <div className="text-center w-full">
-                            {customer.totalCalls || 0}
-                          </div>
-                        ) : (
-                          column.render(customer)
-                        )}
+                        {column.render(customer)}
                       </TableCell>
                     ))}
                     <TableCell>
@@ -447,7 +442,7 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={activeColumns.length + 2}
+                    colSpan={orderedColumns.length + 2}
                     className="text-center py-4"
                   >
                     No data available

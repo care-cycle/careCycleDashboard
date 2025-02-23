@@ -532,12 +532,13 @@ export default function Dashboard() {
                 value={selectedCampaign}
                 onValueChange={setSelectedCampaign}
                 isLoading={isLoading || isMetricsLoading}
-                campaigns={
-                  metrics?.data?.data?.campaigns?.map((c: Campaign) => ({
+                campaigns={[
+                  { id: "all", name: "All Campaigns" },
+                  ...(metrics?.data?.data?.campaigns?.map((c: Campaign) => ({
                     id: c.id,
                     name: c.name,
-                  })) || []
-                }
+                  })) || []),
+                ]}
               />
               <DateRangePicker
                 date={date}

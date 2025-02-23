@@ -321,7 +321,7 @@ export function CallDispositionsChart({
                   fill={
                     dispositionColors[key as keyof typeof dispositionColors]
                   }
-                  radius={[0, 0, 0, 0]}
+                  radius={[4, 4, 0, 0]}
                 />
               ))}
           </BarChart>

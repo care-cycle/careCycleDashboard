@@ -1,25 +1,359 @@
-import { useState } from "react";
+import * as React from "react";
+import { useToast } from "@/hooks/use-toast";
 import { RootLayout } from "@/components/layout/root-layout";
+import { Button } from "@/components/ui/button";
+import {
+  Loader2,
+  Users,
+  Phone,
+  Megaphone,
+  Pencil,
+  Check,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { useInitialData } from "@/hooks/use-client-data";
 import { getTopMetrics } from "@/lib/metrics";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignSelect } from "@/components/campaign-select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { SmsConfig } from "@/components/campaign/sms-config";
+import { RetryConfig } from "@/components/campaign/retry-config";
+import type { Campaign } from "@/types/campaign";
+import apiClient from "@/lib/api-client";
+import { transformToBackendFormat } from "@/utils/smsVariables";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface CampaignData {
+  [key: string]: Campaign;
+}
+
+// SMS type mapping constants
+const SMS_TYPE_MAPPING = {
+  redial: "redial",
+  firstContact: "firstContact",
+  appointmentBooked: "appointmentBooked",
+  missedAppointment: "missedAppointment",
+  missedFirstContact: "missedFirstContact",
+  appointmentReminder: "appointmentReminder",
+} as const;
+
+// Backend SMS types
+interface BackendSmsContent {
+  redial: string;
+  firstContact: string;
+  appointmentBooked: string;
+  missedAppointment: string;
+  missedFirstContact: string;
+  appointmentReminder: string;
+}
+
+interface BackendSmsTypes {
+  redial: boolean;
+  firstContact: boolean;
+  appointmentBooked: boolean;
+  missedAppointment: boolean;
+  missedFirstContact: boolean;
+  appointmentReminder: boolean;
+}
 
 export default function CampaignsPage() {
-  const { todayMetrics, campaigns, isLoading } = useInitialData();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const {
+    todayMetrics,
+    campaigns: campaignsData,
+    clientInfo,
+    isLoading,
+  } = useInitialData();
+  const [selectedCampaignId, setSelectedCampaignId] =
+    React.useState<string>("");
+  const [pendingChanges, setPendingChanges] = React.useState<Partial<Campaign>>(
+    {},
+  );
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [showTcpaDialog, setShowTcpaDialog] = React.useState(false);
+  const [editingField, setEditingField] = React.useState<
+    "name" | "description" | null
+  >(null);
+  const [editValue, setEditValue] = React.useState("");
+  const [isRetryOpen, setIsRetryOpen] = React.useState(true);
+  const [isSmsOpen, setIsSmsOpen] = React.useState(true);
+  const [companyNameError, setCompanyNameError] = React.useState(false);
 
-  // Helper function to format criteria stats
-  const formatCriteriaStats = (criteria: Record<string, number>) => {
-    return Object.entries(criteria).map(([key, value]) => ({
-      label: key, // Use the key directly as it's already formatted
-      value,
-    }));
+  // Add check for discrete associated number
+  const hasDiscreteNumber = React.useMemo(() => {
+    return (
+      (
+        clientInfo?.associatedNumbers as
+          | { type: string; number: string }[]
+          | undefined
+      )?.some((num) => num.type === "discrete" && Boolean(num.number)) ?? false
+    );
+  }, [clientInfo]);
+
+  // Transform campaigns data into our format
+  const campaigns = React.useMemo(() => {
+    if (!campaignsData) return [];
+
+    return Object.entries(campaignsData as CampaignData).map(
+      ([id, campaign]) => ({
+        ...campaign,
+        id,
+        metrics: {
+          customers: campaign.customerStats?.total || 0,
+          calls: campaign.customerStats?.totalCalls || 0,
+          sources: campaign.customerStats?.totalSources || 0,
+          customersByStatus: {
+            pending: campaign.customerStats?.statusCounts?.pending || 0,
+            in_progress: campaign.customerStats?.statusCounts?.in_progress || 0,
+            completed: campaign.customerStats?.statusCounts?.completed || 0,
+            failed: campaign.customerStats?.statusCounts?.failed || 0,
+            expired: campaign.customerStats?.statusCounts?.expired || 0,
+            cancelled: campaign.customerStats?.statusCounts?.cancelled || 0,
+            skipped: campaign.customerStats?.statusCounts?.skipped || 0,
+            exceeded_max_calls:
+              campaign.customerStats?.statusCounts?.exceeded_max_calls || 0,
+          },
+        },
+      }),
+    );
+  }, [campaignsData]);
+
+  const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
+
+  // Set the first campaign as selected when campaigns load
+  React.useEffect(() => {
+    if (campaigns.length > 0 && !selectedCampaignId) {
+      setSelectedCampaignId(campaigns[0].id);
+    }
+  }, [campaigns, selectedCampaignId]);
+
+  const handleSmsUpdate = async (
+    campaignId: string,
+    updateData: Partial<Campaign>,
+  ) => {
+    setIsSaving(true);
+    try {
+      // Only include SMS-related fields
+      const smsUpdateData: {
+        smsCompanyName?: string;
+        smsContent?: Record<string, string>;
+        smsTypes?: Record<string, boolean>;
+      } = {};
+
+      // Add SMS company name if present
+      if (updateData.smsCompanyName) {
+        smsUpdateData.smsCompanyName = updateData.smsCompanyName;
+      }
+
+      // Transform SMS content if present
+      if (updateData.smsContent) {
+        const transformedContent: Record<string, string> = {};
+        Object.entries(updateData.smsContent).forEach(([key, value]) => {
+          if (typeof value === "string" && key in SMS_TYPE_MAPPING) {
+            const backendKey =
+              SMS_TYPE_MAPPING[key as keyof typeof SMS_TYPE_MAPPING];
+            transformedContent[backendKey] = transformToBackendFormat(value);
+          }
+        });
+        smsUpdateData.smsContent = transformedContent;
+      }
+
+      // Transform SMS types if present
+      if (updateData.smsTypes) {
+        const transformedTypes: Record<string, boolean> = {};
+        Object.entries(updateData.smsTypes).forEach(([key, value]) => {
+          if (typeof value === "boolean" && key in SMS_TYPE_MAPPING) {
+            const backendKey =
+              SMS_TYPE_MAPPING[key as keyof typeof SMS_TYPE_MAPPING];
+            transformedTypes[backendKey] = value;
+          }
+        });
+        smsUpdateData.smsTypes = transformedTypes;
+      }
+
+      // Log the raw data before sending to API
+      console.log("[Campaign Update - SMS] Data being sent to API:", {
+        campaignId,
+        updateData: smsUpdateData,
+      });
+
+      const response = await apiClient.put(
+        `/portal/client/campaigns/${campaignId}`,
+        smsUpdateData,
+      );
+
+      if (!response.data) {
+        throw new Error("Failed to update campaign");
+      }
+
+      // Invalidate campaigns query to refetch the latest data
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+
+      toast({
+        title: "Success",
+        description: "SMS configuration updated successfully",
+      });
+      setPendingChanges({});
+    } catch (error) {
+      console.error("[Campaign Update - SMS] Error details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update SMS configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (isLoading) {
+  const handleRetryUpdate = async (
+    campaignId: string,
+    updateData: Partial<Campaign>,
+  ) => {
+    setIsSaving(true);
+    try {
+      // Only include retry-related fields
+      const retryUpdateData = {
+        retryStrategy: updateData.retryStrategy,
+        retryDelays: updateData.retryDelays,
+        retryPatterns: updateData.retryPatterns,
+        retrySettings: updateData.retrySettings,
+        maxAttempts: updateData.maxAttempts,
+      };
+
+      // Log the raw data before sending to API
+      console.log("[Campaign Update - Retry] Data being sent to API:", {
+        campaignId,
+        updateData: retryUpdateData,
+      });
+
+      const response = await apiClient.put(
+        `/portal/client/campaigns/${campaignId}`,
+        retryUpdateData,
+      );
+
+      if (!response.data) {
+        throw new Error("Failed to update campaign");
+      }
+
+      // Invalidate campaigns query to refetch the latest data
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+
+      toast({
+        title: "Success",
+        description: "Retry configuration updated successfully",
+      });
+      setPendingChanges({});
+    } catch (error) {
+      console.error("[Campaign Update - Retry] Error details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update retry configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSmsConfigSave = async () => {
+    if (selectedCampaign && Object.keys(pendingChanges).length > 0) {
+      setIsSaving(true);
+      try {
+        await handleSmsUpdate(selectedCampaign.id, pendingChanges);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleRetryConfigSave = () => {
+    if (Object.keys(pendingChanges).length > 0 && selectedCampaign) {
+      setShowTcpaDialog(true);
+    }
+  };
+
+  const handleSave = () => {
+    if (Object.keys(pendingChanges).length > 0 && selectedCampaign) {
+      setShowTcpaDialog(true);
+    }
+  };
+
+  const handleConfirmSave = () => {
+    if (selectedCampaign) {
+      handleRetryUpdate(selectedCampaign.id, pendingChanges);
+      setShowTcpaDialog(false);
+    }
+  };
+
+  const handleStartEdit = (field: "name" | "description") => {
+    setEditingField(field);
+    setEditValue(selectedCampaign?.[field] || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedCampaign || !editingField) return;
+
+    setIsSaving(true);
+    try {
+      const response = await apiClient.put(
+        `/portal/client/campaigns/${selectedCampaign.id}`,
+        { [editingField]: editValue },
+      );
+
+      if (!response.data) {
+        throw new Error("Failed to update campaign");
+      }
+
+      toast({
+        title: "Success",
+        description: `Campaign ${editingField} updated successfully`,
+      });
+
+      // Update local state
+      const updatedCampaigns = campaigns.map((c) =>
+        c.id === selectedCampaign.id ? { ...c, [editingField]: editValue } : c,
+      );
+      // You'll need to implement a way to update the campaigns data here
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update campaign ${editingField}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      setEditingField(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditValue("");
+  };
+
+  if (isLoading || !campaignsData) {
     return (
-      <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
-        <div className="flex items-center justify-center h-64">
-          <p>Loading campaigns...</p>
+      <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </RootLayout>
     );
@@ -27,138 +361,235 @@ export default function CampaignsPage() {
 
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Campaigns
-        </h1>
+      <div className="container mx-auto p-6">
+        <div className="flex flex-col space-y-4 mb-6">
+          <div className="w-[300px]">
+            <CampaignSelect
+              value={selectedCampaignId}
+              onValueChange={setSelectedCampaignId}
+              campaigns={campaigns}
+            />
+          </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {Object.entries(campaigns?.data || {}).map(([id, campaign]) => (
-            <Card key={id} className="bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>{campaign.campaignName}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {/* <div>
-                    <span className="text-sm font-medium text-gray-500">Type: </span>
-                    <span className="text-sm text-gray-900">{campaign.campaignType}</span>
-                  </div> */}
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">
-                      Status:{" "}
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {campaign.campaignStatus}
-                    </span>
-                  </div>
-                  {campaign.campaignDescription && (
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Description:{" "}
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {campaign.campaignDescription}
-                      </span>
+          {selectedCampaign && (
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="group relative">
+                  {editingField === "name" ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="text-2xl font-semibold h-10 py-1"
+                        autoFocus
+                      />
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={handleSaveEdit}
+                          disabled={isSaving}
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2 group cursor-pointer"
+                      onClick={() => handleStartEdit("name")}
+                    >
+                      <h1 className="text-2xl font-semibold text-gray-900">
+                        {selectedCampaign.name}
+                      </h1>
+                      <Pencil className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   )}
-                  <div className="pt-2 space-y-1">
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Total Customers:{" "}
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {campaign.customerStats.total}
-                      </span>
-                    </div>
-
-                    {/* Success Criteria Section */}
-                    {campaign.customerStats.successCriteria && (
-                      <div className="pt-1">
-                        <div className="text-sm font-medium text-gray-500">
-                          Success Criteria Met:
-                        </div>
-                        {formatCriteriaStats(
-                          campaign.customerStats.successCriteria,
-                        ).map(({ label, value }) => (
-                          <div key={label} className="pl-2">
-                            <span className="text-sm text-gray-500">
-                              {label}:{" "}
-                            </span>
-                            <span className="text-sm text-emerald-600">
-                              {value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Failure Criteria Section */}
-                    {campaign.customerStats.failureCriteria && (
-                      <div className="pt-1">
-                        <div className="text-sm font-medium text-gray-500">
-                          Failure Criteria Met:
-                        </div>
-                        {formatCriteriaStats(
-                          campaign.customerStats.failureCriteria,
-                        ).map(({ label, value }) => (
-                          <div key={label} className="pl-2">
-                            <span className="text-sm text-gray-500">
-                              {label}:{" "}
-                            </span>
-                            <span className="text-sm text-red-600">
-                              {value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="pt-1">
-                      <span className="text-sm font-medium text-gray-500">
-                        Met Success Criteria:{" "}
-                      </span>
-                      <span className="text-sm text-emerald-600">
-                        {campaign.customerStats.metSuccessCriteria}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Met Failure Criteria:{" "}
-                      </span>
-                      <span className="text-sm text-red-600">
-                        {campaign.customerStats.metFailureCriteria}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Pending:{" "}
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {campaign.customerStats.pending}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Remaining to Call:{" "}
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {campaign.customerStats.remainingToCall}
-                      </span>
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <div className="group relative">
+                  {editingField === "description" ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="text-sm h-8 py-1"
+                        placeholder="Add a description..."
+                        autoFocus
+                      />
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={handleSaveEdit}
+                          disabled={isSaving}
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2 group cursor-pointer"
+                      onClick={() => handleStartEdit("description")}
+                    >
+                      <p className="text-sm text-gray-500">
+                        {selectedCampaign.description || "Add a description..."}
+                      </p>
+                      <Pencil className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500 mr-1">Customers</span>
+                  <span className="font-semibold">
+                    {selectedCampaign.metrics?.customers?.toLocaleString() ||
+                      "0"}
+                  </span>
+                </div>
+
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500 mr-1">
+                    Total Calls
+                  </span>
+                  <span className="font-semibold">
+                    {selectedCampaign.metrics?.calls?.toLocaleString() || "0"}
+                  </span>
+                </div>
+
+                <div className="flex items-center">
+                  <Megaphone className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500 mr-1">Sources</span>
+                  <span className="font-semibold">
+                    {selectedCampaign.metrics?.sources?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {Object.keys(campaigns?.data || {}).length === 0 && (
-          <div className="flex items-center justify-center h-64">
-            <p>No campaigns found.</p>
-          </div>
-        )}
+        <div className="space-y-4">
+          {selectedCampaign && (
+            <>
+              <div className="glass-panel rounded-lg overflow-hidden">
+                <Collapsible open={isSmsOpen} onOpenChange={setIsSmsOpen}>
+                  <div className="flex items-center justify-between p-6">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      SMS Config
+                    </h3>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-9 p-0">
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-300 ease-in-out ${isSmsOpen ? "rotate-0" : "-rotate-90"}`}
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+
+                  <CollapsibleContent className="transition-all duration-300 ease-in-out">
+                    <SmsConfig
+                      campaign={selectedCampaign}
+                      pendingChanges={pendingChanges}
+                      setPendingChanges={setPendingChanges}
+                      hasDiscreteNumber={hasDiscreteNumber}
+                      companyNameError={companyNameError}
+                      setCompanyNameError={setCompanyNameError}
+                      isSaving={isSaving}
+                      handleSave={handleSmsConfigSave}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              <div className="glass-panel rounded-lg overflow-hidden">
+                <Collapsible open={isRetryOpen} onOpenChange={setIsRetryOpen}>
+                  <div className="flex items-center justify-between p-6">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Retry Configuration
+                    </h3>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-9 p-0">
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-300 ease-in-out ${isRetryOpen ? "rotate-0" : "-rotate-90"}`}
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+
+                  <CollapsibleContent className="transition-all duration-300 ease-in-out">
+                    <RetryConfig
+                      campaign={selectedCampaign}
+                      pendingChanges={pendingChanges}
+                      setPendingChanges={setPendingChanges}
+                      isSaving={isSaving}
+                      handleSave={handleRetryConfigSave}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      <AlertDialog open={showTcpaDialog} onOpenChange={setShowTcpaDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">
+              TCPA Compliance Check
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              I confirm that I have read and understand{" "}
+              <a
+                href="https://nodable.ai/utility-pages/tcpa-compliance-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                TCPA guidelines
+              </a>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowTcpaDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmSave}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              My cadence is compliant
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </RootLayout>
   );
 }

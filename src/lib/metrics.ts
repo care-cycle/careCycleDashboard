@@ -1,12 +1,12 @@
 import { formatDuration } from "./utils";
 
 interface MetricsData {
-  data?: {
-    totalCalls?: number;
-    totalDurationMs?: number;
-    totalSpend?: number;
-    transferredCalls?: number;
-  };
+  totalCalls?: number;
+  totalDurationMs?: number;
+  totalSpend?: number;
+  transferredCalls?: number;
+  uniqueCalls?: number;
+  averageDurationMs?: number;
 }
 
 interface TopMetric {
@@ -17,14 +17,15 @@ interface TopMetric {
 export function getTopMetrics(
   metricsData: MetricsData | undefined | null,
 ): TopMetric[] {
-  if (!metricsData?.data) return [];
+  if (!metricsData) return [];
 
   const {
     totalCalls = 0,
     totalDurationMs = 0,
     totalSpend = 0,
     transferredCalls = 0,
-  } = metricsData.data;
+    uniqueCalls = 0,
+  } = metricsData;
 
   return [
     {

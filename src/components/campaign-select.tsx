@@ -32,10 +32,9 @@ export function CampaignSelect({
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-[240px] glass-panel">
-        <SelectValue placeholder="All Campaigns" />
+        <SelectValue placeholder="Select Campaign" />
       </SelectTrigger>
       <SelectContent className="glass-panel">
-        <SelectItem value="all">All Campaigns</SelectItem>
         {campaigns?.map((campaign) => (
           <SelectItem key={campaign.id} value={campaign.id}>
             {campaign.name}

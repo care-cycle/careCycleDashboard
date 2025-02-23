@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { format } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import React from "react";
 
 interface CallsResponse {
   s: boolean;
@@ -270,14 +271,48 @@ interface CallData {
 }
 
 export function useInitialData() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const enabled = isLoaded && isSignedIn;
+  const queryClient = useQueryClient();
+
+  // Add event listener for campaign updates
+  useEffect(() => {
+    const handleCampaignsUpdate = (event: CustomEvent<Campaign[]>) => {
+      queryClient.setQueryData(["campaigns"], event.detail);
+    };
+
+    window.addEventListener(
+      "campaignsUpdated",
+      handleCampaignsUpdate as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "campaignsUpdated",
+        handleCampaignsUpdate as EventListener,
+      );
+    };
+  }, [queryClient]);
 
   // Group all queries together to maintain consistent hook order
   const queries = {
     todayMetrics: useQuery({
       queryKey: ["todayMetrics"],
-      queryFn: () => apiClient.get("/portal/client/metrics/today"),
+      queryFn: async () => {
+        const response = await apiClient.get("/portal/client/metrics/today");
+        console.log("Today's metrics response:", {
+          fullData: JSON.stringify(response.data, null, 2),
+          status: "status" in response ? response.status : "unknown",
+          responseStructure: {
+            keys: Object.keys(response.data || {}),
+            values: Object.values(response.data || {}),
+            dataType: typeof response.data,
+            isNull: response.data === null,
+            isUndefined: response.data === undefined,
+            hasData: !!response.data,
+          },
+        });
+        return response.data;
+      },
       enabled,
       refetchInterval: 5 * 60 * 1000,
       staleTime: 4 * 60 * 1000,
@@ -342,7 +377,11 @@ export function useInitialData() {
     sms: useQuery<SMSResponse>({
       queryKey: ["sms"],
       queryFn: async () => {
-        const response = await apiClient.get("/portal/client/sms");
+        const response = await apiClient.get("/portal/client/sms", {
+          params: {
+            limit: 200, // Increase default limit to show more messages
+          },
+        });
         return response.data;
       },
       enabled,
@@ -359,8 +398,18 @@ export function useInitialData() {
 
     campaigns: useQuery({
       queryKey: ["campaigns"],
-      queryFn: () =>
-        apiClient.get<CampaignsResponse>("/portal/client/campaigns"),
+      queryFn: async () => {
+        const response = await apiClient.get<CampaignsResponse>(
+          "/portal/client/campaigns",
+        );
+        console.log("Campaigns response:", {
+          fullData: JSON.stringify(response.data, null, 2),
+          hasData: !!response.data,
+          dataType: typeof response.data,
+          keys: Object.keys(response.data || {}),
+        });
+        return response.data;
+      },
       staleTime: 5 * 60 * 1000,
       enabled,
       retry: 1,

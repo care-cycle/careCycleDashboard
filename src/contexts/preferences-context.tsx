@@ -14,10 +14,6 @@ interface PreferencesContextType {
   setShowConnectedOnly: (show: boolean) => void;
   callSearch: string;
   setCallSearch: (search: string) => void;
-
-  // SMS table preferences
-  smsSearch: string;
-  setSmsSearch: (search: string) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(
@@ -41,9 +37,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [showConnectedOnly, setShowConnectedOnly] = useState(true);
   const [callSearch, setCallSearch] = useState("");
 
-  // SMS table state
-  const [smsSearch, setSmsSearch] = useState("");
-
   return (
     <PreferencesContext.Provider
       value={{
@@ -57,8 +50,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setShowConnectedOnly,
         callSearch,
         setCallSearch,
-        smsSearch,
-        setSmsSearch,
       }}
     >
       {children}

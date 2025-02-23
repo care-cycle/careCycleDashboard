@@ -35,13 +35,6 @@ const navigationItems = [
     href: "/calls",
   },
   {
-    title: "SMS",
-    icon: MessageCircle,
-    disabled: true,
-    badge: "Coming Soon",
-    href: "/sms",
-  },
-  {
     title: "Customers",
     icon: Users,
     href: "/customers",
@@ -65,8 +58,6 @@ const navigationItems = [
     title: "Campaigns",
     icon: CircuitBoard,
     href: "/campaigns",
-    disabled: true,
-    badge: "Coming Soon",
   },
   {
     title: "Journeys",
