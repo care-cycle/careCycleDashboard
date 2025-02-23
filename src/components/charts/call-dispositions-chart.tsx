@@ -279,6 +279,7 @@ export function CallDispositionsChart({
           <BarChart
             data={filteredData}
             margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+            maxBarSize={100}
           >
             <CartesianGrid
               strokeDasharray="3 3"
@@ -313,17 +314,43 @@ export function CallDispositionsChart({
                 );
                 return sumB - sumA; // Sort descending
               })
-              .map((key) => (
-                <Bar
-                  key={key}
-                  dataKey={key}
-                  stackId="dispositions"
-                  fill={
-                    dispositionColors[key as keyof typeof dispositionColors]
-                  }
-                  radius={[4, 4, 0, 0]}
-                />
-              ))}
+              .map((key) => {
+                // For each bar, check if it's the topmost non-zero value in any stack
+                const isTopBar = filteredData.some((entry) => {
+                  // If this bar has no value in this timestamp, it's not the top
+                  if (!entry[key]) return false;
+
+                  // Check all other bars that come after this one in the sort order
+                  const laterKeys = Object.keys(dispositionColors)
+                    .sort((a, b) => {
+                      const sumA = data.reduce(
+                        (sum, e) => sum + (e[a] || 0),
+                        0,
+                      );
+                      const sumB = data.reduce(
+                        (sum, e) => sum + (e[b] || 0),
+                        0,
+                      );
+                      return sumB - sumA;
+                    })
+                    .slice(Object.keys(dispositionColors).indexOf(key) + 1);
+
+                  // If any later bars have values, this isn't the top
+                  return !laterKeys.some((laterKey) => entry[laterKey] > 0);
+                });
+
+                return (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    stackId="dispositions"
+                    fill={
+                      dispositionColors[key as keyof typeof dispositionColors]
+                    }
+                    radius={isTopBar ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                  />
+                );
+              })}
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
