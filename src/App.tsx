@@ -12,7 +12,6 @@ import Calls from "./pages/calls";
 import SignIn from "./pages/sign-in";
 import ProfilePage from "./pages/user/profile";
 import BillingPage from "./pages/user/billing";
-import { isAuthEnabled } from "@/lib/utils";
 import { useInitialData } from "./hooks/use-client-data";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Customers from "./pages/customers";
@@ -28,33 +27,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 // Create a client
 const queryClient = new QueryClient();
 
-// Non-auth version of App
-function NonAuthApp() {
-  return (
-    <UIProvider>
-      <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/calls" element={<Calls />} />
-          <Route path="/user/profile" element={<ProfilePage />} />
-          <Route path="/user/billing" element={<BillingPage />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/campaigns" element={<CampaignsPage />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/inquiries" element={<InquiriesPage />} />
-          <Route path="/sources" element={<SourcesPage />} />
-          <Route path="/sources/manage" element={<ManageSourcesPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
-    </UIProvider>
-  );
-}
-
-// Auth version of App
-function AuthApp() {
+function App() {
   const { isLoaded, isSignedIn } = useAuth();
-  const { clientInfo, isLoading: isLoadingInitialData } = useInitialData();
+  const { isLoading: isLoadingInitialData } = useInitialData();
 
   // Only show loading if auth is still loading
   if (!isLoaded) {
@@ -194,12 +169,12 @@ function AuthApp() {
 }
 
 // Main App component
-export default function App() {
+export default function AppWrapper() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <RedactionProvider>
-          {isAuthEnabled() ? <AuthApp /> : <NonAuthApp />}
+          <App />
           <FeedbackWidget />
         </RedactionProvider>
       </QueryClientProvider>

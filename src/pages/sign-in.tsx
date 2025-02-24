@@ -1,6 +1,4 @@
-import { Navigate } from "react-router-dom";
 import { SignIn } from "@clerk/clerk-react";
-import { isAuthEnabled } from "@/lib/utils";
 
 const BASE_URL =
   import.meta.env.VITE_NODE_ENV === "development"
@@ -8,11 +6,6 @@ const BASE_URL =
     : "https://clerk.nodable.ai";
 
 export default function SignInPage() {
-  // Redirect to dashboard if auth is disabled
-  if (!isAuthEnabled()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       <div className="w-full max-w-[480px] p-6">

@@ -66,7 +66,7 @@ export function FeedbackWidget() {
     }
 
     try {
-      const response = await apiClient.post("/portal/client/feedback", {
+      await apiClient.post("/portal/client/feedback", {
         type: SITE_FEEDBACK_TYPES[type],
         severity: SITE_SEVERITY_LEVELS[severity],
         feedback: feedback.trim(),
@@ -79,10 +79,20 @@ export function FeedbackWidget() {
       setFeedback("");
 
       toast.success("Thank you for your feedback!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to submit feedback:", error);
-      if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "error" in error.response.data
+      ) {
+        toast.error(error.response.data.error as string);
       } else {
         toast.error("Failed to submit feedback. Please try again.");
       }

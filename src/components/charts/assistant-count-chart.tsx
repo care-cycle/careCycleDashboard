@@ -18,28 +18,26 @@ interface AssistantCountChartProps {
   isLoading?: boolean;
 }
 
-interface TooltipProps {
+interface CustomXAxisTickProps {
+  x: number;
+  y: number;
+  payload: {
+    value: string;
+  };
+}
+
+const CustomTooltip = ({
+  active,
+  payload,
+}: {
   active?: boolean;
-  payload?: {
+  payload?: Array<{
     payload: {
       name: string;
     };
     value: number;
-  }[];
-}
-
-export const assistantTypeLabels: Record<string, string> = {
-  appointment_callback: "Appointment",
-  inbound_afterhours_existing: "After Hours Inbound",
-  inbound_afterhours_new: "After Hours New Customer",
-  inbound_existing: "Inbound",
-  inbound_new: "New Customer",
-  outbound_afterhours_existing: "After Hours Outbound",
-  outbound_existing: "Outbound",
-  triggered_outbound_existing: "Requested Call from SMS",
-};
-
-const CustomTooltip = ({ active, payload }: TooltipProps) => {
+  }>;
+}) => {
   if (!active || !payload || !payload.length || !payload[0]) return null;
 
   const data = payload[0];
@@ -57,7 +55,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   );
 };
 
-const CustomXAxisTick = ({ x, y, payload }: any) => {
+const CustomXAxisTick = ({ x, y, payload }: CustomXAxisTickProps) => {
   const words = payload.value.split(" ");
   return (
     <g transform={`translate(${x},${y})`}>

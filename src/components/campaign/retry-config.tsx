@@ -31,16 +31,27 @@ export function RetryConfig({
     field: "hours" | "afterAttempts",
     value: number,
   ) => {
-    setPendingChanges((prev: Partial<Campaign>) => ({
-      ...prev,
-      retrySettings: {
-        ...selectedCampaign.retrySettings,
-        cooldownPeriod: {
-          ...selectedCampaign.retrySettings.cooldownPeriod,
-          [field]: value,
+    setPendingChanges((prev: Partial<Campaign>) => {
+      const currentRetrySettings = selectedCampaign.retrySettings || {
+        cooldownPeriod: { hours: 24, afterAttempts: 3 },
+        retryBehavior: {
+          onDayComplete: "NEXT_DAY_START",
+          onPatternComplete: "COOLDOWN",
+          onCooldownComplete: "END",
         },
-      },
-    }));
+      };
+
+      return {
+        ...prev,
+        retrySettings: {
+          ...currentRetrySettings,
+          cooldownPeriod: {
+            ...currentRetrySettings.cooldownPeriod,
+            [field]: value,
+          },
+        },
+      };
+    });
   };
 
   const handleStrategyChange = (value: Campaign["retryStrategy"]) => {
@@ -269,7 +280,8 @@ export function RetryConfig({
                         type="text"
                         value={
                           pendingChanges.retryDelaysInput ??
-                          selectedCampaign.retryDelays.join(", ")
+                          selectedCampaign.retryDelays?.join(", ") ??
+                          ""
                         }
                         onChange={(e) => handleDelaysChange(e.target.value)}
                         placeholder="60, 180, 360"
@@ -291,7 +303,9 @@ export function RetryConfig({
                         type="number"
                         value={
                           pendingChanges.retrySettings?.cooldownPeriod?.hours ??
-                          selectedCampaign.retrySettings.cooldownPeriod.hours
+                          selectedCampaign.retrySettings?.cooldownPeriod
+                            ?.hours ??
+                          24
                         }
                         onChange={(e) =>
                           handleInputChange("hours", parseInt(e.target.value))
@@ -310,8 +324,9 @@ export function RetryConfig({
                         value={
                           pendingChanges.retrySettings?.cooldownPeriod
                             ?.afterAttempts ??
-                          selectedCampaign.retrySettings.cooldownPeriod
-                            .afterAttempts
+                          selectedCampaign.retrySettings?.cooldownPeriod
+                            ?.afterAttempts ??
+                          3
                         }
                         onChange={(e) =>
                           handleInputChange(

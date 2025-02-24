@@ -1,19 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-
-interface RedactionContextType {
-  isRedacted: boolean;
-  setIsRedacted: (value: boolean) => void;
-}
-
-const RedactionContext = createContext<RedactionContextType | undefined>(
-  undefined,
-);
+import { useState, useEffect, ReactNode } from "react";
+import { RedactionContext, RedactionContextType } from "./redaction-types";
 
 export function RedactionProvider({ children }: { children: ReactNode }) {
   const [isRedacted, setIsRedacted] = useState(false);
@@ -37,10 +23,4 @@ export function RedactionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useRedaction() {
-  const context = useContext(RedactionContext);
-  if (context === undefined) {
-    throw new Error("useRedaction must be used within a RedactionProvider");
-  }
-  return context;
-}
+export type { RedactionContextType };

@@ -1,15 +1,13 @@
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { RootLayout } from "@/components/layout/root-layout";
 import { CallsTable } from "@/components/calls/calls-table";
-import { CallMetrics } from "@/components/calls/call-metrics";
 import { CallFilters } from "@/components/calls/call-filters";
 import { CallDetails } from "@/components/calls/call-details";
 import { DateRange } from "react-day-picker";
-import { useUI } from "@/contexts/ui-context";
-import { usePreferences } from "@/contexts/preferences-context";
+import { useUI } from "@/hooks/use-ui";
+import { usePreferences } from "@/hooks/use-preferences";
 import { Call } from "@/types/calls";
 import { useInitialData } from "@/hooks/use-client-data";
-import { formatDuration } from "@/lib/utils";
 import { DownloadIcon } from "@radix-ui/react-icons";
 import {
   Select,
@@ -20,8 +18,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { CampaignSelect } from "@/components/campaign-select";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
 
@@ -29,7 +26,7 @@ interface CallsTableProps {
   calls: Call[];
   onCallSelect: (call: Call) => void;
   showTestCalls: boolean;
-  showConnectedOnly?: boolean;
+  showConnectedOnly: boolean;
   onSort: (key: string, direction: "asc" | "desc" | null) => void;
   sortConfig: {
     key: string;
@@ -92,15 +89,7 @@ const MemoizedCallDetails = memo(function MemoizedCallDetails({
 });
 
 export default function CallsPage() {
-  const {
-    todayMetrics,
-    metrics,
-    isLoading,
-    isCallsLoading,
-    calls,
-    callsError,
-    clientInfo,
-  } = useInitialData();
+  const { todayMetrics, isCallsLoading, calls, clientInfo } = useInitialData();
   const { setCallDetailsOpen } = useUI();
   const {
     showTestCalls,
@@ -112,14 +101,12 @@ export default function CallsPage() {
   } = usePreferences();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
 
   // Define today and yesterday
   const today = new Date();
   const yesterday = subDays(today, 1);
 
   // Get search params
-  const initialSearch = searchParams.get("search") || "";
   const fromDate = searchParams.get("from");
   const toDate = searchParams.get("to");
 
@@ -150,12 +137,6 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCampaignType, setSelectedCampaignType] = useState(() => {
-    // If there's exactly one campaign, use its type, otherwise use 'all'
-    return clientInfo?.campaigns?.length === 1
-      ? clientInfo.campaigns[0].type
-      : "all";
-  });
   const [selectedCampaignId, setSelectedCampaignId] = useState(() => {
     // If there's exactly one campaign, use its ID, otherwise use 'all'
     return clientInfo?.campaigns?.length === 1
@@ -168,11 +149,6 @@ export default function CallsPage() {
     key: string;
     direction: "asc" | "desc" | null;
   }>({ key: "", direction: null });
-
-  // Add this function to handle campaign changes
-  const handleCampaignChange = (campaignId: string) => {
-    setSelectedCampaignId(campaignId);
-  };
 
   // At the top of your component, define the campaign options
   const campaignOptions = useMemo(() => {
@@ -228,7 +204,7 @@ export default function CallsPage() {
       }
 
       // Then check all other fields
-      const searchMatch = Object.entries(call).some(([key, value]) => {
+      const searchMatch = Object.entries(call).some(([, value]) => {
         if (value === null || value === undefined) return false;
 
         // Convert value to lowercase string for comparison
@@ -340,16 +316,12 @@ export default function CallsPage() {
     const link = document.createElement("a");
     const fileName = `calls_${format(new Date(), "yyyyMMdd")}.csv`;
 
-    if (navigator.msSaveBlob) {
-      // IE 10+
-      navigator.msSaveBlob(blob, fileName);
-    } else {
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   // Add effect to handle initial URL with call ID

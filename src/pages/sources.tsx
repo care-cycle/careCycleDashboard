@@ -3,7 +3,7 @@ import { SourcesTable } from "@/components/sources/sources-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, InboxIcon, Plus, Settings } from "lucide-react";
+import { AlertTriangle, InboxIcon, Settings } from "lucide-react";
 import { RootLayout } from "@/components/layout/root-layout";
 import { useInitialData } from "@/hooks/use-client-data";
 import { getTopMetrics } from "@/lib/metrics";

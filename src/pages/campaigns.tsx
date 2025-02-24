@@ -31,45 +31,76 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { SmsConfig } from "@/components/campaign/sms-config";
 import { RetryConfig } from "@/components/campaign/retry-config";
-import type { Campaign } from "@/types/campaign";
+import type { Campaign, SmsTypes, SmsContent } from "@/types/campaign";
 import apiClient from "@/lib/api-client";
 import { transformToBackendFormat } from "@/utils/smsVariables";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface CampaignData {
-  [key: string]: Campaign;
+  [key: string]: {
+    id: string;
+    name: string;
+    type: string;
+    description: string;
+    status: string;
+    smsCompanyName: string;
+    hasInquiryCallback: boolean;
+    retryStrategy: string;
+    retryDelays: number[];
+    retryPatterns: RetryPattern[];
+    retrySettings: RetrySettings;
+    successCriteria: CampaignCriteria;
+    failureCriteria: CampaignCriteria;
+    maxAttempts: number;
+    smsTypes: SmsTypes;
+    smsContent: SmsContent;
+    customerStats: {
+      total: number;
+      totalCalls: number;
+      statusCounts: {
+        pending: number;
+        in_progress: number;
+        completed: number;
+        failed: number;
+        expired: number;
+        cancelled: number;
+        skipped: number;
+        exceeded_max_calls: number;
+      };
+    };
+  };
 }
 
-// SMS type mapping constants
-const SMS_TYPE_MAPPING = {
-  redial: "redial",
-  firstContact: "firstContact",
-  appointmentBooked: "appointmentBooked",
-  missedAppointment: "missedAppointment",
-  missedFirstContact: "missedFirstContact",
-  appointmentReminder: "appointmentReminder",
-} as const;
-
-// Backend SMS types
-interface BackendSmsContent {
-  redial: string;
-  firstContact: string;
-  appointmentBooked: string;
-  missedAppointment: string;
-  missedFirstContact: string;
-  appointmentReminder: string;
+interface RetryPattern {
+  days: {
+    start: number;
+    end: number;
+  };
+  attempts: number;
+  intervalMinutes: number;
 }
 
-interface BackendSmsTypes {
-  redial: boolean;
-  firstContact: boolean;
-  appointmentBooked: boolean;
-  missedAppointment: boolean;
-  missedFirstContact: boolean;
-  appointmentReminder: boolean;
+interface RetrySettings {
+  cooldownPeriod: {
+    hours: number;
+    afterAttempts: number;
+  };
+  retryBehavior: {
+    onDayComplete: string;
+    onPatternComplete: string;
+    onCooldownComplete: string;
+  };
+}
+
+interface CampaignCriteria {
+  operator: string;
+  conditions: Array<{
+    field: string;
+    operator: string;
+    value: boolean;
+  }>;
 }
 
 export default function CampaignsPage() {
@@ -111,14 +142,27 @@ export default function CampaignsPage() {
   const campaigns = React.useMemo(() => {
     if (!campaignsData) return [];
 
-    return Object.entries(campaignsData as CampaignData).map(
+    return Object.entries(campaignsData as unknown as CampaignData).map(
       ([id, campaign]) => ({
-        ...campaign,
         id,
+        name: campaign.name,
+        type: campaign.type,
+        description: campaign.description,
+        status: campaign.status,
+        smsCompanyName: campaign.smsCompanyName,
+        smsTypes: campaign.smsTypes,
+        smsContent: campaign.smsContent,
+        retryStrategy: campaign.retryStrategy,
+        retryDelays: campaign.retryDelays,
+        retryPatterns: campaign.retryPatterns,
+        retrySettings: campaign.retrySettings,
+        maxAttempts: campaign.maxAttempts,
+        customerStats: campaign.customerStats,
+        hasInquiryCallback: campaign.hasInquiryCallback || false,
         metrics: {
           customers: campaign.customerStats?.total || 0,
           calls: campaign.customerStats?.totalCalls || 0,
-          sources: campaign.customerStats?.totalSources || 0,
+          sources: 0, // API doesn't provide this, so default to 0
           customersByStatus: {
             pending: campaign.customerStats?.statusCounts?.pending || 0,
             in_progress: campaign.customerStats?.statusCounts?.in_progress || 0,
@@ -144,6 +188,17 @@ export default function CampaignsPage() {
     }
   }, [campaigns, selectedCampaignId]);
 
+  // Initialize pendingChanges with selected campaign's SMS configuration
+  React.useEffect(() => {
+    if (selectedCampaign) {
+      setPendingChanges({
+        smsCompanyName: selectedCampaign.smsCompanyName,
+        smsTypes: selectedCampaign.smsTypes,
+        smsContent: selectedCampaign.smsContent,
+      });
+    }
+  }, [selectedCampaign]);
+
   const handleSmsUpdate = async (
     campaignId: string,
     updateData: Partial<Campaign>,
@@ -153,8 +208,8 @@ export default function CampaignsPage() {
       // Only include SMS-related fields
       const smsUpdateData: {
         smsCompanyName?: string;
-        smsContent?: Record<string, string>;
-        smsTypes?: Record<string, boolean>;
+        smsContent?: SmsContent;
+        smsTypes?: SmsTypes;
       } = {};
 
       // Add SMS company name if present
@@ -164,12 +219,11 @@ export default function CampaignsPage() {
 
       // Transform SMS content if present
       if (updateData.smsContent) {
-        const transformedContent: Record<string, string> = {};
-        Object.entries(updateData.smsContent).forEach(([key, value]) => {
-          if (typeof value === "string" && key in SMS_TYPE_MAPPING) {
-            const backendKey =
-              SMS_TYPE_MAPPING[key as keyof typeof SMS_TYPE_MAPPING];
-            transformedContent[backendKey] = transformToBackendFormat(value);
+        const transformedContent = { ...updateData.smsContent };
+        Object.entries(transformedContent).forEach(([key, value]) => {
+          if (typeof value === "string") {
+            transformedContent[key as keyof SmsContent] =
+              transformToBackendFormat(value);
           }
         });
         smsUpdateData.smsContent = transformedContent;
@@ -177,15 +231,7 @@ export default function CampaignsPage() {
 
       // Transform SMS types if present
       if (updateData.smsTypes) {
-        const transformedTypes: Record<string, boolean> = {};
-        Object.entries(updateData.smsTypes).forEach(([key, value]) => {
-          if (typeof value === "boolean" && key in SMS_TYPE_MAPPING) {
-            const backendKey =
-              SMS_TYPE_MAPPING[key as keyof typeof SMS_TYPE_MAPPING];
-            transformedTypes[backendKey] = value;
-          }
-        });
-        smsUpdateData.smsTypes = transformedTypes;
+        smsUpdateData.smsTypes = { ...updateData.smsTypes };
       }
 
       // Log the raw data before sending to API
@@ -290,12 +336,6 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleSave = () => {
-    if (Object.keys(pendingChanges).length > 0 && selectedCampaign) {
-      setShowTcpaDialog(true);
-    }
-  };
-
   const handleConfirmSave = () => {
     if (selectedCampaign) {
       handleRetryUpdate(selectedCampaign.id, pendingChanges);
@@ -327,11 +367,8 @@ export default function CampaignsPage() {
         description: `Campaign ${editingField} updated successfully`,
       });
 
-      // Update local state
-      const updatedCampaigns = campaigns.map((c) =>
-        c.id === selectedCampaign.id ? { ...c, [editingField]: editValue } : c,
-      );
-      // You'll need to implement a way to update the campaigns data here
+      // Invalidate campaigns query to refetch the latest data
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     } catch (error) {
       toast({
         title: "Error",
@@ -514,7 +551,7 @@ export default function CampaignsPage() {
 
                   <CollapsibleContent className="transition-all duration-300 ease-in-out">
                     <SmsConfig
-                      campaign={selectedCampaign}
+                      campaign={selectedCampaign as Campaign}
                       pendingChanges={pendingChanges}
                       setPendingChanges={setPendingChanges}
                       hasDiscreteNumber={hasDiscreteNumber}
@@ -522,6 +559,9 @@ export default function CampaignsPage() {
                       setCompanyNameError={setCompanyNameError}
                       isSaving={isSaving}
                       handleSave={handleSmsConfigSave}
+                      hasInquiryCallback={
+                        selectedCampaign?.hasInquiryCallback || false
+                      }
                     />
                   </CollapsibleContent>
                 </Collapsible>
@@ -544,7 +584,7 @@ export default function CampaignsPage() {
 
                   <CollapsibleContent className="transition-all duration-300 ease-in-out">
                     <RetryConfig
-                      campaign={selectedCampaign}
+                      campaign={selectedCampaign as Campaign}
                       pendingChanges={pendingChanges}
                       setPendingChanges={setPendingChanges}
                       isSaving={isSaving}

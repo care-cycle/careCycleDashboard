@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import {
   Table,
   TableBody,
@@ -7,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Phone, ArrowUpDown, PhoneForwarded } from "lucide-react";
+import { ArrowUpDown, PhoneForwarded } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPhoneNumber, formatDate } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";

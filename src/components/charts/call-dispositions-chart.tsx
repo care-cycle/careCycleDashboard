@@ -6,7 +6,6 @@ import {
   YAxis,
   Bar,
   Tooltip,
-  Legend,
   CartesianGrid,
 } from "recharts";
 import {
@@ -64,8 +63,14 @@ const NON_CONNECTED_DISPOSITIONS = [
   "Bad Contact",
 ];
 
+interface DispositionDataPoint {
+  timestamp: string;
+  weekEnd?: string;
+  [key: string]: string | number | undefined;
+}
+
 interface CallDispositionsChartProps {
-  data: any[];
+  data: DispositionDataPoint[];
   dateRange: DateRange | undefined;
   isLoading?: boolean;
 }
@@ -200,7 +205,17 @@ export function CallDispositionsChart({
     };
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+  }: {
+    active?: boolean;
+    payload?: Array<{
+      name: string;
+      value: number;
+      color: string;
+    }>;
+  }) => {
     if (!active || !payload?.length) return null;
 
     let dateDisplay;
@@ -232,17 +247,13 @@ export function CallDispositionsChart({
       <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
         <p className="text-sm font-medium mb-2">{dateDisplay}</p>
         <div className="space-y-1.5">
-          {[...payload]
-            .sort((a, b) => b.value - a.value)
-            .map((entry: any) => (
+          {payload.map(
+            (entry: { name: string; value: number; color: string }) => (
               <div key={entry.name} className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full"
                   style={{
-                    backgroundColor:
-                      dispositionColors[
-                        entry.name as keyof typeof dispositionColors
-                      ],
+                    backgroundColor: entry.color,
                   }}
                 />
                 <span className="text-sm text-gray-600">{entry.name}:</span>
@@ -250,7 +261,8 @@ export function CallDispositionsChart({
                   {entry.value} {entry.value === 1 ? "call" : "calls"}
                 </span>
               </div>
-            ))}
+            ),
+          )}
         </div>
       </div>
     );
@@ -315,30 +327,6 @@ export function CallDispositionsChart({
                 return sumB - sumA; // Sort descending
               })
               .map((key) => {
-                // For each bar, check if it's the topmost non-zero value in any stack
-                const isTopBar = filteredData.some((entry) => {
-                  // If this bar has no value in this timestamp, it's not the top
-                  if (!entry[key]) return false;
-
-                  // Check all other bars that come after this one in the sort order
-                  const laterKeys = Object.keys(dispositionColors)
-                    .sort((a, b) => {
-                      const sumA = data.reduce(
-                        (sum, e) => sum + (e[a] || 0),
-                        0,
-                      );
-                      const sumB = data.reduce(
-                        (sum, e) => sum + (e[b] || 0),
-                        0,
-                      );
-                      return sumB - sumA;
-                    })
-                    .slice(Object.keys(dispositionColors).indexOf(key) + 1);
-
-                  // If any later bars have values, this isn't the top
-                  return !laterKeys.some((laterKey) => entry[laterKey] > 0);
-                });
-
                 return (
                   <Bar
                     key={key}
@@ -347,7 +335,7 @@ export function CallDispositionsChart({
                     fill={
                       dispositionColors[key as keyof typeof dispositionColors]
                     }
-                    radius={isTopBar ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    radius={[4, 4, 4, 4]}
                   />
                 );
               })}

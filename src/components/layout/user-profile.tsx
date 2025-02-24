@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronUp, ChevronDown, User, CreditCard, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn, isAuthEnabled } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useClerk } from "@clerk/clerk-react";
@@ -21,54 +21,30 @@ export function UserProfile({
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
-  // Only call Clerk hooks when auth is enabled
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const user = isAuthEnabled() ? useUser().user : null;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const signOut = isAuthEnabled() ? useClerk().signOut : null;
-
-  const clerkHooks = {
-    user,
-    signOut,
-  };
-
-  // Use the values conditionally
   const userData = {
-    fullName: isRedacted
-      ? "***"
-      : (isAuthEnabled() && clerkHooks.user?.fullName) || "Demo User",
-    email: isRedacted
-      ? "***"
-      : (isAuthEnabled() &&
-          clerkHooks.user?.primaryEmailAddress?.emailAddress) ||
-        "demo@example.com",
+    fullName: isRedacted ? "***" : user?.fullName,
+    email: isRedacted ? "***" : user?.primaryEmailAddress?.emailAddress,
     imageUrl:
-      isAuthEnabled() && clerkHooks.user?.imageUrl
-        ? clerkHooks.user.imageUrl
-        : "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png",
+      user?.imageUrl ||
+      "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png",
   };
 
   const handleLogout = async () => {
-    if (isAuthEnabled() && clerkHooks.signOut) {
-      try {
-        await clerkHooks.signOut();
-        setIsExpanded(false);
-        toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account",
-        });
-      } catch (error) {
-        toast({
-          title: "Error logging out",
-          description: "There was a problem logging out of your account",
-          variant: "destructive",
-        });
-      }
-    } else {
+    try {
+      await signOut();
+      setIsExpanded(false);
       toast({
-        title: "Demo Mode",
-        description: "Logout is disabled in demo mode",
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+    } catch (error) {
+      toast({
+        title: "Error logging out",
+        description: "There was a problem logging out of your account",
+        variant: "destructive",
       });
     }
   };
@@ -165,7 +141,7 @@ export function UserProfile({
           >
             <img
               src={userData.imageUrl}
-              alt={userData.fullName}
+              alt={userData.fullName || ""}
               className="w-6 h-6 rounded-md"
             />
           </div>

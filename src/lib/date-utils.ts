@@ -3,14 +3,13 @@ import {
   startOfDay,
   startOfWeek,
   endOfWeek,
-  isSameDay,
-  isSameHour,
   differenceInDays,
 } from "date-fns";
 
 type TimeseriesDataPoint = {
   timestamp: Date;
-  [key: string]: any;
+  weekEnd?: Date;
+  [key: string]: Date | number | string | undefined;
 };
 
 export function aggregateTimeseriesData<T extends TimeseriesDataPoint>(

@@ -1,11 +1,4 @@
-import {
-  useState,
-  useMemo,
-  forwardRef,
-  useImperativeHandle,
-  useEffect,
-  useCallback,
-} from "react";
+import { useState, useMemo, forwardRef, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -50,7 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useRedaction } from "@/contexts/redaction-context";
+import { useRedaction } from "@/hooks/use-redaction";
 import { useNavigate } from "react-router-dom";
 
 interface SortableHeaderProps {
@@ -86,13 +79,6 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
   );
 }
 
-// Add this interface to define the data fields structure
-interface CustomerDataFields {
-  dataFields: string[];
-  customers: Customer[];
-  total: number;
-}
-
 interface CustomersTableProps {
   customers: Customer[];
   dataFields?: string[];
@@ -105,11 +91,6 @@ interface CustomersTableProps {
   activeColumnKeys: string[];
   onColumnToggle: (columnKey: string) => void;
 }
-
-const redactData = (value: string) => {
-  return value.replace(/./g, "*");
-};
-
 export interface TableRef {
   availableColumns: { key: string; label: string }[];
 }
@@ -123,7 +104,6 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
       onSort,
       sortConfig,
       activeColumnKeys,
-      onColumnToggle,
     }: CustomersTableProps,
     ref,
   ) => {
@@ -273,13 +253,7 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
       });
 
       return columns;
-    }, [
-      dataFields,
-      renderCustomerName,
-      renderCustomerId,
-      renderContact,
-      isRedacted,
-    ]);
+    }, [dataFields, renderCustomerName, renderCustomerId, renderContact]);
 
     // State for ordered columns
     const [orderedColumns, setOrderedColumns] = useState(() =>
@@ -287,6 +261,17 @@ export const CustomersTable = forwardRef<TableRef, CustomersTableProps>(
         .map((key) => allColumns.find((col) => col.key === key))
         .filter((col): col is (typeof allColumns)[0] => col !== undefined),
     );
+
+    // Expose availableColumns through ref
+    useEffect(() => {
+      if (ref) {
+        if (typeof ref === "function") {
+          ref({ availableColumns: allColumns });
+        } else {
+          ref.current = { availableColumns: allColumns };
+        }
+      }
+    }, [ref, allColumns]);
 
     // Update ordered columns when activeColumnKeys changes
     useEffect(() => {

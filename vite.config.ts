@@ -1,4 +1,5 @@
 // vite.config.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -32,16 +33,16 @@ export default defineConfig(({ mode }) => {
           secure: !isDev,
           configure: (proxy) => {
             // Add error handling
-            proxy.on('error', (err, req) => {
+            proxy.on('error', (err, req: any) => {
               console.error('Proxy Error:', {
                 error: err.message,
-                path: req.path,
+                path: req.url,
                 target: isDev ? env.VITE_API_BASE_URL : env.VITE_PROD_API_BASE_URL
               });
             });
 
             // Add request logging
-            proxy.on('proxyReq', (proxyReq, req) => {
+            proxy.on('proxyReq', (proxyReq: any, req: any) => {
               console.log('Proxying request:', {
                 path: proxyReq.path,
                 method: proxyReq.method,

@@ -25,9 +25,32 @@ interface Inquiry {
   carrierName?: string;
   planName?: string;
   agentName?: string;
+  firstName?: string;
+  lastName?: string;
+  callerId?: string;
 }
 
 type InquiryKey = keyof Inquiry;
+
+// Sort function for inquiries
+const sortInquiries = (
+  inquiries: Inquiry[],
+  sortConfig: { key: InquiryKey; direction: "asc" | "desc" | null },
+) => {
+  if (!sortConfig.direction) return inquiries;
+
+  return [...inquiries].sort((a, b) => {
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+
+    if (aValue === bValue) return 0;
+    if (aValue === undefined) return 1;
+    if (bValue === undefined) return -1;
+
+    const comparison = aValue < bValue ? -1 : 1;
+    return sortConfig.direction === "asc" ? comparison : -comparison;
+  });
+};
 
 export default function InquiriesPage() {
   const { inquiries, isInquiriesLoading, todayMetrics } = useInitialData();
@@ -61,25 +84,7 @@ export default function InquiriesPage() {
 
     // Apply sorting
     if (sortConfig.key && sortConfig.direction) {
-      result = [...result].sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-
-        // Handle date fields
-        if (sortConfig.key.includes("At")) {
-          const aTime = aValue ? new Date(aValue.toString()).getTime() : 0;
-          const bTime = bValue ? new Date(bValue.toString()).getTime() : 0;
-          return sortConfig.direction === "asc" ? aTime - bTime : bTime - aTime;
-        }
-
-        // Handle string comparisons
-        const aStr = String(aValue || "");
-        const bStr = String(bValue || "");
-
-        return sortConfig.direction === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
-      });
+      result = sortInquiries(result, sortConfig);
     }
 
     return result;

@@ -11,13 +11,13 @@
     "lint:errors": "eslint . --quiet",
     "preview": "vite preview",
     "prepare": "husky",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "type-check": "tsc --noEmit"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
-      "eslint --quiet",
-      "prettier --write",
-      "pnpm format"
+      "pnpm format",
+      "prettier --write"
     ],
     "src/**/*.{json,css,md}": [
       "pnpm format",
@@ -94,6 +94,8 @@
     "@types/node": "^20.17.6",
     "@types/react": "^18.2.52",
     "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",

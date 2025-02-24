@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -84,13 +78,21 @@ export function SpecialHoursConfig() {
   const handleUpdateSchedule = (
     index: number,
     field: keyof SpecialHour | string,
-    value: any,
+    value:
+      | string
+      | number
+      | number[]
+      | { startHour: number; endHour: number }[]
+      | undefined,
   ) => {
     setSpecialHours(
       specialHours.map((schedule, i) => {
         if (i === index) {
           if (field === "hours") {
-            return { ...schedule, hours: value };
+            return {
+              ...schedule,
+              hours: value as { startHour: number; endHour: number }[],
+            };
           }
           return { ...schedule, [field]: value };
         }

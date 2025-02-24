@@ -7,21 +7,16 @@ import {
   RotateCw,
   Megaphone,
   Calendar,
-  Settings,
   MessageSquare,
-  ChevronLeft,
-  ChevronRight,
-  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserProfile } from "@/components/layout/user-profile";
 import { Link, useLocation } from "react-router-dom";
-import { useRedaction } from "@/contexts/redaction-context";
+import { useRedaction } from "@/hooks/use-redaction";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useClientData } from "@/hooks/use-client-data";
 
 const navigationItems = [
   {

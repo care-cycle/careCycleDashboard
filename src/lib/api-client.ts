@@ -1,30 +1,20 @@
 // src/lib/api-client.ts
 import axios from "axios";
-import { isAuthEnabled } from "@/lib/utils";
-import { mockData } from "./mock-data";
+
+// Add Clerk types to window object
+declare global {
+  interface Window {
+    Clerk?: {
+      session: Promise<{
+        getToken: () => Promise<string | null>;
+      } | null>;
+    };
+  }
+}
 
 const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
 
-const getMockResponse = (endpoint: string) => {
-  // Map endpoints to mock data
-  const mockResponses: Record<string, any> = {
-    "/api/calls": mockData.calls,
-    "/api/billing": mockData.billing,
-    "/api/user": mockData.user,
-  };
-
-  return mockResponses[endpoint] || {};
-};
-
-// Create mock client
-const mockClient = {
-  get: async (url: string) => ({ data: getMockResponse(url) }),
-  post: async (url: string) => ({ data: getMockResponse(url) }),
-  put: async (url: string) => ({ data: getMockResponse(url) }),
-  delete: async (url: string) => ({ data: getMockResponse(url) }),
-};
-
-// Create real API client
+// Create API client
 const apiClient = axios.create({
   baseURL: isDevelopment
     ? "http://localhost:3000/api"
@@ -40,23 +30,18 @@ const apiClient = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   async (config) => {
-    if (isAuthEnabled()) {
-      try {
-        // Get the current active session
-        const session = await window.Clerk?.session;
-        const token = await session?.getToken();
+    try {
+      // Get the current active session
+      const session = await window.Clerk?.session;
+      const token = await session?.getToken();
 
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-          if (isDevelopment) {
-            // console.log('🔑 Auth token added to request');
-          }
-        } else {
-          console.warn("No auth token available");
-        }
-      } catch (error) {
-        console.error("Error getting auth token:", error);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn("No auth token available");
       }
+    } catch (error) {
+      console.error("Error getting auth token:", error);
     }
 
     if (isDevelopment) {
@@ -95,5 +80,4 @@ apiClient.interceptors.response.use(
   },
 );
 
-// Export the appropriate client based on auth setting
-export default isAuthEnabled() ? apiClient : mockClient;
+export default apiClient;

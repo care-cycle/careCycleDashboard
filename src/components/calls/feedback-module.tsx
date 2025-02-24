@@ -21,40 +21,18 @@ import {
   CALL_SEVERITY_LEVELS,
 } from "@/constants/feedback";
 import { X } from "lucide-react";
-import { Dialog as DialogPrimitive } from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
-import {
-  type ElementRef,
-  type ComponentPropsWithoutRef,
-  forwardRef,
-} from "react";
 import { toast } from "sonner";
 import apiClient from "@/lib/api-client";
 
 interface FeedbackModuleProps {
   callId: string;
-  onSubmit?: () => void;
+  onSubmit?: (feedback: {
+    type: string;
+    severity: string;
+    comment: string;
+  }) => void;
 }
-
-const DialogContentWithoutClose = forwardRef<
-  ElementRef<typeof DialogPrimitive.Content>,
-  ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
-DialogContentWithoutClose.displayName = "DialogContentWithoutClose";
 
 export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
   const [feedbackType, setFeedbackType] = useState<string>("");
@@ -87,7 +65,11 @@ export function FeedbackModule({ callId, onSubmit }: FeedbackModuleProps) {
         setFeedbackType("");
         setSeverity("");
         setComment("");
-        onSubmit?.();
+        onSubmit?.({
+          type: feedbackType,
+          severity: CALL_SEVERITY_LEVELS[severity],
+          comment: comment.trim(),
+        });
       } else {
         throw new Error("Failed to submit feedback");
       }

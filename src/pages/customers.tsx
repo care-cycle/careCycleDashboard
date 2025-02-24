@@ -5,7 +5,7 @@ import { CustomerFilters } from "@/components/customers/customer-filters";
 import { CustomersTable } from "@/components/customers/customers-table";
 import { DownloadIcon } from "@radix-ui/react-icons";
 import { useLocation } from "react-router-dom";
-import { usePreferences } from "@/contexts/preferences-context";
+import { usePreferences } from "@/hooks/use-preferences";
 import {
   Select,
   SelectContent,
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, formatDuration } from "date-fns";
+import { format } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
 import { TableRef } from "@/components/customers/customers-table";
 import { Customer, CustomData } from "@/types/customers";
@@ -113,27 +113,22 @@ export default function CustomersPage() {
 
   // Handle column toggling
   const handleColumnToggle = (columnKey: string) => {
-    setActiveColumnKeys((prev) => {
-      if (prev.includes(columnKey)) {
-        // Don't allow removing the last column
-        if (prev.length <= 1) return prev;
-        return prev.filter((key) => key !== columnKey);
-      } else {
-        return [...prev, columnKey];
-      }
-    });
+    if (activeColumnKeys.includes(columnKey)) {
+      // Don't allow removing the last column
+      if (activeColumnKeys.length <= 1) return;
+      setActiveColumnKeys(activeColumnKeys.filter((key) => key !== columnKey));
+    } else {
+      setActiveColumnKeys([...activeColumnKeys, columnKey]);
+    }
   };
 
   // Add this effect to initialize columns when data is loaded
   useEffect(() => {
     if (!isCustomersLoading && customers?.customers) {
       // Force a re-render to update the columns
-      setForceUpdate((prev) => !prev);
+      setActiveColumnKeys(activeColumnKeys);
     }
-  }, [isCustomersLoading, customers]);
-
-  // Add this state to force re-renders
-  const [forceUpdate, setForceUpdate] = useState(false);
+  }, [isCustomersLoading, customers, activeColumnKeys, setActiveColumnKeys]);
 
   // Add debounce effect for search
   useEffect(() => {
@@ -228,76 +223,78 @@ export default function CustomersPage() {
 
     // Apply sorting if configured
     if (sortConfig.key && sortConfig.direction) {
-      result = [...result].sort((a, b) => {
-        let aValue: any, bValue: any;
+      result = [...result].sort(
+        (a: FormattedCustomer, b: FormattedCustomer) => {
+          let aValue: string | number, bValue: string | number;
 
-        switch (sortConfig.key) {
-          case "customer":
-            aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
-            bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
-            break;
-          case "contact":
-            aValue = a.callerId || "";
-            bValue = b.callerId || "";
-            break;
-          case "location":
-            aValue = [a.state, a.timezone, a.postalCode]
-              .filter(Boolean)
-              .join(",");
-            bValue = [b.state, b.timezone, b.postalCode]
-              .filter(Boolean)
-              .join(",");
-            break;
-          case "campaigns":
-            aValue = a.campaigns?.[0]?.campaign_status || "";
-            bValue = b.campaigns?.[0]?.campaign_status || "";
-            break;
-          case "calls":
-            aValue = a.totalCalls || 0;
-            bValue = b.totalCalls || 0;
-            break;
-          case "last-contact":
-            aValue = a.lastCallDate || "";
-            bValue = b.lastCallDate || "";
-            break;
-          default:
-            // Handle data field columns
-            if (sortConfig.key.startsWith("data_")) {
-              const field = sortConfig.key.replace("data_", "");
-              aValue =
-                a.customData?.[field] ?? a[field as keyof Customer] ?? "";
-              bValue =
-                b.customData?.[field] ?? b[field as keyof Customer] ?? "";
+          switch (sortConfig.key) {
+            case "customer":
+              aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+              bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+              break;
+            case "contact":
+              aValue = a.callerId || "";
+              bValue = b.callerId || "";
+              break;
+            case "location":
+              aValue = [a.state, a.timezone, a.postalCode]
+                .filter(Boolean)
+                .join(",");
+              bValue = [b.state, b.timezone, b.postalCode]
+                .filter(Boolean)
+                .join(",");
+              break;
+            case "campaigns":
+              aValue = a.campaigns?.[0]?.campaign_status || "";
+              bValue = b.campaigns?.[0]?.campaign_status || "";
+              break;
+            case "calls":
+              aValue = a.totalCalls || 0;
+              bValue = b.totalCalls || 0;
+              break;
+            case "last-contact":
+              aValue = a.lastCallDate || "";
+              bValue = b.lastCallDate || "";
+              break;
+            default:
+              // Handle data field columns
+              if (sortConfig.key.startsWith("data_")) {
+                const field = sortConfig.key.replace("data_", "");
+                aValue =
+                  a.customData?.[field] ?? a[field as keyof Customer] ?? "";
+                bValue =
+                  b.customData?.[field] ?? b[field as keyof Customer] ?? "";
 
-              // Convert to numbers if possible for proper numeric sorting
-              if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-                aValue = Number(aValue);
-                bValue = Number(bValue);
-              } else {
-                // Convert to lowercase strings for case-insensitive sorting
-                aValue = String(aValue).toLowerCase();
-                bValue = String(bValue).toLowerCase();
+                // Convert to numbers if possible for proper numeric sorting
+                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                  aValue = Number(aValue);
+                  bValue = Number(bValue);
+                } else {
+                  // Convert to lowercase strings for case-insensitive sorting
+                  aValue = String(aValue).toLowerCase();
+                  bValue = String(bValue).toLowerCase();
+                }
               }
-            }
-            break;
-        }
+              break;
+          }
 
-        // Handle undefined/null values
-        if (aValue === undefined || aValue === null) aValue = "";
-        if (bValue === undefined || bValue === null) bValue = "";
+          // Handle undefined/null values
+          if (aValue === undefined || aValue === null) aValue = "";
+          if (bValue === undefined || bValue === null) bValue = "";
 
-        return sortConfig.direction === "asc"
-          ? aValue > bValue
-            ? 1
+          return sortConfig.direction === "asc"
+            ? aValue > bValue
+              ? 1
+              : aValue < bValue
+                ? -1
+                : 0
             : aValue < bValue
-              ? -1
-              : 0
-          : aValue < bValue
-            ? 1
-            : aValue > bValue
-              ? -1
-              : 0;
-      });
+              ? 1
+              : aValue > bValue
+                ? -1
+                : 0;
+        },
+      );
     }
 
     return result;

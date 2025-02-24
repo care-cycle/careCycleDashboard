@@ -3,7 +3,7 @@ export interface CustomData {
   carrierName?: string;
   effectiveDate?: string;
   enrollmentDate?: string;
-  [key: string]: any;
+  [key: string]: string | undefined;
 }
 
 export interface Customer {
@@ -24,7 +24,5 @@ export interface Customer {
   lastCallDate?: string;
   smsConsent?: boolean;
   doNotContact?: boolean;
-  customData?: {
-    [key: string]: any;
-  };
+  customData?: CustomData;
 }

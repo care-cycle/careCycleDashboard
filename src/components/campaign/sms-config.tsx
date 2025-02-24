@@ -6,29 +6,15 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import apiClient from "@/lib/api-client";
 import type { Campaign, SmsTypes, SmsContent } from "@/types/campaign";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  transformToBackendFormat,
-  transformToFrontendFormat,
-} from "@/utils/smsVariables";
+import { transformToFrontendFormat } from "@/utils/smsVariables";
+import { DEFAULT_SMS_CONTENT } from "@/lib/sms-config";
 
 const VARIABLES = [
   { name: "firstname", description: "Customer's first name" },
@@ -46,29 +32,12 @@ interface SmsConfigProps {
   setCompanyNameError: (error: boolean) => void;
   isSaving: boolean;
   handleSave: () => void;
+  hasInquiryCallback: boolean;
 }
-
-const defaultSmsTypes: SmsTypes = {
-  redial: false,
-  firstContact: false,
-  appointmentBooked: false,
-  missedAppointment: false,
-  missedFirstContact: false,
-  appointmentReminder: false,
-};
-
-const defaultSmsContent: SmsContent = {
-  redial: "",
-  firstContact: "",
-  appointmentBooked: "",
-  missedAppointment: "",
-  missedFirstContact: "",
-  appointmentReminder: "",
-};
 
 interface VariableAutocompleteProps {
   textareaId: string;
-  onSelect: (variable: string, partialText: string) => void;
+  onSelect: (variable: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -83,6 +52,14 @@ function VariableAutocomplete({
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [filter, setFilter] = React.useState("");
 
+  // Add effect to reset state when opening
+  React.useEffect(() => {
+    if (open) {
+      setSelectedIndex(0);
+      setFilter("");
+    }
+  }, [open]);
+
   const filteredVariables = React.useMemo(() => {
     if (!filter) return VARIABLES;
     const searchTerm = filter.toLowerCase().replace("{", "");
@@ -93,63 +70,68 @@ function VariableAutocomplete({
     );
   }, [filter]);
 
-  React.useEffect(() => {
-    if (open) {
-      setSelectedIndex(0);
-      setFilter("");
-    }
-  }, [open]);
+  const handleKeyDown = React.useCallback(
+    (e: KeyboardEvent) => {
+      if (!open) return;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (!open) return;
+      const textarea = document.getElementById(
+        textareaId,
+      ) as HTMLTextAreaElement;
+      if (!textarea) return;
 
-    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
-    if (!textarea) return;
+      const cursorPos = textarea.selectionStart;
+      const textBeforeCursor = textarea.value.slice(0, cursorPos);
+      const match = textBeforeCursor.match(/{[^}]*$/);
 
-    const cursorPos = textarea.selectionStart;
-    const textBeforeCursor = textarea.value.slice(0, cursorPos);
-    const match = textBeforeCursor.match(/{[^}]*$/);
-
-    switch (e.key) {
-      case "ArrowDown":
-      case "Tab":
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % filteredVariables.length);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setSelectedIndex(
-          (prev) =>
-            (prev - 1 + filteredVariables.length) % filteredVariables.length,
-        );
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (filteredVariables.length > 0 && match) {
-          const selectedVariable = filteredVariables[selectedIndex];
-          onSelect(`{${selectedVariable.name}}`, match[0]);
+      switch (e.key) {
+        case "ArrowDown":
+        case "Tab":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev + 1) % filteredVariables.length);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex(
+            (prev) =>
+              (prev - 1 + filteredVariables.length) % filteredVariables.length,
+          );
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (filteredVariables.length > 0 && match) {
+            const selectedVariable = filteredVariables[selectedIndex];
+            onSelect(selectedVariable.name);
+            onOpenChange(false);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
           onOpenChange(false);
-        }
-        break;
-      case "Escape":
-        e.preventDefault();
-        onOpenChange(false);
-        break;
-      default:
-        // Allow typing to filter
-        if (match) {
-          setFilter(match[0]);
-          setSelectedIndex(0);
-        }
-    }
-  };
+          break;
+        default:
+          // Allow typing to filter
+          if (match) {
+            setFilter(match[0]);
+            setSelectedIndex(0);
+          }
+      }
+    },
+    [
+      open,
+      selectedIndex,
+      filteredVariables,
+      textareaId,
+      onSelect,
+      onOpenChange,
+    ],
+  );
 
   React.useEffect(() => {
     if (open) {
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
-  }, [open, selectedIndex, filteredVariables]);
+  }, [open, handleKeyDown]);
 
   if (filteredVariables.length === 0) {
     return null;
@@ -181,7 +163,7 @@ function VariableAutocomplete({
                 const textBeforeCursor = textarea.value.slice(0, cursorPos);
                 const match = textBeforeCursor.match(/{[^}]*$/);
                 if (match) {
-                  onSelect(`{${variable.name}}`, match[0]);
+                  onSelect(variable.name);
                   onOpenChange(false);
                 }
               }
@@ -208,6 +190,8 @@ const SMS_TYPE_DESCRIPTIONS = {
   appointmentReminder:
     "Sent 5 minutes before a scheduled appointment as a reminder",
   missedAppointment: "Sent when a customer misses their scheduled appointment",
+  missedInquiry:
+    "Sent when a customer inquiry was received but couldn't be responded to immediately",
 };
 
 export function SmsConfig({
@@ -219,6 +203,7 @@ export function SmsConfig({
   setCompanyNameError,
   isSaving,
   handleSave: parentHandleSave,
+  hasInquiryCallback,
 }: SmsConfigProps) {
   const [showVariables, setShowVariables] = React.useState(false);
   const [activeTextareaId, setActiveTextareaId] = React.useState<string | null>(
@@ -227,64 +212,71 @@ export function SmsConfig({
   const [cursorPosition, setCursorPosition] = React.useState<number | null>(
     null,
   );
-  const [variableAnchorPoint, setVariableAnchorPoint] = React.useState({
-    x: 0,
-    y: 0,
-  });
+
+  // Create default SMS types and content based on whether inquiry callbacks are available
+  const getDefaultSmsTypes = React.useCallback(() => {
+    const types = {
+      redial: false,
+      firstContact: false,
+      appointmentBooked: false,
+      missedAppointment: false,
+      missedFirstContact: false,
+      appointmentReminder: false,
+    } as SmsTypes;
+
+    if (hasInquiryCallback) {
+      types.missedInquiry = false;
+    }
+
+    return types;
+  }, [hasInquiryCallback]);
+
+  const getDefaultSmsContent = React.useCallback(() => {
+    const content = { ...DEFAULT_SMS_CONTENT };
+
+    if (!hasInquiryCallback) {
+      delete content.missedInquiry;
+    }
+
+    return content;
+  }, [hasInquiryCallback]);
+
+  // Add effect to check company name on mount and when it changes
+  React.useEffect(() => {
+    const companyName =
+      pendingChanges.smsCompanyName ?? selectedCampaign?.smsCompanyName;
+    if (companyName && companyName.trim()) {
+      setCompanyNameError(false);
+    }
+  }, [
+    pendingChanges.smsCompanyName,
+    selectedCampaign?.smsCompanyName,
+    setCompanyNameError,
+  ]);
 
   // Transform the initial SMS content to frontend format
   const currentSmsContent = React.useMemo(() => {
     const content =
       pendingChanges.smsContent ??
       selectedCampaign?.smsContent ??
-      defaultSmsContent;
+      getDefaultSmsContent();
     return Object.entries(content).reduce((acc, [key, value]) => {
-      acc[key as keyof SmsContent] = value
-        ? transformToFrontendFormat(value)
-        : "";
+      acc[key as keyof SmsContent] = transformToFrontendFormat(
+        value || DEFAULT_SMS_CONTENT[key as keyof SmsContent],
+      );
       return acc;
     }, {} as SmsContent);
-  }, [pendingChanges.smsContent, selectedCampaign?.smsContent]);
+  }, [
+    pendingChanges.smsContent,
+    selectedCampaign?.smsContent,
+    getDefaultSmsContent,
+  ]);
 
   // Ensure we have default values for smsTypes
   const currentSmsTypes =
-    pendingChanges.smsTypes ?? selectedCampaign?.smsTypes ?? defaultSmsTypes;
-
-  const getCaretCoordinates = (textarea: HTMLTextAreaElement) => {
-    // Get the current cursor position
-    const cursorPosition = textarea.selectionStart;
-
-    // Create a dummy element to measure the text
-    const dummy = document.createElement("div");
-    dummy.style.position = "absolute";
-    dummy.style.visibility = "hidden";
-    dummy.style.whiteSpace = "pre-wrap";
-    dummy.style.wordWrap = "break-word";
-    dummy.style.width = window.getComputedStyle(textarea).width;
-    dummy.style.fontSize = window.getComputedStyle(textarea).fontSize;
-    dummy.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
-    dummy.style.padding = window.getComputedStyle(textarea).padding;
-
-    // Add the text content up to the cursor
-    const textBeforeCursor = textarea.value.substring(0, cursorPosition);
-    dummy.textContent = textBeforeCursor;
-
-    // Add the dummy element to the document
-    document.body.appendChild(dummy);
-
-    // Get the coordinates
-    const dummyRect = dummy.getBoundingClientRect();
-    const textareaRect = textarea.getBoundingClientRect();
-
-    // Clean up
-    document.body.removeChild(dummy);
-
-    // Calculate the absolute position
-    return {
-      x: textareaRect.left + (dummyRect.width % textareaRect.width),
-      y: textareaRect.top + Math.floor(dummyRect.height),
-    };
-  };
+    pendingChanges.smsTypes ??
+    selectedCampaign?.smsTypes ??
+    getDefaultSmsTypes();
 
   const handleTextareaKeyDown = (
     e: React.KeyboardEvent<HTMLTextAreaElement>,
@@ -318,7 +310,7 @@ export function SmsConfig({
     if (textWithoutBrackets.length <= maxMainLength) {
       setPendingChanges((prev: Partial<Campaign>) => {
         const updatedSmsContent = {
-          ...defaultSmsContent,
+          ...getDefaultSmsContent(),
           ...currentSmsContent,
           [key]: e.target.value, // Store the raw value, transform only when sending to API
         };
@@ -346,7 +338,7 @@ export function SmsConfig({
     setActiveTextareaId(`smsContent-${key}`);
   };
 
-  const handleVariableSelect = (variable: string, partialText: string) => {
+  const handleVariableSelect = (variable: string) => {
     if (!activeTextareaId || cursorPosition === null) return;
 
     const key = activeTextareaId.replace("smsContent-", "") as keyof SmsContent;
@@ -363,19 +355,15 @@ export function SmsConfig({
         variable +
         content.slice(cursorPosition);
 
-      setPendingChanges((prev: Partial<Campaign>) => {
-        const updatedSmsContent = {
-          ...defaultSmsContent,
+      setPendingChanges((prev) => ({
+        ...prev,
+        smsContent: {
           ...currentSmsContent,
           [key]: newContent,
-        };
-        return {
-          ...prev,
-          smsContent: updatedSmsContent,
-        };
-      });
+        },
+      }));
 
-      // Focus back on the textarea and place cursor after the inserted variable
+      // Focus back on textarea and place cursor after the inserted variable
       const textarea = document.getElementById(
         activeTextareaId,
       ) as HTMLTextAreaElement;
@@ -383,6 +371,7 @@ export function SmsConfig({
         textarea.focus();
         const newPosition = lastOpenBrace + variable.length;
         textarea.setSelectionRange(newPosition, newPosition);
+        setCursorPosition(newPosition);
       }
     }
 
@@ -457,22 +446,13 @@ export function SmsConfig({
                       ""
                     }
                     onChange={(e) => {
-                      const newValue = e.target.value;
-                      if (newValue) {
-                        setCompanyNameError(false);
-                      }
+                      const newValue = e.target.value.trim();
+                      setCompanyNameError(!newValue);
                       setPendingChanges((prev: Partial<Campaign>) => ({
                         ...prev,
-                        smsCompanyName: newValue,
+                        smsCompanyName: e.target.value,
                         smsTypes: !newValue
-                          ? {
-                              redial: false,
-                              firstContact: false,
-                              appointmentBooked: false,
-                              missedAppointment: false,
-                              missedFirstContact: false,
-                              appointmentReminder: false,
-                            }
+                          ? getDefaultSmsTypes()
                           : prev.smsTypes,
                       }));
                     }}
@@ -577,7 +557,10 @@ export function SmsConfig({
                           currentSmsTypes[key as keyof SmsTypes] || false
                         }
                         onCheckedChange={(checked) => {
-                          if (!selectedCampaign?.smsCompanyName && checked) {
+                          const companyName =
+                            pendingChanges.smsCompanyName ??
+                            selectedCampaign?.smsCompanyName;
+                          if (!companyName && checked) {
                             setCompanyNameError(true);
                             return;
                           }
@@ -686,8 +669,8 @@ export function SmsConfig({
                         activeTextareaId === `smsContent-${key}` && (
                           <VariableAutocomplete
                             textareaId={`smsContent-${key}`}
-                            onSelect={(variable, partialText) =>
-                              handleVariableSelect(variable, partialText)
+                            onSelect={(variable) =>
+                              handleVariableSelect(variable)
                             }
                             open={showVariables}
                             onOpenChange={setShowVariables}
@@ -707,6 +690,7 @@ export function SmsConfig({
                 "appointmentBooked",
                 "appointmentReminder",
                 "missedAppointment",
+                ...(hasInquiryCallback ? ["missedInquiry"] : []),
               ].map((key) => (
                 <div key={key} className="space-y-4">
                   <div className="flex items-center gap-2 justify-between">
@@ -716,7 +700,10 @@ export function SmsConfig({
                           currentSmsTypes[key as keyof SmsTypes] || false
                         }
                         onCheckedChange={(checked) => {
-                          if (!selectedCampaign?.smsCompanyName && checked) {
+                          const companyName =
+                            pendingChanges.smsCompanyName ??
+                            selectedCampaign?.smsCompanyName;
+                          if (!companyName && checked) {
                             setCompanyNameError(true);
                             return;
                           }
@@ -738,7 +725,9 @@ export function SmsConfig({
                           ? "Appointment Booked"
                           : key === "appointmentReminder"
                             ? "Appointment Reminder"
-                            : "Missed Appointment"}
+                            : key === "missedAppointment"
+                              ? "Missed Appointment"
+                              : "Missed Inquiry"}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>

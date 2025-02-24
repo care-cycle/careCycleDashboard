@@ -1,24 +1,8 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-
-interface PreferencesContextType {
-  // Customer table preferences
-  customerColumns: string[];
-  setCustomerColumns: (columns: string[]) => void;
-  customerSearch: string;
-  setCustomerSearch: (search: string) => void;
-
-  // Call table preferences
-  showTestCalls: boolean;
-  setShowTestCalls: (show: boolean) => void;
-  showConnectedOnly: boolean;
-  setShowConnectedOnly: (show: boolean) => void;
-  callSearch: string;
-  setCallSearch: (search: string) => void;
-}
-
-const PreferencesContext = createContext<PreferencesContextType | undefined>(
-  undefined,
-);
+import { useState, ReactNode } from "react";
+import {
+  PreferencesContext,
+  PreferencesContextType,
+} from "./preferences-types";
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   // Customer table state
@@ -57,10 +41,4 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePreferences() {
-  const context = useContext(PreferencesContext);
-  if (context === undefined) {
-    throw new Error("usePreferences must be used within a PreferencesProvider");
-  }
-  return context;
-}
+export type { PreferencesContextType };

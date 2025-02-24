@@ -3,11 +3,36 @@ import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useMemo } from "react";
 import { DateRange } from "react-day-picker";
 
+interface Call {
+  i: string; // id
+  cid: string; // campaignId
+  d: string; // disposition
+  ca: string; // callerId
+  cr: string; // createdAt
+  r: string; // recordingUrl
+  du: string; // duration
+  at: string; // assistantType
+  se: string; // successEvaluation
+  su: string; // summary
+  tr: string; // transcript
+  di: "i" | "o"; // direction
+  co: number; // cost
+  tf: boolean; // testFlag
+  s?: string | null; // source
+}
+
+interface Metric {
+  title: string;
+  value: string;
+  change: string;
+  trend: "up" | "down" | "neutral";
+}
+
 interface CallMetricsProps {
-  metrics?: any;
+  metrics?: Metric[];
   date?: DateRange;
   isLoading?: boolean;
-  calls?: any[];
+  calls?: Call[];
 }
 
 // Helper function to convert duration string to milliseconds
@@ -28,17 +53,19 @@ export function CallMetrics({ calls, date, isLoading }: CallMetricsProps) {
     }
 
     let currentPeriodCalls = calls;
-    let previousPeriodCalls: any[] = [];
+    let previousPeriodCalls: Call[] = [];
     let daysDiff = 0;
 
-    if (date?.from && date?.to) {
-      // Filter calls within date range if dates are provided
-      currentPeriodCalls = calls.filter((call) => {
-        const callDate = new Date(call.createdAt);
-        return callDate >= date.from && callDate <= date.to;
-      });
+    // Filter calls within date range if dates are provided
+    currentPeriodCalls = calls.filter((call) => {
+      const callDate = new Date(call.cr);
+      return (
+        date?.from && date?.to && callDate >= date.from && callDate <= date.to
+      );
+    });
 
-      // Calculate previous period only if we have dates
+    // Calculate previous period only if we have dates
+    if (date?.from && date?.to) {
       daysDiff = Math.ceil(
         (date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24),
       );
@@ -48,7 +75,7 @@ export function CallMetrics({ calls, date, isLoading }: CallMetricsProps) {
       const previousTo = new Date(date.from.getTime() - 1);
 
       previousPeriodCalls = calls.filter((call) => {
-        const callDate = new Date(call.createdAt);
+        const callDate = new Date(call.cr);
         return callDate >= previousFrom && callDate <= previousTo;
       });
     }
@@ -58,14 +85,14 @@ export function CallMetrics({ calls, date, isLoading }: CallMetricsProps) {
 
     // Calculate average duration
     const totalDurationMs = currentPeriodCalls.reduce((sum, call) => {
-      return sum + parseDuration(call.duration || "0s");
+      return sum + parseDuration(call.du || "0s");
     }, 0);
 
     const averageDurationMs = totalCalls > 0 ? totalDurationMs / totalCalls : 0;
 
     // Calculate previous period
     const previousTotalDurationMs = previousPeriodCalls.reduce((sum, call) => {
-      return sum + parseDuration(call.duration || "0s");
+      return sum + parseDuration(call.du || "0s");
     }, 0);
 
     const previousAverageDurationMs =
@@ -147,11 +174,12 @@ export function CallMetrics({ calls, date, isLoading }: CallMetricsProps) {
               {metric.value}
             </div>
             <p
-              className={cn("text-xs", {
-                "text-emerald-500": metric.trend === "up",
-                "text-red-500": metric.trend === "down",
-                "text-gray-500": metric.trend === "neutral",
-              })}
+              className={cn(
+                "text-xs",
+                metric.trend === "up" && "text-emerald-500",
+                metric.trend === "down" && "text-red-500",
+                metric.trend === "neutral" && "text-gray-500",
+              )}
             >
               {metric.change}
               {date?.from && " from last period"}

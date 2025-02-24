@@ -3,7 +3,6 @@ import apiClient from "@/lib/api-client";
 import { format } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import { useCallback, useEffect } from "react";
-import React from "react";
 
 interface CallsResponse {
   s: boolean;
@@ -44,6 +43,7 @@ interface Customer {
 interface CustomersResponse {
   customers: Customer[];
   total: number;
+  dataFields: string[];
 }
 
 interface CustomerStats {
@@ -64,6 +64,13 @@ interface Campaign {
 
 interface CampaignsResponse {
   [key: string]: Campaign;
+}
+
+interface PaymentMethod {
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  brand: string;
 }
 
 interface ClientInfo {
@@ -126,7 +133,7 @@ interface ClientInfo {
   timezone: string;
   organizationId: string | null;
   isPersonal: boolean;
-  default_payment_method: any | null;
+  default_payment_method: PaymentMethod | null;
   campaigns?: Array<{
     id: string;
     name: string;
@@ -136,7 +143,7 @@ interface ClientInfo {
   }>;
 }
 
-interface Appointment {
+export interface Appointment {
   id: string;
   customerId: string;
   firstName: string | null;
@@ -145,6 +152,7 @@ interface Appointment {
   state: string | null;
   postalCode: string | null;
   appointmentDateTime: string;
+  appointmentAttended: boolean;
   campaignId: string;
   campaignName: string;
   callerId: string | null;
@@ -271,7 +279,7 @@ interface CallData {
 }
 
 export function useInitialData() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const enabled = isLoaded && isSignedIn;
   const queryClient = useQueryClient();
 
@@ -299,18 +307,6 @@ export function useInitialData() {
       queryKey: ["todayMetrics"],
       queryFn: async () => {
         const response = await apiClient.get("/portal/client/metrics/today");
-        console.log("Today's metrics response:", {
-          fullData: JSON.stringify(response.data, null, 2),
-          status: "status" in response ? response.status : "unknown",
-          responseStructure: {
-            keys: Object.keys(response.data || {}),
-            values: Object.values(response.data || {}),
-            dataType: typeof response.data,
-            isNull: response.data === null,
-            isUndefined: response.data === undefined,
-            hasData: !!response.data,
-          },
-        });
         return response.data;
       },
       enabled,
@@ -367,7 +363,7 @@ export function useInitialData() {
             direction: call.di === "i" ? "inbound" : "outbound",
             cost: call.co,
             testFlag: call.tf,
-            source: call.s,
+            source: call.s ?? null,
           })),
           hasSourceTracking: response.data.d.hasSourceTracking,
         };
@@ -379,7 +375,7 @@ export function useInitialData() {
       queryFn: async () => {
         const response = await apiClient.get("/portal/client/sms", {
           params: {
-            limit: 200, // Increase default limit to show more messages
+            limit: 200,
           },
         });
         return response.data;
@@ -402,12 +398,6 @@ export function useInitialData() {
         const response = await apiClient.get<CampaignsResponse>(
           "/portal/client/campaigns",
         );
-        console.log("Campaigns response:", {
-          fullData: JSON.stringify(response.data, null, 2),
-          hasData: !!response.data,
-          dataType: typeof response.data,
-          keys: Object.keys(response.data || {}),
-        });
         return response.data;
       },
       staleTime: 5 * 60 * 1000,
@@ -424,8 +414,8 @@ export function useInitialData() {
         return response.data;
       },
       enabled,
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-      gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
     }),
@@ -437,7 +427,7 @@ export function useInitialData() {
         return response.data;
       },
       enabled,
-      staleTime: 0, // Always consider data stale
+      staleTime: 0,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
     }),

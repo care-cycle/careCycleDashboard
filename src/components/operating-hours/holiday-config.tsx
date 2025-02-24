@@ -16,11 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, ChevronDown } from "lucide-react";
 import { useClientData } from "@/hooks/use-client-data";
-import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
@@ -114,7 +112,7 @@ export function HolidayConfig() {
   const handleUpdateGroup = (
     id: string,
     field: keyof HolidayGroup,
-    value: any,
+    value: string | boolean | Holiday[],
   ) => {
     setHolidayGroups((groups) =>
       groups.map((group) => {
@@ -157,8 +155,13 @@ export function HolidayConfig() {
   const handleUpdateHoliday = (
     groupId: string,
     holidayId: string | undefined,
-    field: keyof Holiday | string,
-    value: any,
+    field: keyof Holiday | "floatingRule",
+    value:
+      | string
+      | number
+      | boolean
+      | Holiday["floatingRule"]
+      | Holiday["modifiedHours"],
   ) => {
     setHolidayGroups((groups) =>
       groups.map((group) => {
@@ -435,7 +438,8 @@ export function HolidayConfig() {
                               of{" "}
                               {
                                 MONTHS.find(
-                                  (m) => m.value === holiday.floatingRule.month,
+                                  (m) =>
+                                    m.value === holiday.floatingRule?.month,
                                 )?.label
                               }
                             </div>

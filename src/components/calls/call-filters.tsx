@@ -1,107 +1,38 @@
 import { useState, useEffect } from "react";
-import { DateRange } from "react-day-picker";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DateRangePicker } from "@/components/date-range-picker";
-import { usePreferences } from "@/contexts/preferences-context";
-import { Download, Filter, Search } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useDebounce } from "@/hooks/use-debounce";
 
-const filterGroups = {
-  "Key Metrics": [
-    { id: "total-dials", label: "Total Dials" },
-    { id: "unique-customers", label: "Unique Customers" },
-    { id: "connected-calls", label: "Connected Calls" },
-    { id: "unanswered", label: "Unanswered" },
-  ],
-  Duration: [{ id: "duration", label: "Duration" }],
-  Performance: [
-    { id: "performance-score", label: "Performance Score" },
-    { id: "qa-score", label: "QA Score" },
-  ],
-  Transfers: [
-    { id: "total-transfers", label: "Total Transfers" },
-    { id: "transfer-rate", label: "Transfer Rate" },
-  ],
-  "Agent Analysis": [
-    { id: "agent-calls", label: "Calls by Agent" },
-    { id: "agent-transfers", label: "Transfers by Agent" },
-  ],
-  "Call Details": [
-    { id: "agent-name", label: "Agent Name" },
-    { id: "direction", label: "Direction" },
-    { id: "cost", label: "Cost" },
-    { id: "phone", label: "Phone/Extension" },
-    { id: "from-number", label: "From Number" },
-    { id: "summary", label: "Call Summary" },
-    { id: "transcript", label: "Transcript" },
-  ],
-};
+interface CallFiltersProps {
+  searchQuery: string;
+  onSearchChange: (search: string) => void;
+  showTestCalls: boolean;
+  onTestCallsChange: (show: boolean) => void;
+  showConnectedOnly: boolean;
+  onConnectedOnlyChange: (show: boolean) => void;
+}
 
-export function CallFilters() {
-  const {
-    callSearch: searchQuery,
-    setCallSearch: setSearchQuery,
-    showTestCalls,
-    setShowTestCalls,
-    showConnectedOnly,
-    setShowConnectedOnly,
-  } = usePreferences();
-
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [selectedExports, setSelectedExports] = useState<string[]>([]);
-  const [openFilter, setOpenFilter] = useState(false);
-  const [openExport, setOpenExport] = useState(false);
+export function CallFilters({
+  searchQuery,
+  onSearchChange,
+  showTestCalls,
+  onTestCallsChange,
+  showConnectedOnly,
+  onConnectedOnlyChange,
+}: CallFiltersProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const debouncedSearchQuery = useDebounce(localSearchQuery, 250);
 
   // Update parent's search query when debounced value changes
   useEffect(() => {
-    setSearchQuery(debouncedSearchQuery);
-  }, [debouncedSearchQuery, setSearchQuery]);
+    onSearchChange(debouncedSearchQuery);
+  }, [debouncedSearchQuery, onSearchChange]);
 
   // Add effect to update local search when prop changes
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
-
-  const handleFilterSelect = (filterId: string) => {
-    setSelectedFilters((current) =>
-      current.includes(filterId)
-        ? current.filter((id) => id !== filterId)
-        : [...current, filterId],
-    );
-  };
-
-  const handleExportSelect = (fieldId: string) => {
-    setSelectedExports((current) =>
-      current.includes(fieldId)
-        ? current.filter((id) => id !== fieldId)
-        : [...current, fieldId],
-    );
-  };
-
-  const handleExport = () => {
-    // Export logic here
-    setOpenExport(false);
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,7 +53,7 @@ export function CallFilters() {
               <Switch
                 id="connected-calls"
                 checked={showConnectedOnly}
-                onCheckedChange={setShowConnectedOnly}
+                onCheckedChange={onConnectedOnlyChange}
               />
               <label
                 htmlFor="connected-calls"
@@ -136,7 +67,7 @@ export function CallFilters() {
               <Switch
                 id="test-calls"
                 checked={showTestCalls}
-                onCheckedChange={setShowTestCalls}
+                onCheckedChange={onTestCallsChange}
               />
               <label
                 htmlFor="test-calls"

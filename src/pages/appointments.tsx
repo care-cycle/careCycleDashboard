@@ -2,33 +2,18 @@ import { useEffect, useState, useMemo } from "react";
 import { AppointmentCalendar } from "@/components/ui/appointment-calendar";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Calendar as CalendarIcon, UserSearch } from "lucide-react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import moment from "moment-timezone";
 import { useClientData, useInitialData } from "@/hooks/use-client-data";
 import { RootLayout } from "@/components/layout/root-layout";
 import { cn } from "@/lib/utils";
 import { getTopMetrics } from "@/lib/metrics";
 import { Input } from "@/components/ui/input";
-
-interface Appointment {
-  id: string;
-  customerId: string;
-  firstName: string | null;
-  lastName: string | null;
-  timezone: string | null;
-  state: string | null;
-  postalCode: string | null;
-  appointmentDateTime: string;
-  appointmentAttended: boolean;
-  campaignId: string;
-  campaignName: string;
-  callerId: string | null;
-}
+import type { Appointment } from "@/hooks/use-client-data";
 
 export default function Appointments() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clientInfo, fetchAppointments } = useClientData();
   const {
@@ -70,7 +55,7 @@ export default function Appointments() {
     };
 
     loadAppointments();
-  }, []); // Only load once on mount
+  }, [fetchAppointments, toast]);
 
   // Filter appointments for the current month view
   const appointments = useMemo(() => {

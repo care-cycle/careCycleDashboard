@@ -18,7 +18,7 @@ export function StripeProvider({
     ? {
         clientSecret,
         appearance: {
-          theme: "stripe",
+          theme: "flat" as const,
         },
       }
     : undefined;

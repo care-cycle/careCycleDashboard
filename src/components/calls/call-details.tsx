@@ -9,18 +9,14 @@ import {
 } from "@/components/ui/accordion";
 import {
   X,
-  Flag,
   User,
   Clock,
   PhoneCall,
   CheckCircle2,
-  ArrowRightLeft,
   DollarSign,
   Copy,
   Check,
 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { useUI } from "@/contexts/ui-context";
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { Call } from "@/types/calls";
 import { toast } from "sonner";
@@ -38,7 +34,6 @@ export const CallDetails = memo(function CallDetails({
   onClose,
   preloadedAudio,
 }: CallDetailsProps) {
-  const { setCallDetailsOpen } = useUI();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [hasCopied, setHasCopied] = useState({
@@ -48,11 +43,12 @@ export const CallDetails = memo(function CallDetails({
 
   // Add cleanup effect for audio
   useEffect(() => {
+    const audio = audioRef.current;
     // Cleanup function that runs when component unmounts OR when call changes
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
       }
     };
   }, [call.id]); // Add dependency on call.id to cleanup when call changes

@@ -6,15 +6,10 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
 } from "recharts";
 import {
   format,
   differenceInDays,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  addWeeks,
   startOfHour,
   endOfHour,
   addHours,
@@ -28,6 +23,22 @@ interface CallVolumeChartProps {
   data: CallVolumeDataPoint[];
   dateRange: DateRange | undefined;
   isLoading?: boolean;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    payload: {
+      timestamp: string;
+      weekEnd?: string;
+      formattedDate: string;
+      formattedHour: string;
+      Inbound: number;
+      Outbound: number;
+    };
+  }>;
 }
 
 const volumeColors = {
@@ -144,7 +155,7 @@ export function CallVolumeChart({
     };
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (!active || !payload?.length) return null;
 
     let dateDisplay;
@@ -175,36 +186,31 @@ export function CallVolumeChart({
       <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
         <p className="text-sm font-medium mb-2">{dateDisplay}</p>
         <div className="space-y-1.5">
-          {payload.map((entry: any) => (
-            <div key={entry.name} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor:
-                    volumeColors[entry.name as keyof typeof volumeColors],
-                }}
-              />
-              <span className="text-sm text-gray-600">{entry.name}:</span>
-              <span className="text-sm font-medium">{entry.value} calls</span>
-            </div>
-          ))}
+          {payload.map(
+            (entry: {
+              name: string;
+              value: number;
+              payload: {
+                formattedDate: string;
+                formattedHour: string;
+                Inbound: number;
+                Outbound: number;
+              };
+            }) => (
+              <div key={entry.name} className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor:
+                      volumeColors[entry.name as keyof typeof volumeColors],
+                  }}
+                />
+                <span className="text-sm text-gray-600">{entry.name}:</span>
+                <span className="text-sm font-medium">{entry.value} calls</span>
+              </div>
+            ),
+          )}
         </div>
-      </div>
-    );
-  };
-
-  const CustomLegend = ({ payload }: any) => {
-    return (
-      <div className="flex justify-center gap-6">
-        {payload.map((entry: any) => (
-          <div key={entry.value} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-sm text-gray-600">{entry.value}</span>
-          </div>
-        ))}
       </div>
     );
   };
@@ -246,31 +252,7 @@ export function CallVolumeChart({
               tickLine={false}
               axisLine={{ stroke: "#E2E8F0" }}
             />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload?.length) {
-                  const data = payload[0].payload;
-                  return (
-                    <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
-                      <p className="text-sm font-medium mb-2">
-                        {data.formattedDate}, {data.formattedHour}
-                      </p>
-                      <div className="space-y-1.5">
-                        <p className="text-sm">
-                          Inbound: {data.Inbound}{" "}
-                          {data.Inbound === 1 ? "call" : "calls"}
-                        </p>
-                        <p className="text-sm">
-                          Outbound: {data.Outbound}{" "}
-                          {data.Outbound === 1 ? "call" : "calls"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
+            <Tooltip content={CustomTooltip} />
             <Area
               type="monotone"
               dataKey="Inbound"

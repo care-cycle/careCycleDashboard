@@ -28,6 +28,7 @@ export interface SmsTypes {
   missedAppointment: boolean;
   missedFirstContact: boolean;
   appointmentReminder: boolean;
+  missedInquiry: boolean;
 }
 
 export interface SmsContent {
@@ -37,16 +38,17 @@ export interface SmsContent {
   missedAppointment: string;
   missedFirstContact: string;
   appointmentReminder: string;
+  missedInquiry?: string;
 }
 
 export interface CustomerStats {
   total: number;
-  metSuccessCriteria: number;
-  metFailureCriteria: number;
-  pending: number;
-  remainingToCall: number;
+  metSuccessCriteria?: number;
+  metFailureCriteria?: number;
+  pending?: number;
+  remainingToCall?: number;
   totalCalls: number;
-  totalSources: number;
+  totalSources?: number;
   statusCounts: {
     expired: number;
     failed: number;
@@ -57,12 +59,12 @@ export interface CustomerStats {
     cancelled: number;
     skipped: number;
   };
-  successCriteria: {
+  successCriteria?: {
     transferred?: number;
     disposition?: number;
     leadStatus?: number;
   };
-  failureCriteria: {
+  failureCriteria?: {
     "Do Not Contact"?: number;
     disposition?: number;
     leadStatus?: number;
@@ -80,7 +82,7 @@ export interface Campaign {
   retryStrategy?: string;
   retryDelays?: number[];
   retryDelaysInput?: string;
-  retryPatterns?: any[];
+  retryPatterns?: RetryPattern[];
   retrySettings?: {
     cooldownPeriod: {
       hours: number;
@@ -111,6 +113,7 @@ export interface Campaign {
   maxAttempts?: number;
   smsTypes?: SmsTypes;
   smsContent?: SmsContent;
+  hasInquiryCallback?: boolean;
   metrics?: {
     customers: number;
     calls: number;

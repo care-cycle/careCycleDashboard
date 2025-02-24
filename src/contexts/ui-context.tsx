@@ -1,11 +1,5 @@
-import { createContext, useContext, useState } from "react";
-
-interface UIContextType {
-  isCallDetailsOpen: boolean;
-  setCallDetailsOpen: (open: boolean) => void;
-}
-
-const UIContext = createContext<UIContextType | undefined>(undefined);
+import { useState } from "react";
+import { UIContext, UIContextType } from "./ui-types";
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isCallDetailsOpen, setCallDetailsOpen] = useState(false);
@@ -17,10 +11,4 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useUI() {
-  const context = useContext(UIContext);
-  if (context === undefined) {
-    throw new Error("useUI must be used within a UIProvider");
-  }
-  return context;
-}
+export type { UIContextType };

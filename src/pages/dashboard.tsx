@@ -10,13 +10,11 @@ import { CampaignSelect } from "@/components/campaign-select";
 import { CallsByCampaign } from "@/components/metrics/calls-by-campaign";
 import { PageTransition } from "@/components/layout/page-transition";
 import { useInitialData } from "@/hooks/use-client-data";
-import { Card, CardContent } from "@/components/ui/card";
 import { aggregateTimeseriesData } from "@/lib/date-utils";
-import { assistantTypeLabels } from "@/components/charts/assistant-count-chart";
+import { assistantTypeLabels } from "@/components/charts/constants";
 import { AssistantCountChart } from "@/components/charts/assistant-count-chart";
 import { format, subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
-import { cn } from "@/lib/utils";
 
 interface Campaign {
   id: string;
@@ -36,28 +34,12 @@ interface Campaign {
   }>;
 }
 
-interface MetricsData {
-  total: Campaign["hours"];
-  campaigns?: Campaign[];
-}
-
-interface Metrics {
-  data?: MetricsData;
-}
-
-interface ClientInfo {
-  id: string;
-  name: string;
-  internalName?: string;
-  campaigns?: Campaign[];
-}
-
 interface TimeseriesDataPoint {
   timestamp: Date;
   hour: string;
   formattedHour: string;
   formattedDate: string;
-  [key: string]: any;
+  [key: string]: Date | string | number;
 }
 
 interface CallVolumeDataPoint extends TimeseriesDataPoint {
@@ -65,20 +47,9 @@ interface CallVolumeDataPoint extends TimeseriesDataPoint {
   Outbound: number;
 }
 
-interface ContactRateDataPoint extends TimeseriesDataPoint {
-  totalCalls: number;
-  uniqueCallers: number;
-  totalCustomers: number;
-  dispositionCounts: Record<string, number>;
-}
-
 interface AssistantCountDataPoint {
   name: string;
   value: number;
-}
-
-interface AssistantTypeLabels {
-  [key: string]: string;
 }
 
 export default function Dashboard() {
@@ -96,7 +67,6 @@ export default function Dashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState("all");
   const {
     metrics,
-    clientInfo,
     isLoading,
     isMetricsLoading,
     todayMetrics,
@@ -346,7 +316,7 @@ export default function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [date?.from, date?.to]);
+  }, [date?.from, date?.to, isLoading, fetchUniqueCallers]);
 
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.data?.campaigns) return [];

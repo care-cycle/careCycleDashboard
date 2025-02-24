@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { useUI } from "@/contexts/ui-context";
+import { useUI } from "@/hooks/use-ui";
 import { format } from "date-fns";
 
 interface Message {

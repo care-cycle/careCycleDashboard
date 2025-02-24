@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -72,7 +66,7 @@ export function RegularHoursConfig() {
   const handleUpdateSchedule = (
     index: number,
     field: keyof BusinessHour,
-    value: any,
+    value: number | number[] | string,
   ) => {
     setBusinessHours(
       businessHours.map((schedule, i) => {

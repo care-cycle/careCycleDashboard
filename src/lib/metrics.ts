@@ -24,7 +24,6 @@ export function getTopMetrics(
     totalDurationMs = 0,
     totalSpend = 0,
     transferredCalls = 0,
-    uniqueCalls = 0,
   } = metricsData;
 
   return [

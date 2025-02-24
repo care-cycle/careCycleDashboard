@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import apiClient from "@/lib/api-client";
@@ -23,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AxiosError } from "axios";
 
 interface Source {
   id: string;
@@ -57,7 +57,6 @@ export function ManageSources() {
   const [editPayout, setEditPayout] = useState<number>(0);
   const [editDuration, setEditDuration] = useState<number>(0);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newSourceName, setNewSourceName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -104,9 +103,11 @@ export function ManageSources() {
       setEditPayout(0);
       setEditDuration(0);
       toast.success("Source updated successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage =
-        error.response?.data?.error || "Failed to update source";
+        error instanceof AxiosError
+          ? error.response?.data?.error
+          : "Failed to update source";
       toast.error(errorMessage);
     }
   };
@@ -118,10 +119,12 @@ export function ManageSources() {
       });
       await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
       toast.success(source.enabled ? "Source disabled" : "Source enabled");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error toggling source:", error);
       const errorMessage =
-        error.response?.data?.error || "Failed to update source";
+        error instanceof AxiosError
+          ? error.response?.data?.error
+          : "Failed to update source";
       toast.error(errorMessage);
     }
   };
@@ -191,20 +194,18 @@ export function ManageSources() {
 
     setIsCreating(true);
     try {
-      const response = await apiClient.post(
-        "/portal/client/sources/bulk",
-        validEntries,
-      );
-
+      await apiClient.post("/portal/client/sources/bulk", validEntries);
       await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
       setShowCreateDialog(false);
       setSourceEntries([{ name: "", payout: 0, durationSeconds: 0 }]);
       toast.success(
         `Successfully created ${validEntries.length} source${validEntries.length > 1 ? "s" : ""}`,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage =
-        error.response?.data?.error || "Failed to create sources";
+        error instanceof AxiosError
+          ? error.response?.data?.error
+          : "Failed to create sources";
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
@@ -287,13 +288,6 @@ export function ManageSources() {
       return 0;
     });
   }, [sources, sortConfig]);
-
-  const getSortIndicator = (key: keyof Source) => {
-    if (sortConfig.key !== key) return "↕";
-    if (sortConfig.direction === "asc") return "↑";
-    if (sortConfig.direction === "desc") return "↓";
-    return "↕";
-  };
 
   const columns = useMemo(
     () => [

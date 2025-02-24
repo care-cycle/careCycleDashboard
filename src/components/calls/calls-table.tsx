@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -7,11 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, Flag, GripVertical, UserSearch } from "lucide-react";
+import { ArrowUpDown, GripVertical, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Call } from "@/types/calls";
 import { formatPhoneNumber } from "@/lib/utils";
 import { format } from "date-fns";
+import { assistantTypeLabels } from "@/components/charts/constants";
 import {
   Tooltip,
   TooltipContent,
@@ -25,16 +26,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   horizontalListSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useRedaction } from "@/contexts/redaction-context";
+import { useRedaction } from "@/hooks/use-redaction";
 import { useNavigate } from "react-router-dom";
 
 interface CallsTableProps {
@@ -294,13 +293,14 @@ export function CallsTable({
                         ? redactData(call.callerId)
                         : formatPhoneNumber(call.callerId))}
                     {column === "Assistant Type" &&
-                      call.assistantType
-                        .split("_")
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() + word.slice(1),
-                        )
-                        .join(" ")}
+                      (assistantTypeLabels[call.assistantType] ||
+                        call.assistantType
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1),
+                          )
+                          .join(" "))}
                     {column === "Direction" &&
                       call.direction.charAt(0).toUpperCase() +
                         call.direction.slice(1)}

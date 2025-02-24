@@ -1,49 +1,39 @@
 // src/hooks/use-auth-api.ts
 import { useState, useEffect, useRef } from "react";
-import { isAuthEnabled } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@clerk/clerk-react";
 
-interface UseAuthApiOptions {
-  onError?: (error: any) => void;
-  onSuccess?: (data: any) => void;
+interface ApiError extends Error {
+  message: string;
+  status?: number;
+}
+
+interface UseAuthApiOptions<T> {
+  onError?: (error: ApiError) => void;
+  onSuccess?: (data: T) => void;
   showErrorToast?: boolean;
 }
 
 // Cache for storing API responses
-const apiCache = new Map<string, any>();
-
-// Default state for non-auth mode
-const nonAuthState = {
-  data: null,
-  isLoading: false,
-  error: null,
-  isAuthenticated: true,
-  refetch: () => Promise.resolve(null),
-};
+const apiCache = new Map<string, unknown>();
 
 export function useAuthApi<T>(
   endpoint: string,
-  options: UseAuthApiOptions = {},
+  options: UseAuthApiOptions<T> = {},
 ) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
   const auth = useAuth();
   const fetchCount = useRef(0);
 
   useEffect(() => {
-    // Skip effect if auth is disabled
-    if (!isAuthEnabled()) {
-      return;
-    }
-
     const fetchData = async () => {
       // Check if we already have cached data
       if (apiCache.has(endpoint)) {
-        setData(apiCache.get(endpoint));
+        setData(apiCache.get(endpoint) as T);
         setIsLoading(false);
         return;
       }
@@ -56,17 +46,19 @@ export function useAuthApi<T>(
       try {
         setIsLoading(true);
         fetchCount.current += 1;
-        const response = await apiClient.get(endpoint);
+        const response = await apiClient.get<T>(endpoint);
         apiCache.set(endpoint, response.data);
         setData(response.data);
         options.onSuccess?.(response.data);
-      } catch (err: any) {
-        setError(err);
-        options.onError?.(err);
+      } catch (err) {
+        const apiError: ApiError =
+          err instanceof Error ? err : new Error(String(err));
+        setError(apiError);
+        options.onError?.(apiError);
         if (options.showErrorToast) {
           toast({
             title: "Error",
-            description: err.message || "An error occurred",
+            description: apiError.message || "An error occurred",
             variant: "destructive",
           });
         }
@@ -78,12 +70,7 @@ export function useAuthApi<T>(
     if (auth.isLoaded && auth.isSignedIn) {
       fetchData();
     }
-  }, [endpoint, auth.isLoaded, auth.isSignedIn]);
-
-  // Return non-auth state if auth is disabled
-  if (!isAuthEnabled()) {
-    return nonAuthState;
-  }
+  }, [endpoint, auth.isLoaded, auth.isSignedIn, options, toast]);
 
   const refetch = async () => {
     // Clear cache for this endpoint
@@ -93,17 +80,19 @@ export function useAuthApi<T>(
     if (auth.isLoaded && auth.isSignedIn) {
       try {
         setIsLoading(true);
-        const response = await apiClient.get(endpoint);
+        const response = await apiClient.get<T>(endpoint);
         apiCache.set(endpoint, response.data);
         setData(response.data);
         options.onSuccess?.(response.data);
-      } catch (err: any) {
-        setError(err);
-        options.onError?.(err);
+      } catch (err) {
+        const apiError: ApiError =
+          err instanceof Error ? err : new Error(String(err));
+        setError(apiError);
+        options.onError?.(apiError);
         if (options.showErrorToast) {
           toast({
             title: "Error",
-            description: err.message || "An error occurred",
+            description: apiError.message || "An error occurred",
             variant: "destructive",
           });
         }

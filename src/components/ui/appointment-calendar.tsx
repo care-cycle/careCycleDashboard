@@ -7,7 +7,7 @@ import type {
   SelectSingleEventHandler,
 } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-styles";
 import {
   Tooltip,
   TooltipContent,
@@ -202,8 +202,7 @@ export function AppointmentCalendar({
           IconLeft: () => <ChevronLeft className="h-5 w-5" />,
           IconRight: () => <ChevronRight className="h-5 w-5" />,
           DayContent: (props: DayContentProps) => {
-            const { date, displayMonth, activeModifiers, ...contentProps } =
-              props;
+            const { date } = props;
             const dayAppointments = getAppointmentsForDate(date);
 
             return (

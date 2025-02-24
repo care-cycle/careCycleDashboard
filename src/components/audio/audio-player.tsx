@@ -26,7 +26,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [volume, setVolume] = useState(1);
-    const [error, setError] = useState<string | null>(null);
 
     // Forward the ref
     useImperativeHandle(ref, () => audioRef.current as HTMLAudioElement);
