@@ -1,6 +1,7 @@
 import { TopMetricsBar } from "@/components/metrics/top-metrics-bar";
 import { Sidebar } from "@/components/layout/sidebar";
 import { KnowledgeSearch } from "@/components/search/knowledge-search";
+import { Toaster } from "@/components/ui/toaster";
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -69,6 +70,7 @@ export function RootLayout({
           {!hideKnowledgeSearch && <KnowledgeSearch />}
         </div>
       </div>
+      <Toaster />
     </>
   );
 }

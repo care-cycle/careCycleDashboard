@@ -66,10 +66,12 @@ export default function BillingPage() {
             />
           </div>
           <BillingMethod
-            paymentMethod={clientInfo?.default_payment_method || null}
-            onPaymentMethodUpdate={() => {
-              // Disabled for now
+            paymentMethod={clientInfo?.default_payment_method || undefined}
+            onPaymentMethodChange={() => {
+              // Refresh the client data after updating the payment method
+              window.location.reload();
             }}
+            clientId={clientInfo?.id || ""}
           />
         </div>
       </div>
