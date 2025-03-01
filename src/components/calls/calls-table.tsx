@@ -169,13 +169,22 @@ export function CallsTable({
     // Create a Set for faster lookups
     const nonConnectedSet = new Set(nonConnectedDispositions);
 
-    return calls.filter((call) => {
+    console.log("CallsTable filtering:", {
+      inputCallsLength: calls.length,
+      showTestCalls,
+      showConnectedOnly,
+    });
+
+    const result = calls.filter((call) => {
       // Combine conditions to reduce iterations
       return (
         (!showTestCalls ? !call.testFlag : true) &&
         (!showConnectedOnly ? true : !nonConnectedSet.has(call.disposition))
       );
     });
+
+    console.log("CallsTable filtered result:", result.length);
+    return result;
   }, [calls, showTestCalls, showConnectedOnly, nonConnectedDispositions]);
 
   // Memoize the columns array

@@ -9,7 +9,10 @@ import { RootLayout } from "@/components/layout/root-layout";
 import { cn } from "@/lib/utils";
 import { getTopMetrics } from "@/lib/metrics";
 import { Input } from "@/components/ui/input";
+import { CalendarActions } from "@/components/ui/calendar-actions";
+import { AppointmentData, convertTimezone } from "@/lib/calendar-utils";
 import type { Appointment } from "@/hooks/use-client-data";
+import { AppointmentActions } from "@/components/ui/appointment-actions";
 
 export default function Appointments() {
   const { toast } = useToast();
@@ -60,11 +63,28 @@ export default function Appointments() {
   // Filter appointments for the current month view
   const appointments = useMemo(() => {
     return allAppointments.filter((appointment) => {
-      const appointmentDate = new Date(appointment.appointmentDateTime);
-      return (
-        appointmentDate.getMonth() === currentMonth.getMonth() &&
-        appointmentDate.getFullYear() === currentMonth.getFullYear()
-      );
+      try {
+        const ianaTimezone = convertTimezone(appointment.timezone || null);
+
+        // Use moment-timezone to get the correct date in the appointment's timezone
+        const tzMoment = moment
+          .utc(appointment.appointmentDateTime)
+          .tz(ianaTimezone);
+
+        // Check if the appointment is in the current month view
+        return (
+          tzMoment.month() === currentMonth.getMonth() &&
+          tzMoment.year() === currentMonth.getFullYear()
+        );
+      } catch (e) {
+        // Fallback to browser timezone if there's an error
+        console.warn("Error filtering appointments by month:", e);
+        const appointmentDate = new Date(appointment.appointmentDateTime);
+        return (
+          appointmentDate.getMonth() === currentMonth.getMonth() &&
+          appointmentDate.getFullYear() === currentMonth.getFullYear()
+        );
+      }
     });
   }, [allAppointments, currentMonth]);
 
@@ -107,28 +127,17 @@ export default function Appointments() {
     }
   };
 
-  const convertTimezone = (timezone: string | null): string => {
-    if (!timezone) return "America/New_York";
-
-    // Convert common timezone names to IANA format
-    const timezoneMap: Record<string, string> = {
-      Eastern: "America/New_York",
-      Central: "America/Chicago",
-      Mountain: "America/Denver",
-      Pacific: "America/Los_Angeles",
-    };
-
-    return timezoneMap[timezone] || timezone;
-  };
-
   const formatAppointmentTime = (dateTime: string) => {
-    if (!clientInfo?.timezone) return moment(dateTime).format("LLL");
+    if (!clientInfo?.timezone) return moment.utc(dateTime).format("LLL");
     try {
       const ianaTimezone = convertTimezone(clientInfo.timezone);
-      return moment(dateTime).tz(ianaTimezone).format("LLL z");
+      const tzMoment = moment.utc(dateTime).tz(ianaTimezone);
+      const formattedTime = tzMoment.format("LLL z");
+
+      return formattedTime;
     } catch (e) {
       console.warn("Invalid timezone:", clientInfo.timezone);
-      return moment(dateTime).format("LLL");
+      return moment.utc(dateTime).format("LLL");
     }
   };
 
@@ -139,15 +148,15 @@ export default function Appointments() {
       return allAppointments.filter((appointment) => {
         let appointmentDate;
         try {
-          const ianaTimezone = convertTimezone(appointment.timezone);
-          appointmentDate = moment(appointment.appointmentDateTime).tz(
-            ianaTimezone,
-          );
+          const ianaTimezone = convertTimezone(appointment.timezone || null);
+          appointmentDate = moment
+            .utc(appointment.appointmentDateTime)
+            .tz(ianaTimezone);
         } catch (e) {
           console.warn("Invalid timezone:", appointment.timezone);
-          appointmentDate = moment(appointment.appointmentDateTime).tz(
-            "America/New_York",
-          );
+          appointmentDate = moment
+            .utc(appointment.appointmentDateTime)
+            .tz("America/New_York");
         }
 
         return appointmentDate.isAfter(moment());
@@ -175,6 +184,24 @@ export default function Appointments() {
     });
   }, [allAppointments, searchQuery]);
 
+  // Convert appointments to AppointmentData type for calendar actions
+  const appointmentsData: AppointmentData[] = useMemo(() => {
+    return filteredAppointments.map((apt) => ({
+      id: apt.id,
+      customerId: apt.customerId,
+      firstName: apt.firstName,
+      lastName: apt.lastName,
+      timezone: apt.timezone,
+      state: apt.state,
+      postalCode: apt.postalCode,
+      appointmentDateTime: apt.appointmentDateTime,
+      appointmentAttended: apt.appointmentAttended || false,
+      campaignId: apt.campaignId,
+      campaignName: apt.campaignName,
+      callerId: apt.callerId,
+    }));
+  }, [filteredAppointments]);
+
   return (
     <RootLayout hideKnowledgeSearch topMetrics={getTopMetrics(todayMetrics)}>
       <div className="space-y-6">
@@ -183,7 +210,12 @@ export default function Appointments() {
           <div className="lg:w-[300px] flex-shrink-0 h-[500px] lg:h-[calc(100vh-12rem)] rounded-lg border">
             <div className="p-4 h-full">
               <div className="flex flex-col gap-3">
-                <h2 className="text-lg font-semibold">Upcoming Appointments</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">
+                    Upcoming Appointments
+                  </h2>
+                  <CalendarActions appointments={appointmentsData} />
+                </div>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                   <Input
@@ -245,27 +277,55 @@ export default function Appointments() {
                             )}
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigateToCustomer(
-                              appointment.customerId,
-                              appointment.callerId,
-                            );
-                          }}
-                          className={cn(
-                            "text-gray-400 hover:text-gray-900",
-                            "transition-colors duration-200",
-                            "flex-shrink-0 ml-2",
-                          )}
-                          title={
-                            appointment.callerId
-                              ? `Search by ${appointment.callerId}`
-                              : "Search customer"
-                          }
-                        >
-                          <UserSearch size={16} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigateToCustomer(
+                                appointment.customerId,
+                                appointment.callerId,
+                              );
+                            }}
+                            className={cn(
+                              "text-gray-400 hover:text-blue-600",
+                              "transition-colors duration-200",
+                              "flex-shrink-0 h-6 w-6 flex items-center justify-center",
+                              "hover:bg-gray-100 rounded-full",
+                            )}
+                            title={
+                              appointment.callerId
+                                ? `Search customer: ${appointment.callerId}`
+                                : "Search customer"
+                            }
+                          >
+                            <UserSearch size={16} />
+                          </button>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            {moment(appointment.appointmentDateTime).isAfter(
+                              moment(),
+                            ) && (
+                              <AppointmentActions
+                                appointment={{
+                                  id: appointment.id,
+                                  customerId: appointment.customerId,
+                                  firstName: appointment.firstName,
+                                  lastName: appointment.lastName,
+                                  timezone: appointment.timezone,
+                                  state: appointment.state,
+                                  postalCode: appointment.postalCode,
+                                  appointmentDateTime:
+                                    appointment.appointmentDateTime,
+                                  appointmentAttended:
+                                    appointment.appointmentAttended || false,
+                                  campaignId: appointment.campaignId,
+                                  campaignName: appointment.campaignName,
+                                  callerId: appointment.callerId,
+                                }}
+                                showCalendarOnly={true}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -282,6 +342,7 @@ export default function Appointments() {
               onMonthChange={handleMonthChange}
               appointments={appointments}
               onAppointmentClick={handleAppointmentClick}
+              onCustomerSearch={navigateToCustomer}
             />
           </div>
         </div>
