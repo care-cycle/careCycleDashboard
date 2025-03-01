@@ -65,6 +65,17 @@ export default function BillingPage() {
               enableTopUp={clientInfo?.enableTopUp ?? false}
             />
           </div>
+
+          {/* Payment method component temporarily disabled */}
+          <div className="p-4 border rounded-md bg-white shadow-sm">
+            <h3 className="text-lg font-medium mb-2">Payment Method</h3>
+            <p className="text-gray-500">
+              Payment method management is temporarily disabled. Please contact
+              support if you need to update your payment information.
+            </p>
+          </div>
+
+          {/* 
           <BillingMethod
             paymentMethod={clientInfo?.default_payment_method || undefined}
             onPaymentMethodChange={() => {
@@ -73,6 +84,7 @@ export default function BillingPage() {
             }}
             clientId={clientInfo?.id || ""}
           />
+          */}
         </div>
       </div>
     </RootLayout>
