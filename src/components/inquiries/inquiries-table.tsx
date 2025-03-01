@@ -10,6 +10,8 @@ import { ArrowUpDown, PhoneForwarded } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPhoneNumber, formatDate } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useRedaction } from "@/hooks/use-redaction";
+import { useCallback } from "react";
 
 interface Inquiry {
   id: string;
@@ -54,6 +56,7 @@ export function InquiriesTable({
   onInquirySelect,
 }: InquiriesTableProps) {
   const navigate = useNavigate();
+  const { isRedacted } = useRedaction();
 
   const handleSort = (key: InquiryKey) => {
     let direction: "asc" | "desc" | null = "asc";
@@ -109,6 +112,29 @@ export function InquiriesTable({
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
   };
+
+  // Helper function to render customer name with redaction
+  const renderCustomerName = useCallback(
+    (firstName?: string, lastName?: string) => {
+      if (isRedacted) {
+        const firstNameRedacted = firstName ? "*".repeat(firstName.length) : "";
+        const lastNameRedacted = lastName ? "*".repeat(lastName.length) : "";
+        return `${firstNameRedacted} ${lastNameRedacted}`.trim();
+      }
+      return `${firstName || ""} ${lastName || ""}`.trim();
+    },
+    [isRedacted],
+  );
+
+  // Helper function to render phone number with redaction
+  const renderPhoneNumber = useCallback(
+    (phoneNumber?: string) => {
+      if (!phoneNumber) return "";
+      if (isRedacted) return "*".repeat(phoneNumber.length);
+      return formatPhoneNumber(phoneNumber);
+    },
+    [isRedacted],
+  );
 
   return (
     <div className="rounded-md border glass-panel w-full">
@@ -209,10 +235,10 @@ export function InquiriesTable({
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="font-medium">
-                      {inquiry.firstName} {inquiry.lastName}
+                      {renderCustomerName(inquiry.firstName, inquiry.lastName)}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {formatPhoneNumber(inquiry.callerId || "")}
+                      {renderPhoneNumber(inquiry.callerId)}
                     </span>
                   </div>
                 </TableCell>
