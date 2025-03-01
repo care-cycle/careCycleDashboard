@@ -74,19 +74,6 @@ export default function Dashboard() {
   } = useInitialData();
 
   const callVolumeData = useMemo(() => {
-    console.log("Call Volume Data Calculation:", {
-      isLoading,
-      hasMetrics: !!metrics?.data,
-      date,
-      selectedCampaign,
-      campaignData:
-        selectedCampaign === "all"
-          ? metrics?.data?.data?.total
-          : metrics?.data?.data?.campaigns?.find(
-              (c: Campaign) => c.id === selectedCampaign,
-            )?.hours,
-    });
-
     if (isLoading || !metrics?.data) return [];
 
     const startDate = new Date(date?.from || new Date());
@@ -111,13 +98,6 @@ export default function Dashboard() {
       campaignData = campaign?.hours;
     }
 
-    console.log("Campaign Data:", {
-      startUTC,
-      endUTC,
-      campaignDataLength: campaignData?.length,
-      firstFewRecords: campaignData?.slice(0, 3),
-    });
-
     if (!campaignData?.length) return [];
 
     const rawData = campaignData
@@ -134,11 +114,6 @@ export default function Dashboard() {
         Outbound: Number(metric.outbound) || 0,
       }));
 
-    console.log("Filtered Raw Data:", {
-      filteredLength: rawData.length,
-      firstFewFiltered: rawData.slice(0, 3),
-    });
-
     const result = aggregateTimeseriesData<CallVolumeDataPoint>(
       rawData,
       { from: startUTC, to: endUTC },
@@ -152,22 +127,10 @@ export default function Dashboard() {
       }),
     );
 
-    console.log("Final Aggregated Data:", {
-      resultLength: result.length,
-      firstFewResults: result.slice(0, 3),
-    });
-
     return result;
   }, [date, metrics, selectedCampaign, isLoading]);
 
   const dispositionsData = useMemo(() => {
-    console.log("Dispositions Data Calculation:", {
-      isLoading,
-      hasMetrics: !!metrics?.data,
-      date,
-      selectedCampaign,
-    });
-
     if (isLoading || !metrics?.data) return [];
 
     const startDate = new Date(date?.from || new Date());
@@ -401,41 +364,75 @@ export default function Dashboard() {
     if (!campaignData?.length)
       return { value: "0", change: "N/A", description: "" };
 
-    const rawData = campaignData
-      .filter((metric: Campaign["hours"][number]) => {
-        const metricDate = new Date(metric.hour);
-        return (
-          date?.from &&
-          date?.to &&
-          metricDate >= date.from &&
-          metricDate <= date.to
-        );
-      })
-      .map((metric: Campaign["hours"][number]) => ({
-        hour: metric.hour,
-        formattedHour: metric.hourFormatted,
-        formattedDate: metric.dateFormatted,
-        totalMs: Number(metric.totalMs || 0),
-      }));
+    // Calculate date ranges exactly like customersEngaged
+    const daysDiff =
+      date?.from && date?.to
+        ? Math.ceil(
+            (date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1
+        : 0;
 
-    const aggregatedData = aggregateTimeseriesData(
-      rawData,
-      { from: date?.from || new Date(), to: date?.to || new Date() },
-      (points) => ({
-        hour: points[0].hour,
-        formattedHour: points[0].formattedHour,
-        formattedDate: points[0].formattedDate,
-        totalMs: points.reduce((sum, point) => sum + point.totalMs, 0),
-      }),
-    );
+    // Calculate previous period date range
+    const previousFrom = date?.from
+      ? new Date(date.from.getTime() - daysDiff * 24 * 60 * 60 * 1000)
+      : new Date();
+    const previousTo = date?.from
+      ? new Date(date.from.getTime() - 1)
+      : new Date();
+
+    // Calculate current and previous period totals
+    let currentPeriodTotalMs = 0;
+    let previousPeriodTotalMs = 0;
+
+    // Process each record
+    campaignData.forEach((metric: Campaign["hours"][number]) => {
+      const metricDate = new Date(metric.hour);
+      const totalMs = Number(metric.totalMs || 0);
+
+      // Current period
+      if (
+        date?.from &&
+        date?.to &&
+        metricDate >= date.from &&
+        metricDate <= date.to
+      ) {
+        currentPeriodTotalMs += totalMs;
+      }
+      // Previous period
+      else if (
+        date?.from &&
+        metricDate >= previousFrom &&
+        metricDate <= previousTo
+      ) {
+        previousPeriodTotalMs += totalMs;
+      }
+    });
 
     // Convert milliseconds to hours
-    const totalHours =
-      Math.round(aggregatedData[0]?.totalMs / (1000 * 60 * 60)) || 0;
+    const currentPeriodHours = (
+      currentPeriodTotalMs /
+      (1000 * 60 * 60)
+    ).toFixed(1);
+
+    // Format the final value with "hrs" suffix
+    const finalValue = `${parseFloat(currentPeriodHours).toLocaleString()} hrs`;
+
+    // Calculate change text - EXACTLY like customersEngaged
+    let change = "N/A";
+
+    if (previousPeriodTotalMs > 0) {
+      const percentChange =
+        ((currentPeriodTotalMs - previousPeriodTotalMs) /
+          previousPeriodTotalMs) *
+        100;
+      change = `${percentChange >= 0 ? "+" : ""}${percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`;
+    } else {
+      change = `No data for previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`;
+    }
 
     return {
-      value: `${totalHours.toLocaleString()} hrs`,
-      change: "N/A",
+      value: finalValue,
+      change,
       description: "",
     };
   }, [date, metrics, selectedCampaign, isLoading]);
