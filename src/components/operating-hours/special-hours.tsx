@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -50,10 +50,55 @@ const HOURS = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export function SpecialHoursConfig() {
-  const { clientInfo, mutate } = useClientData();
-  const [specialHours, setSpecialHours] = useState<SpecialHour[]>(
-    clientInfo?.specialHours || [],
-  );
+  const { clientInfo, isLoading, mutate } = useClientData();
+
+  // Validation function to check if a special hour object is valid
+  const isValidSpecialHour = (hour: any): hour is SpecialHour => {
+    return (
+      hour &&
+      typeof hour === "object" &&
+      "type" in hour &&
+      typeof hour.type === "string" &&
+      (hour.type === "special" ||
+        hour.type === "dateRange" ||
+        hour.type === "recurring") &&
+      "name" in hour &&
+      typeof hour.name === "string" &&
+      "hours" in hour &&
+      Array.isArray(hour.hours) &&
+      hour.hours.length > 0 &&
+      hour.hours.every(
+        (h: any) =>
+          typeof h === "object" &&
+          "startHour" in h &&
+          typeof h.startHour === "number" &&
+          "endHour" in h &&
+          typeof h.endHour === "number",
+      )
+    );
+  };
+
+  // Filter out invalid special hours when initializing state
+  const [specialHours, setSpecialHours] = useState<SpecialHour[]>(() => {
+    if (!clientInfo?.specialHours) return [];
+
+    // Filter out invalid entries like [{ "type": "TESTING", "enabled": true }]
+    const validHours = Array.isArray(clientInfo.specialHours)
+      ? clientInfo.specialHours.filter(isValidSpecialHour)
+      : [];
+
+    return validHours;
+  });
+
+  // Update specialHours when clientInfo changes, filtering out invalid entries
+  useEffect(() => {
+    if (clientInfo?.specialHours) {
+      const validHours = Array.isArray(clientInfo.specialHours)
+        ? clientInfo.specialHours.filter(isValidSpecialHour)
+        : [];
+      setSpecialHours(validHours);
+    }
+  }, [clientInfo]);
 
   const handleAddSchedule = () => {
     setSpecialHours([
@@ -141,290 +186,310 @@ export function SpecialHoursConfig() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {specialHours.map((schedule, index) => (
-          <div
-            key={index}
-            className="flex items-start gap-4 p-4 border rounded-lg"
-          >
-            <div className="flex-1 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Type</label>
-                  <Select
-                    value={schedule.type}
-                    onValueChange={(value: SpecialHour["type"]) =>
-                      handleUpdateSchedule(index, "type", value)
-                    }
-                  >
-                    <SelectTrigger className="glass-panel">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="glass-panel">
-                      <SelectItem value="special">
-                        One-time Special Day
-                      </SelectItem>
-                      <SelectItem value="dateRange">Date Range</SelectItem>
-                      <SelectItem value="recurring">Recurring Event</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Name</label>
-                  <Input
-                    value={schedule.name}
-                    onChange={(e) =>
-                      handleUpdateSchedule(index, "name", e.target.value)
-                    }
-                    placeholder="e.g., Company Training Day"
-                  />
-                </div>
-              </div>
-
-              {schedule.type === "special" && (
-                <div>
-                  <label className="text-sm font-medium">Date</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !schedule.date && "text-muted-foreground",
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {schedule.date
-                          ? format(new Date(schedule.date), "PPP")
-                          : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-auto p-0 glass-panel"
-                      align="start"
-                    >
-                      <Calendar
-                        mode="single"
-                        selected={
-                          schedule.date ? new Date(schedule.date) : undefined
-                        }
-                        onSelect={(date) =>
-                          handleUpdateSchedule(
-                            index,
-                            "date",
-                            date?.toISOString(),
-                          )
-                        }
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-
-              {schedule.type === "dateRange" && (
+        {isLoading ? (
+          <div>Loading special hours...</div>
+        ) : specialHours.length > 0 ? (
+          specialHours.map((schedule, index) => (
+            <div
+              key={index}
+              className="flex items-start gap-4 p-4 border rounded-lg"
+            >
+              <div className="flex-1 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Start Date</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !schedule.startDate && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {schedule.startDate
-                            ? format(new Date(schedule.startDate), "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0 glass-panel"
-                        align="start"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={
-                            schedule.startDate
-                              ? new Date(schedule.startDate)
-                              : undefined
-                          }
-                          onSelect={(date) =>
-                            handleUpdateSchedule(
-                              index,
-                              "startDate",
-                              date?.toISOString(),
-                            )
-                          }
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">End Date</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !schedule.endDate && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {schedule.endDate
-                            ? format(new Date(schedule.endDate), "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0 glass-panel"
-                        align="start"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={
-                            schedule.endDate
-                              ? new Date(schedule.endDate)
-                              : undefined
-                          }
-                          onSelect={(date) =>
-                            handleUpdateSchedule(
-                              index,
-                              "endDate",
-                              date?.toISOString(),
-                            )
-                          }
-                          disabled={(date) =>
-                            schedule.startDate
-                              ? date < new Date(schedule.startDate)
-                              : false
-                          }
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              )}
-
-              {schedule.type === "recurring" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Recurrence</label>
+                    <label className="text-sm font-medium">Type</label>
                     <Select
-                      value={schedule.recurrence}
-                      onValueChange={(value) =>
-                        handleUpdateSchedule(index, "recurrence", value)
+                      value={schedule.type}
+                      onValueChange={(value: SpecialHour["type"]) =>
+                        handleUpdateSchedule(index, "type", value)
                       }
                     >
                       <SelectTrigger className="glass-panel">
-                        <SelectValue placeholder="Select recurrence" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="glass-panel">
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="special">
+                          One-time Special Day
+                        </SelectItem>
+                        <SelectItem value="dateRange">Date Range</SelectItem>
+                        <SelectItem value="recurring">
+                          Recurring Event
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {schedule.recurrence === "monthly" && (
+                  <div>
+                    <label className="text-sm font-medium">Name</label>
+                    <Input
+                      value={schedule.name}
+                      onChange={(e) =>
+                        handleUpdateSchedule(index, "name", e.target.value)
+                      }
+                      placeholder="e.g., Company Training Day"
+                    />
+                  </div>
+                </div>
+
+                {schedule.type === "special" && (
+                  <div>
+                    <label className="text-sm font-medium">Date</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !schedule.date && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {schedule.date
+                            ? format(new Date(schedule.date), "PPP")
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto p-0 glass-panel"
+                        align="start"
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={
+                            schedule.date ? new Date(schedule.date) : undefined
+                          }
+                          onSelect={(date) =>
+                            handleUpdateSchedule(
+                              index,
+                              "date",
+                              date?.toISOString(),
+                            )
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+
+                {schedule.type === "dateRange" && (
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium">
-                        Day of Month
-                      </label>
+                      <label className="text-sm font-medium">Start Date</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !schedule.startDate && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {schedule.startDate
+                              ? format(new Date(schedule.startDate), "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-auto p-0 glass-panel"
+                          align="start"
+                        >
+                          <Calendar
+                            mode="single"
+                            selected={
+                              schedule.startDate
+                                ? new Date(schedule.startDate)
+                                : undefined
+                            }
+                            onSelect={(date) =>
+                              handleUpdateSchedule(
+                                index,
+                                "startDate",
+                                date?.toISOString(),
+                              )
+                            }
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">End Date</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !schedule.endDate && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {schedule.endDate
+                              ? format(new Date(schedule.endDate), "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-auto p-0 glass-panel"
+                          align="start"
+                        >
+                          <Calendar
+                            mode="single"
+                            selected={
+                              schedule.endDate
+                                ? new Date(schedule.endDate)
+                                : undefined
+                            }
+                            onSelect={(date) =>
+                              handleUpdateSchedule(
+                                index,
+                                "endDate",
+                                date?.toISOString(),
+                              )
+                            }
+                            disabled={(date) =>
+                              schedule.startDate
+                                ? date < new Date(schedule.startDate)
+                                : false
+                            }
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+
+                {schedule.type === "recurring" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Recurrence</label>
                       <Select
-                        value={schedule.dayOfMonth?.toString()}
+                        value={schedule.recurrence}
                         onValueChange={(value) =>
-                          handleUpdateSchedule(
-                            index,
-                            "dayOfMonth",
-                            Number(value),
-                          )
+                          handleUpdateSchedule(index, "recurrence", value)
                         }
                       >
                         <SelectTrigger className="glass-panel">
-                          <SelectValue placeholder="Select day" />
+                          <SelectValue placeholder="Select recurrence" />
                         </SelectTrigger>
                         <SelectContent className="glass-panel">
-                          {Array.from({ length: 31 }, (_, i) => (
-                            <SelectItem key={i + 1} value={(i + 1).toString()}>
-                              {i + 1}
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {schedule.recurrence === "monthly" && (
+                      <div>
+                        <label className="text-sm font-medium">
+                          Day of Month
+                        </label>
+                        <Select
+                          value={schedule.dayOfMonth?.toString()}
+                          onValueChange={(value) =>
+                            handleUpdateSchedule(
+                              index,
+                              "dayOfMonth",
+                              Number(value),
+                            )
+                          }
+                        >
+                          <SelectTrigger className="glass-panel">
+                            <SelectValue placeholder="Select day" />
+                          </SelectTrigger>
+                          <SelectContent className="glass-panel">
+                            {Array.from({ length: 31 }, (_, i) => (
+                              <SelectItem
+                                key={i + 1}
+                                value={(i + 1).toString()}
+                              >
+                                {i + 1}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium">Hours</label>
+                  {schedule.hours.map((hour, hourIndex) => (
+                    <div
+                      key={hourIndex}
+                      className="grid grid-cols-2 gap-4 mt-2"
+                    >
+                      <Select
+                        value={hour.startHour.toString()}
+                        onValueChange={(value) => {
+                          const newHours = [...schedule.hours];
+                          newHours[hourIndex] = {
+                            ...hour,
+                            startHour: Number(value),
+                          };
+                          handleUpdateSchedule(index, "hours", newHours);
+                        }}
+                      >
+                        <SelectTrigger className="glass-panel">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-panel">
+                          {HOURS.map((h) => (
+                            <SelectItem
+                              key={h.value}
+                              value={h.value.toString()}
+                            >
+                              {h.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={hour.endHour.toString()}
+                        onValueChange={(value) => {
+                          const newHours = [...schedule.hours];
+                          newHours[hourIndex] = {
+                            ...hour,
+                            endHour: Number(value),
+                          };
+                          handleUpdateSchedule(index, "hours", newHours);
+                        }}
+                      >
+                        <SelectTrigger className="glass-panel">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-panel">
+                          {HOURS.map((h) => (
+                            <SelectItem
+                              key={h.value}
+                              value={h.value.toString()}
+                            >
+                              {h.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  )}
+                  ))}
                 </div>
-              )}
-
-              <div>
-                <label className="text-sm font-medium">Hours</label>
-                {schedule.hours.map((hour, hourIndex) => (
-                  <div key={hourIndex} className="grid grid-cols-2 gap-4 mt-2">
-                    <Select
-                      value={hour.startHour.toString()}
-                      onValueChange={(value) => {
-                        const newHours = [...schedule.hours];
-                        newHours[hourIndex] = {
-                          ...hour,
-                          startHour: Number(value),
-                        };
-                        handleUpdateSchedule(index, "hours", newHours);
-                      }}
-                    >
-                      <SelectTrigger className="glass-panel">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="glass-panel">
-                        {HOURS.map((h) => (
-                          <SelectItem key={h.value} value={h.value.toString()}>
-                            {h.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={hour.endHour.toString()}
-                      onValueChange={(value) => {
-                        const newHours = [...schedule.hours];
-                        newHours[hourIndex] = {
-                          ...hour,
-                          endHour: Number(value),
-                        };
-                        handleUpdateSchedule(index, "hours", newHours);
-                      }}
-                    >
-                      <SelectTrigger className="glass-panel">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="glass-panel">
-                        {HOURS.map((h) => (
-                          <SelectItem key={h.value} value={h.value.toString()}>
-                            {h.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
               </div>
-            </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveSchedule(index)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveSchedule(index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))
+        ) : (
+          <div>No special hours configured. Add some below.</div>
+        )}
 
         <div className="flex justify-between">
           <Button variant="outline" onClick={handleAddSchedule}>
