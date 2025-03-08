@@ -8,9 +8,28 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
-import { PhoneForwarded } from "lucide-react";
+import { PhoneForwarded, FileDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { toast } from "sonner";
+import apiClient from "@/lib/api-client";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Add Clerk types to window object
+declare global {
+  interface Window {
+    Clerk?: {
+      session: Promise<{
+        getToken: () => Promise<string | null>;
+      } | null>;
+    };
+  }
+}
 
 interface Source {
   sourceId: string;
@@ -47,18 +66,26 @@ function MetricCell({
   denominator: number;
   percentage: number;
 }) {
+  // Handle undefined, null, or NaN values
+  const safeNumerator =
+    typeof numerator === "number" && !isNaN(numerator) ? numerator : 0;
+  const safeDenominator =
+    typeof denominator === "number" && !isNaN(denominator) ? denominator : 0;
+  const safePercentage =
+    typeof percentage === "number" && !isNaN(percentage) ? percentage : 0;
+
   return (
     <div className="space-y-1">
       <div className="text-right">
-        <span className="font-medium">{numerator.toLocaleString()}</span>
+        <span className="font-medium">{safeNumerator.toLocaleString()}</span>
         <span className="text-muted-foreground">
-          /{denominator.toLocaleString()}
+          /{safeDenominator.toLocaleString()}
         </span>
       </div>
       <div className="flex items-center justify-end gap-2">
-        <Progress value={percentage} className="w-[60px]" />
+        <Progress value={safePercentage} className="w-[60px]" />
         <span className="text-sm text-muted-foreground w-[36px] text-right">
-          {percentage}%
+          {safePercentage}%
         </span>
       </div>
     </div>
@@ -105,6 +132,100 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
     navigate(`/calls?${searchParams.toString()}`);
   };
 
+  const handleDownloadDocumentation = async (
+    e: React.MouseEvent,
+    source: Source,
+  ) => {
+    e.stopPropagation();
+    try {
+      // Use toast.promise instead of toast.info to show loading state until promise resolves
+      await toast.promise(
+        (async () => {
+          // Get the current active session and token
+          const session = await window.Clerk?.session;
+          const token = await session?.getToken();
+
+          if (!token) {
+            console.error("No auth token available for documentation download");
+            throw new Error(
+              "Authentication error. Please try again or refresh the page.",
+            );
+          }
+
+          // Use apiClient directly to ensure authentication headers are included
+          const response = await apiClient.get(
+            `/portal/client/sources/${source.sourceId}/documentation`,
+            {
+              responseType: "blob", // Important for binary data
+              headers: {
+                // Explicitly set the Authorization header
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          console.log("Response received:", {
+            status: response.status,
+            contentType: response.headers["content-type"],
+            contentLength: response.headers["content-length"],
+          });
+
+          // Create a URL for the blob
+          const blob = new Blob([response.data], { type: "application/pdf" });
+          const url = window.URL.createObjectURL(blob);
+
+          // Create a temporary link element
+          const link = document.createElement("a");
+          link.href = url;
+
+          // Use source name if available, otherwise use sourceId
+          const fileName = source.name
+            ? `careCycle-source-api-${source.name.replace(/[^a-zA-Z0-9-_]/g, "_")}`
+            : `careCycle-source-api-${source.sourceId}`;
+
+          link.download = `${fileName}.pdf`;
+
+          // Append to the document, click it, and remove it
+          document.body.appendChild(link);
+          link.click();
+
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+
+          return response; // Return response to resolve the promise
+        })(),
+        {
+          loading: "Preparing documentation for download...",
+          success: "Documentation downloaded successfully!",
+          error: "Failed to download documentation",
+        },
+      );
+    } catch (error: any) {
+      // Type as any to handle Axios error properties
+      console.error("Download error:", error);
+
+      // More detailed error message
+      let errorMessage = "Failed to download documentation. Please try again.";
+      if (error.response) {
+        errorMessage += ` (Status: ${error.response.status})`;
+
+        // Log more details for debugging
+        console.error("Error response details:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data,
+        });
+      }
+
+      // We don't need to show this error toast since toast.promise will handle it
+      // toast.error(errorMessage);
+    }
+  };
+
   const sortedSources = [...initialSources].sort((a, b) => {
     if (!sortConfig.direction || !sortConfig.key) return 0;
 
@@ -144,6 +265,18 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
 
   return (
     <div className="rounded-md border glass-panel w-full relative">
+      <div
+        className="absolute top-0 bottom-0 right-0 border-l border-white/30 flex items-center justify-center z-10"
+        style={{
+          background: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(16px)",
+          width: "calc(250% / 12)", // Increased from 200% to 250% to better cover the columns
+        }}
+      >
+        <span className="text-sm font-bold text-gray-600 whitespace-nowrap">
+          Activate Welcome Calls to unlock
+        </span>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -161,27 +294,32 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody className="relative">
-          <div
-            className="absolute top-0 bottom-0 right-0 border-l border-white/30 flex items-center justify-center z-10"
-            style={{
-              background: "rgba(255, 255, 255, 0.9)",
-              backdropFilter: "blur(16px)",
-              width: "calc(250% / 12)", // Increased from 200% to 250% to better cover the columns
-            }}
-          >
-            <span className="text-sm font-bold text-gray-600 whitespace-nowrap">
-              Activate Welcome Calls to unlock
-            </span>
-          </div>
+        <TableBody>
           {sortedSources.map((source) => (
             <TableRow key={source.sourceId} className="hover:bg-muted/30">
               <TableCell>
-                <div className="h-8 w-8 flex items-center justify-center">
+                <div className="h-8 w-8 flex items-center justify-center gap-1">
                   <PhoneForwarded
                     className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer"
                     onClick={(e) => handleCallsNavigation(e, source)}
                   />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <FileDown
+                          className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer"
+                          onClick={(e) =>
+                            handleDownloadDocumentation(e, source)
+                          }
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" align="center">
+                        <p className="text-sm">
+                          Download documentation for this source
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </TableCell>
               <TableCell className="font-medium text-center">

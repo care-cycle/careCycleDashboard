@@ -13,7 +13,17 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import apiClient from "@/lib/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Save, X, Copy, Check, ArrowUpDown } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  Save,
+  X,
+  Copy,
+  Check,
+  ArrowUpDown,
+  FileDown,
+  Download,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +33,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AxiosError } from "axios";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+declare global {
+  interface Window {
+    Clerk?: {
+      session: Promise<{
+        getToken: () => Promise<string | null>;
+      } | null>;
+    };
+  }
+}
 
 interface Source {
   id: string;
@@ -58,7 +84,7 @@ export function ManageSources() {
   const [editDuration, setEditDuration] = useState<number>(0);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string>("");
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "",
     direction: null,
@@ -213,13 +239,205 @@ export function ManageSources() {
   };
 
   const handleCopySourceId = async (sourceId: string) => {
+    await navigator.clipboard.writeText(sourceId);
+    setCopiedId(sourceId);
+    setTimeout(() => setCopiedId(""), 2000);
+    toast.success("Source ID copied to clipboard");
+  };
+
+  const handleDownloadDocumentation = async (
+    e: React.MouseEvent,
+    source: Source,
+  ) => {
+    e.stopPropagation();
+
     try {
-      await navigator.clipboard.writeText(sourceId);
-      setCopiedId(sourceId);
-      setTimeout(() => setCopiedId(null), 2000);
-      toast.success("Source ID copied to clipboard");
-    } catch (error) {
-      toast.error("Failed to copy to clipboard");
+      // Use toast.promise instead of toast.info to show loading state until promise resolves
+      await toast.promise(
+        (async () => {
+          console.log(
+            "Starting documentation download for source:",
+            source.sourceId,
+          );
+
+          // Get the current active session and token
+          const session = await window.Clerk?.session;
+          const token = await session?.getToken();
+
+          if (!token) {
+            console.error("No auth token available for documentation download");
+            throw new Error(
+              "Authentication error. Please try again or refresh the page.",
+            );
+          }
+
+          console.log("Auth token obtained, making request...");
+
+          // Use apiClient directly to ensure authentication headers are included
+          const response = await apiClient.get(
+            `/portal/client/sources/${source.sourceId}/documentation`,
+            {
+              responseType: "blob", // Important for binary data
+              headers: {
+                // Explicitly set the Authorization header
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          console.log("Response received:", {
+            status: response.status,
+            contentType: response.headers["content-type"],
+            contentLength: response.headers["content-length"],
+          });
+
+          // Create a URL for the blob
+          const blob = new Blob([response.data], { type: "application/pdf" });
+          const url = window.URL.createObjectURL(blob);
+
+          // Create a temporary link element
+          const link = document.createElement("a");
+          link.href = url;
+
+          // Use source name if available, otherwise use sourceId
+          const fileName = source.name
+            ? `careCycle-source-api-${source.name.replace(/[^a-zA-Z0-9-_]/g, "_")}`
+            : `careCycle-source-api-${source.sourceId}`;
+
+          link.download = `${fileName}.pdf`;
+
+          // Append to the document, click it, and remove it
+          document.body.appendChild(link);
+          link.click();
+
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+
+          return response; // Return response to resolve the promise
+        })(),
+        {
+          loading: "Preparing documentation for download...",
+          success: "Documentation downloaded successfully!",
+          error: "Failed to download documentation",
+        },
+      );
+    } catch (error: any) {
+      // Type as any to handle Axios error properties
+      console.error("Download error:", error);
+
+      // More detailed error message
+      let errorMessage = "Failed to download documentation. Please try again.";
+      if (error.response) {
+        errorMessage += ` (Status: ${error.response.status})`;
+
+        // Log more details for debugging
+        console.error("Error response details:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data,
+        });
+      }
+
+      // We don't need to show this error toast since toast.promise will handle it
+      // toast.error(errorMessage);
+    }
+  };
+
+  const handleDownloadAllDocumentation = async () => {
+    if (!sources || sources.length === 0) {
+      toast.error("No sources available to download documentation");
+      return;
+    }
+
+    try {
+      await toast.promise(
+        (async () => {
+          // Get the current active session and token
+          const session = await window.Clerk?.session;
+          const token = await session?.getToken();
+
+          if (!token) {
+            console.error("No auth token available for documentation download");
+            throw new Error(
+              "Authentication error. Please try again or refresh the page.",
+            );
+          }
+
+          console.log(
+            "Auth token obtained, making request for all documentation...",
+          );
+
+          // Use apiClient directly to ensure authentication headers are included
+          const response = await apiClient.get(
+            `/portal/client/sources/all-documentation`,
+            {
+              responseType: "blob", // Important for binary data
+              headers: {
+                // Explicitly set the Authorization header
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          console.log("Response received:", {
+            status: response.status,
+            contentType: response.headers["content-type"],
+            contentLength: response.headers["content-length"],
+          });
+
+          // Create a URL for the blob
+          const blob = new Blob([response.data], {
+            type: response.headers["content-type"] || "application/zip",
+          });
+          const url = window.URL.createObjectURL(blob);
+
+          // Create a temporary link element
+          const link = document.createElement("a");
+          link.href = url;
+
+          // Set the filename
+          const date = new Date().toISOString().split("T")[0];
+          link.download = `careCycle-all-source-documentation-${date}.zip`;
+
+          // Append to the document, click it, and remove it
+          document.body.appendChild(link);
+          link.click();
+
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+
+          return response; // Return response to resolve the promise
+        })(),
+        {
+          loading: "Preparing all documentation for download...",
+          success: "All documentation downloaded successfully!",
+          error: "Failed to download documentation",
+        },
+      );
+    } catch (error: any) {
+      console.error("Download all documentation error:", error);
+
+      // More detailed error message
+      let errorMessage =
+        "Failed to download all documentation. Please try again.";
+      if (error.response) {
+        errorMessage += ` (Status: ${error.response.status})`;
+
+        // Log more details for debugging
+        console.error("Error response details:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data,
+        });
+      }
     }
   };
 
@@ -309,7 +527,16 @@ export function ManageSources() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          onClick={handleDownloadAllDocumentation}
+          disabled={!sources || sources.length === 0}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download All Documentation
+        </Button>
+
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Source
@@ -344,7 +571,23 @@ export function ManageSources() {
               <TableRow key={source.id} className="hover:bg-black/5">
                 <TableCell>
                   <div className="h-8 w-8 flex items-center justify-center">
-                    {/* Empty cell for consistency with other tables */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <FileDown
+                            className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer"
+                            onClick={(e) =>
+                              handleDownloadDocumentation(e, source)
+                            }
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" align="center">
+                          <p className="text-sm">
+                            Download documentation for this source
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -365,7 +608,7 @@ export function ManageSources() {
                       variant="ghost"
                       size="icon"
                       className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleCopySourceId(source.sourceId)}
+                      onClick={(e) => handleCopySourceId(source.sourceId)}
                     >
                       {copiedId === source.sourceId ? (
                         <Check className="h-3 w-3 text-green-500" />
