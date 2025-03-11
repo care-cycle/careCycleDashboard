@@ -52,6 +52,11 @@ interface AssistantCountDataPoint {
   value: number;
 }
 
+interface CampaignLike {
+  id: string;
+  name: string;
+}
+
 export default function Dashboard() {
   const today = new Date();
   const yesterday = subDays(today, 1);
@@ -284,12 +289,50 @@ export default function Dashboard() {
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.data?.campaigns) return [];
 
+    // Handle empty object case
+    if (Object.keys(metrics.data.data.campaigns).length === 0) {
+      // console.log('Empty campaigns object detected');
+      return [];
+    }
+
+    // Ensure we have a valid campaigns structure
+    if (
+      !metrics.data.data.campaigns ||
+      typeof metrics.data.data.campaigns !== "object"
+    ) {
+      console.error("Invalid campaigns data structure");
+      return [];
+    }
+
     // Convert campaigns to array if it's an object
     const campaignsArray = Array.isArray(metrics.data.data.campaigns)
       ? metrics.data.data.campaigns
       : Object.values(metrics.data.data.campaigns);
 
-    return campaignsArray.map((campaign: Campaign) => {
+    // Validate the converted array
+    if (!Array.isArray(campaignsArray)) {
+      console.error("Failed to convert campaigns to array");
+      return [];
+    }
+
+    console.log("campaignsArray after conversion:", {
+      isArray: Array.isArray(campaignsArray),
+      length: campaignsArray.length,
+      sample: campaignsArray[0],
+    });
+
+    // Filter out any invalid campaign entries
+    const validCampaigns = campaignsArray.filter((c: any): c is Campaign => {
+      const campaignLike = c as CampaignLike;
+      return (
+        campaignLike &&
+        typeof campaignLike === "object" &&
+        typeof campaignLike.id === "string" &&
+        typeof campaignLike.name === "string"
+      );
+    });
+
+    return validCampaigns.map((campaign: Campaign) => {
       // Get all hours for this campaign
       const hours = campaign.hours || [];
 
@@ -342,7 +385,10 @@ export default function Dashboard() {
       return {
         name: campaign.name,
         calls: currentPeriodCalls,
-        trend: currentPeriodCalls >= previousPeriodCalls ? "up" : "down",
+        trend:
+          currentPeriodCalls >= previousPeriodCalls
+            ? ("up" as const)
+            : ("down" as const),
       };
     });
   }, [metrics, date, isLoading]);
@@ -361,9 +407,6 @@ export default function Dashboard() {
       campaignData = campaign?.hours;
     }
 
-    if (!campaignData?.length)
-      return { value: "0", change: "N/A", description: "" };
-
     // Calculate date ranges exactly like customersEngaged
     const daysDiff =
       date?.from && date?.to
@@ -371,6 +414,14 @@ export default function Dashboard() {
             (date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24),
           ) + 1
         : 0;
+
+    if (!campaignData?.length) {
+      return {
+        value: "0",
+        change: `+0% change from previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`,
+        description: "",
+      };
+    }
 
     // Calculate previous period date range
     const previousFrom = date?.from
@@ -418,7 +469,7 @@ export default function Dashboard() {
     const finalValue = `${parseFloat(currentPeriodHours).toLocaleString()} hrs`;
 
     // Calculate change text - EXACTLY like customersEngaged
-    let change = "N/A";
+    let change = `+0% change from previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`;
 
     if (previousPeriodTotalMs > 0) {
       const percentChange =
@@ -426,8 +477,6 @@ export default function Dashboard() {
           previousPeriodTotalMs) *
         100;
       change = `${percentChange >= 0 ? "+" : ""}${percentChange.toFixed(1)}% change from previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`;
-    } else {
-      change = `No data for previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`;
     }
 
     return {
@@ -501,10 +550,26 @@ export default function Dashboard() {
                 isLoading={isLoading || isMetricsLoading}
                 campaigns={[
                   { id: "all", name: "All Campaigns" },
-                  ...(metrics?.data?.data?.campaigns?.map((c: Campaign) => ({
-                    id: c.id,
-                    name: c.name,
-                  })) || []),
+                  ...(metrics?.data?.data?.campaigns &&
+                  typeof metrics.data.data.campaigns === "object"
+                    ? (Array.isArray(metrics.data.data.campaigns)
+                        ? metrics.data.data.campaigns
+                        : Object.values(metrics.data.data.campaigns)
+                      )
+                        .filter((c: any): c is Campaign => {
+                          const campaignLike = c as CampaignLike;
+                          return (
+                            campaignLike &&
+                            typeof campaignLike === "object" &&
+                            typeof campaignLike.id === "string" &&
+                            typeof campaignLike.name === "string"
+                          );
+                        })
+                        .map((c: Campaign) => ({
+                          id: c.id,
+                          name: c.name,
+                        }))
+                    : []),
                 ]}
               />
               <DateRangePicker
