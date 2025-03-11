@@ -69,7 +69,9 @@ export default function Dashboard() {
       to: today,
     };
   });
-  const [selectedCampaign, setSelectedCampaign] = useState("all");
+
+  // Initialize selectedCampaign as null to handle auto-selection
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const {
     metrics,
     isLoading,
@@ -77,6 +79,86 @@ export default function Dashboard() {
     todayMetrics,
     fetchUniqueCallers,
   } = useInitialData();
+
+  // Auto-select single campaign
+  useEffect(() => {
+    if (!isLoading && metrics?.data) {
+      // Get campaigns directly from metrics.data
+      const campaignsData = metrics.data;
+      console.log("Raw campaigns data:", campaignsData);
+
+      // Handle object structure where campaign ID is the key
+      const campaignsList = Object.entries(campaignsData)
+        .filter(
+          ([id, data]) =>
+            // Filter out non-campaign entries
+            id !== "data" &&
+            id !== "status" &&
+            id !== "url" &&
+            typeof data === "object" &&
+            data !== null,
+        )
+        .map(([id, data]: [string, any]) => ({
+          id,
+          name: data.name,
+          type: data.type,
+          hours: data.hours || [],
+        }));
+
+      console.log("Processed campaigns list:", campaignsList);
+
+      // If there's exactly one campaign, select it
+      if (campaignsList.length === 1) {
+        console.log("Auto-selecting single campaign:", campaignsList[0]);
+        setSelectedCampaign(campaignsList[0].id);
+      }
+    }
+  }, [isLoading, metrics]);
+
+  // Update campaign selector to handle object structure
+  const availableCampaigns = useMemo(() => {
+    if (!metrics?.data) return [];
+
+    // Get campaigns directly from metrics.data
+    const campaignsData = metrics.data;
+    console.log("Building available campaigns from:", campaignsData);
+
+    // Handle object structure where campaign ID is the key
+    const campaignsList = Object.entries(campaignsData)
+      .filter(
+        ([id, data]) =>
+          // Filter out non-campaign entries
+          id !== "data" &&
+          id !== "status" &&
+          id !== "url" &&
+          typeof data === "object" &&
+          data !== null,
+      )
+      .map(([id, data]: [string, any]) => ({
+        id,
+        name: data.name || "24/7 Inbound Pre-Qualification",
+        type: data.type,
+        hours: data.hours || [],
+      }));
+
+    console.log("Available campaigns list:", campaignsList);
+
+    return [
+      { id: "all", name: "All Campaigns" },
+      ...campaignsList.map((campaign) => ({
+        id: campaign.id,
+        name: campaign.name,
+      })),
+    ];
+  }, [metrics]);
+
+  // Update campaign finding logic
+  const findCampaign = (campaignId: string) => {
+    if (!metrics?.data || campaignId === "all") return null;
+
+    const campaignData = metrics.data[campaignId];
+    return campaignData ? { id: campaignId, ...campaignData } : null;
+  };
 
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
@@ -97,9 +179,7 @@ export default function Dashboard() {
     if (selectedCampaign === "all") {
       campaignData = metrics.data.data.total;
     } else {
-      const campaign = metrics.data.data.campaigns?.find(
-        (c: Campaign) => c.id === selectedCampaign,
-      );
+      const campaign = findCampaign(selectedCampaign);
       campaignData = campaign?.hours;
     }
 
@@ -154,9 +234,7 @@ export default function Dashboard() {
     if (selectedCampaign === "all") {
       campaignData = metrics.data.data.total;
     } else {
-      const campaign = metrics.data.data.campaigns?.find(
-        (c: Campaign) => c.id === selectedCampaign,
-      );
+      const campaign = findCampaign(selectedCampaign);
       campaignData = campaign?.hours;
     }
 
@@ -401,9 +479,7 @@ export default function Dashboard() {
     if (selectedCampaign === "all") {
       campaignData = metrics.data.data.total;
     } else {
-      const campaign = metrics.data.data.campaigns?.find(
-        (c: Campaign) => c.id === selectedCampaign,
-      );
+      const campaign = findCampaign(selectedCampaign);
       campaignData = campaign?.hours;
     }
 
@@ -493,9 +569,7 @@ export default function Dashboard() {
     if (selectedCampaign === "all") {
       campaignData = metrics.data.data.total;
     } else {
-      const campaign = metrics.data.data.campaigns?.find(
-        (c: Campaign) => c.id === selectedCampaign,
-      );
+      const campaign = findCampaign(selectedCampaign);
       campaignData = campaign?.hours;
     }
 
@@ -548,29 +622,7 @@ export default function Dashboard() {
                 value={selectedCampaign}
                 onValueChange={setSelectedCampaign}
                 isLoading={isLoading || isMetricsLoading}
-                campaigns={[
-                  { id: "all", name: "All Campaigns" },
-                  ...(metrics?.data?.data?.campaigns &&
-                  typeof metrics.data.data.campaigns === "object"
-                    ? (Array.isArray(metrics.data.data.campaigns)
-                        ? metrics.data.data.campaigns
-                        : Object.values(metrics.data.data.campaigns)
-                      )
-                        .filter((c: any): c is Campaign => {
-                          const campaignLike = c as CampaignLike;
-                          return (
-                            campaignLike &&
-                            typeof campaignLike === "object" &&
-                            typeof campaignLike.id === "string" &&
-                            typeof campaignLike.name === "string"
-                          );
-                        })
-                        .map((c: Campaign) => ({
-                          id: c.id,
-                          name: c.name,
-                        }))
-                    : []),
-                ]}
+                campaigns={availableCampaigns}
               />
               <DateRangePicker
                 date={date}
@@ -625,10 +677,23 @@ export default function Dashboard() {
             dateRange={date}
             campaignId={
               selectedCampaign === "all"
-                ? metrics?.data?.data?.campaigns?.[0]?.id
-                : metrics?.data?.data?.campaigns?.find(
-                    (c: Campaign) => c.id === selectedCampaign,
-                  )?.id
+                ? Object.entries(metrics?.data || {}).filter(
+                    ([id, data]) =>
+                      // Filter out non-campaign entries and ensure valid UUID
+                      id !== "data" &&
+                      id !== "status" &&
+                      id !== "url" &&
+                      typeof data === "object" &&
+                      data !== null &&
+                      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                        id,
+                      ),
+                  )[0]?.[0]
+                : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                      selectedCampaign,
+                    )
+                  ? selectedCampaign
+                  : undefined
             }
           />
           <CallsByCampaign data={campaignMetrics || []} />
