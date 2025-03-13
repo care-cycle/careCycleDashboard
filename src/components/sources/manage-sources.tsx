@@ -219,6 +219,11 @@ export function ManageSources() {
     }
 
     setIsCreating(true);
+    const toastId = toast.loading(
+      `Creating ${validEntries.length} source${validEntries.length > 1 ? "s" : ""}...`,
+      { duration: Infinity },
+    );
+
     try {
       await apiClient.post("/portal/client/sources/bulk", validEntries);
       await queryClient.invalidateQueries({ queryKey: ["sources-management"] });
@@ -226,13 +231,14 @@ export function ManageSources() {
       setSourceEntries([{ name: "", payout: 0, durationSeconds: 0 }]);
       toast.success(
         `Successfully created ${validEntries.length} source${validEntries.length > 1 ? "s" : ""}`,
+        { id: toastId },
       );
     } catch (error: unknown) {
       const errorMessage =
         error instanceof AxiosError
           ? error.response?.data?.error
           : "Failed to create sources";
-      toast.error(errorMessage);
+      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsCreating(false);
     }
