@@ -95,6 +95,7 @@ export default function Dashboard() {
             id !== "data" &&
             id !== "status" &&
             id !== "url" &&
+            id !== "metadata" && // Also exclude metadata
             typeof data === "object" &&
             data !== null,
         )
@@ -111,6 +112,17 @@ export default function Dashboard() {
       if (campaignsList.length === 1) {
         console.log("Auto-selecting single campaign:", campaignsList[0]);
         setSelectedCampaign(campaignsList[0].id);
+      } else if (campaignsList.length > 1) {
+        // If there are multiple campaigns, select the first valid one
+        console.log(
+          "Multiple campaigns found, selecting first:",
+          campaignsList[0],
+        );
+        setSelectedCampaign(campaignsList[0].id);
+      } else {
+        // If no valid campaigns, set to "all"
+        console.log("No valid campaigns found, setting to 'all'");
+        setSelectedCampaign("all");
       }
     }
   }, [isLoading, metrics]);
@@ -122,6 +134,10 @@ export default function Dashboard() {
     // Get campaigns directly from metrics.data
     const campaignsData = metrics.data;
     console.log("Building available campaigns from:", campaignsData);
+    console.log(
+      "Full metrics data structure:",
+      JSON.stringify(metrics.data, null, 2).substring(0, 1000) + "...",
+    );
 
     // Handle object structure where campaign ID is the key
     const campaignsList = Object.entries(campaignsData)
@@ -131,6 +147,7 @@ export default function Dashboard() {
           id !== "data" &&
           id !== "status" &&
           id !== "url" &&
+          id !== "metadata" && // Also exclude metadata
           typeof data === "object" &&
           data !== null,
       )
@@ -156,12 +173,34 @@ export default function Dashboard() {
   const findCampaign = (campaignId: string) => {
     if (!metrics?.data || campaignId === "all") return null;
 
+    // Log all available campaign IDs for debugging
+    console.log(
+      "Available campaign IDs:",
+      Object.keys(metrics.data).filter(
+        (id) =>
+          id !== "data" && id !== "status" && id !== "url" && id !== "metadata",
+      ),
+    );
+
     const campaignData = metrics.data[campaignId];
+    console.log(
+      "Found campaign data for ID:",
+      campaignId,
+      campaignData ? "exists" : "not found",
+    );
     return campaignData ? { id: campaignId, ...campaignData } : null;
   };
 
   const callVolumeData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
+
+    // Log the metrics data structure
+    console.log("Metrics data structure:", {
+      hasDataProperty: metrics.data.hasOwnProperty("data"),
+      dataKeys: metrics.data.data ? Object.keys(metrics.data.data) : [],
+      hasTotalProperty: metrics.data.data?.hasOwnProperty("total"),
+      totalLength: metrics.data.data?.total?.length,
+    });
 
     const startDate = new Date(date?.from || new Date());
     startDate.setHours(0, 0, 0, 0);
@@ -177,11 +216,28 @@ export default function Dashboard() {
 
     let campaignData;
     if (selectedCampaign === "all") {
-      campaignData = metrics.data.data.total;
+      campaignData = metrics.data.data?.total || [];
+      console.log("Using 'all' campaigns data:", {
+        path: "metrics.data.data.total",
+        exists: Boolean(metrics.data.data?.total),
+        length: metrics.data.data?.total?.length || 0,
+      });
     } else {
       const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours;
+      campaignData = campaign?.hours || [];
+      console.log("Using specific campaign data:", {
+        campaignId: selectedCampaign,
+        campaignExists: Boolean(campaign),
+        hoursExists: Boolean(campaign?.hours),
+        length: campaign?.hours?.length || 0,
+      });
     }
+
+    console.log("Campaign data for call volume:", {
+      selectedCampaign,
+      dataLength: campaignData?.length || 0,
+      sampleData: campaignData?.[0],
+    });
 
     if (!campaignData?.length) return [];
 
@@ -199,6 +255,11 @@ export default function Dashboard() {
         Outbound: Number(metric.outbound) || 0,
       }));
 
+    console.log("Raw call volume data after filtering:", {
+      length: rawData.length,
+      sample: rawData[0],
+    });
+
     const result = aggregateTimeseriesData<CallVolumeDataPoint>(
       rawData,
       { from: startUTC, to: endUTC },
@@ -211,6 +272,11 @@ export default function Dashboard() {
         Outbound: points.reduce((sum, p) => sum + p.Outbound, 0),
       }),
     );
+
+    console.log("Final call volume data:", {
+      length: result.length,
+      sample: result[0],
+    });
 
     return result;
   }, [date, metrics, selectedCampaign, isLoading]);
@@ -230,13 +296,37 @@ export default function Dashboard() {
       endDate.getTime() - endDate.getTimezoneOffset() * 60000,
     );
 
+    console.log("Date range for filtering:", {
+      from: startUTC.toISOString(),
+      to: endUTC.toISOString(),
+      fromOriginal: date?.from,
+      toOriginal: date?.to,
+    });
+
     let campaignData;
     if (selectedCampaign === "all") {
-      campaignData = metrics.data.data.total;
+      campaignData = metrics.data.data?.total || [];
+      console.log("Using 'all' campaigns data for dispositions:", {
+        path: "metrics.data.data.total",
+        exists: Boolean(metrics.data.data?.total),
+        length: metrics.data.data?.total?.length || 0,
+      });
     } else {
       const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours;
+      campaignData = campaign?.hours || [];
+      console.log("Using specific campaign data for dispositions:", {
+        campaignId: selectedCampaign,
+        campaignExists: Boolean(campaign),
+        hoursExists: Boolean(campaign?.hours),
+        length: campaign?.hours?.length || 0,
+      });
     }
+
+    console.log("Campaign data for dispositions:", {
+      selectedCampaign,
+      dataLength: campaignData?.length || 0,
+      sampleData: campaignData?.[0],
+    });
 
     if (!campaignData?.length) return [];
 
@@ -258,7 +348,13 @@ export default function Dashboard() {
         ),
       }));
 
-    return aggregateTimeseriesData(
+    console.log("Raw dispositions data after filtering:", {
+      length: rawData.length,
+      sample: rawData[0],
+      keys: rawData[0] ? Object.keys(rawData[0]) : [],
+    });
+
+    const result = aggregateTimeseriesData(
       rawData,
       { from: startUTC, to: endUTC },
       (points) => {
@@ -287,6 +383,21 @@ export default function Dashboard() {
         };
       },
     );
+
+    // Convert timestamp to string for the chart component after aggregation
+    const finalResult = result.map((item) => ({
+      ...item,
+      timestamp: item.timestamp.toISOString(),
+      weekEnd: item.weekEnd ? item.weekEnd.toISOString() : undefined,
+    }));
+
+    console.log("Final dispositions data:", {
+      length: finalResult.length,
+      sample: finalResult[0],
+      keys: finalResult[0] ? Object.keys(finalResult[0]) : [],
+    });
+
+    return finalResult;
   }, [date, metrics, selectedCampaign, isLoading]);
 
   const handleDateChange = async (newDate: DateRange | undefined) => {
@@ -307,52 +418,143 @@ export default function Dashboard() {
     value: "0",
     change: "N/A",
     description: "",
+    rawValue: 0, // Add a raw numeric value for internal use
   });
+
+  // Add debug logging for customersEngaged state changes
+  useEffect(() => {
+    console.log("customersEngaged state changed:", customersEngaged);
+  }, [customersEngaged]);
 
   // Consolidated effect to update customersEngaged
   useEffect(() => {
     let isMounted = true;
+    // Clear previous state when date changes to prevent stale data
+    setCustomersEngaged({
+      value: "Loading...",
+      change: "Fetching data...",
+      description: "",
+      rawValue: 0,
+    });
 
     if (date?.from && date?.to && !isLoading) {
       const fetchCustomerData = async () => {
         try {
           const from = new Date(date.from!);
           const to = new Date(date.to!);
+
+          // Log the date range being requested
+          const daysDiff =
+            Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) +
+            1;
+          console.log("Fetching unique callers for date range:", {
+            from: from.toISOString(),
+            to: to.toISOString(),
+            daysDiff,
+          });
+
+          // Show loading state for large date ranges
+          if (daysDiff > 14) {
+            setCustomersEngaged({
+              value: "Loading...",
+              change: `Processing ${daysDiff} day range in chunks`,
+              description: "This may take a moment",
+              rawValue: 0,
+            });
+          }
+
+          // Create a controller to abort the request if it takes too long
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s overall timeout
+
+          console.log("Calling fetchUniqueCallers with:", {
+            from: from.toISOString(),
+            to: to.toISOString(),
+          });
+
           const response = await fetchUniqueCallers(from, to);
+
+          console.log("fetchUniqueCallers response:", {
+            success: response.data.success,
+            currentPeriod: response.data.data?.currentPeriod,
+            previousPeriod: response.data.data?.previousPeriod,
+            comparison: response.data.data?.comparison,
+          });
+
+          clearTimeout(timeoutId);
 
           if (!isMounted) return;
 
           if (response.data.success && response.data.data) {
             const { currentPeriod, previousPeriod, comparison } =
               response.data.data;
-            const daysDiff =
-              Math.ceil(
-                (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24),
-              ) + 1;
+
+            // Ensure uniqueCallers is a proper number - parse it strictly
+            // First convert to string, then remove any non-numeric characters, then parse as integer
+            const rawValue =
+              typeof currentPeriod?.uniqueCallers === "number"
+                ? currentPeriod.uniqueCallers
+                : parseInt(
+                    String(currentPeriod?.uniqueCallers || "0").replace(
+                      /[^0-9]/g,
+                      "",
+                    ),
+                    10,
+                  ) || 0;
+
+            // Debug log to check the value before setting state
+            console.log("Setting customersEngaged with value:", {
+              rawValue: currentPeriod?.uniqueCallers,
+              parsedValue: rawValue,
+              formattedValue: rawValue.toLocaleString(),
+              valueType: typeof currentPeriod?.uniqueCallers,
+            });
 
             setCustomersEngaged({
-              value: (currentPeriod?.uniqueCallers ?? 0).toLocaleString(),
+              value: rawValue.toLocaleString(),
               change: !previousPeriod?.uniqueCallers
                 ? `No data for previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`
                 : `${comparison?.percentChange >= 0 ? "+" : ""}${comparison?.percentChange?.toFixed(1) ?? 0}% change from previous ${daysDiff} day${daysDiff === 1 ? "" : "s"}`,
               description: response.data.metadata?.timeRanges?.previousPeriod
                 ? `${format(new Date(response.data.metadata.timeRanges.previousPeriod.from), "MMM d, yyyy")} - ${format(new Date(response.data.metadata.timeRanges.previousPeriod.to), "MMM d, yyyy")}`
                 : "",
+              rawValue: rawValue,
             });
           } else {
             setCustomersEngaged({
               value: "0",
               change: "No data available",
               description: "",
+              rawValue: 0,
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error fetching unique callers:", error);
-          setCustomersEngaged({
-            value: "0",
-            change: "Error loading data",
-            description: "",
-          });
+
+          // Handle timeout specifically
+          if (error.code === "ECONNABORTED" || error.name === "AbortError") {
+            // Get the date range values from the closure
+            const fromDate = date?.from ? new Date(date.from) : new Date();
+            const toDate = date?.to ? new Date(date.to) : new Date();
+            const daysDiff =
+              Math.ceil(
+                (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24),
+              ) + 1;
+
+            setCustomersEngaged({
+              value: "N/A",
+              change: `Request timed out for ${daysDiff} day range`,
+              description: "Try selecting a shorter date range",
+              rawValue: 0,
+            });
+          } else {
+            setCustomersEngaged({
+              value: "0",
+              change: "Error loading data",
+              description: "",
+              rawValue: 0,
+            });
+          }
         }
       };
 
@@ -565,13 +767,42 @@ export default function Dashboard() {
   const assistantCountData = useMemo(() => {
     if (isLoading || !metrics?.data) return [];
 
+    const startDate = new Date(date?.from || new Date());
+    startDate.setHours(0, 0, 0, 0);
+    const startUTC = new Date(
+      startDate.getTime() - startDate.getTimezoneOffset() * 60000,
+    );
+
+    const endDate = new Date(date?.to || new Date());
+    endDate.setHours(23, 59, 59, 999);
+    const endUTC = new Date(
+      endDate.getTime() - endDate.getTimezoneOffset() * 60000,
+    );
+
     let campaignData;
     if (selectedCampaign === "all") {
-      campaignData = metrics.data.data.total;
+      campaignData = metrics.data.data?.total || [];
+      console.log("Using 'all' campaigns data for assistant types:", {
+        path: "metrics.data.data.total",
+        exists: Boolean(metrics.data.data?.total),
+        length: metrics.data.data?.total?.length || 0,
+      });
     } else {
       const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours;
+      campaignData = campaign?.hours || [];
+      console.log("Using specific campaign data for assistant types:", {
+        campaignId: selectedCampaign,
+        campaignExists: Boolean(campaign),
+        hoursExists: Boolean(campaign?.hours),
+        length: campaign?.hours?.length || 0,
+      });
     }
+
+    console.log("Campaign data for assistant types:", {
+      selectedCampaign,
+      dataLength: campaignData?.length || 0,
+      sampleData: campaignData?.[0],
+    });
 
     if (!campaignData?.length) return [];
 
@@ -579,12 +810,7 @@ export default function Dashboard() {
     const typeCounts = campaignData
       .filter((metric: Campaign["hours"][number]) => {
         const metricDate = new Date(metric.hour);
-        return (
-          date?.from &&
-          date?.to &&
-          metricDate >= date.from &&
-          metricDate <= date.to
-        );
+        return metricDate >= startUTC && metricDate <= endUTC;
       })
       .reduce(
         (acc: Record<string, number>, hour: Campaign["hours"][number]) => {
@@ -598,8 +824,10 @@ export default function Dashboard() {
         {},
       );
 
+    console.log("Assistant type counts:", typeCounts);
+
     // Convert to array format and map to friendly names
-    return Object.entries(typeCounts)
+    const result = Object.entries(typeCounts)
       .map(
         ([type, count]): AssistantCountDataPoint => ({
           name: assistantTypeLabels[type] || type,
@@ -607,6 +835,13 @@ export default function Dashboard() {
         }),
       )
       .sort((a, b) => b.value - a.value); // Sort by count descending
+
+    console.log("Final assistant count data:", {
+      length: result.length,
+      sample: result[0],
+    });
+
+    return result;
   }, [date, metrics, selectedCampaign, isLoading]);
 
   return (
@@ -644,7 +879,7 @@ export default function Dashboard() {
           <div className="grid gap-6 md:grid-cols-2">
             <KPICard
               title="Customers Engaged"
-              value={customersEngaged.value}
+              value={customersEngaged.rawValue}
               change={customersEngaged.change}
               info={`Number of unique customers who interacted with our AI assistants`}
             />

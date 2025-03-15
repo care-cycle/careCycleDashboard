@@ -7,16 +7,36 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 interface KPICardProps {
   title: string;
-  value: string;
+  value: string | number;
   change?: string;
   info?: string;
 }
 
 export function KPICard({ title, value, change, info }: KPICardProps) {
   const isPositiveChange = change?.startsWith("+");
+
+  // Use state to prevent unintended concatenation
+  const [displayValue, setDisplayValue] = useState<string>("Loading...");
+
+  // Update display value when prop changes
+  useEffect(() => {
+    // Log the incoming value for debugging
+    console.log(`KPICard "${title}" received value:`, {
+      value,
+      type: typeof value,
+    });
+
+    // Ensure value is treated as a string without concatenation
+    if (typeof value === "number") {
+      setDisplayValue(value.toLocaleString());
+    } else {
+      setDisplayValue(String(value));
+    }
+  }, [value, title]);
 
   return (
     <Card className="glass-panel interactive cursor-pointer overflow-visible">
@@ -45,7 +65,7 @@ export function KPICard({ title, value, change, info }: KPICardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
+        <div className="text-2xl font-bold text-gray-900">{displayValue}</div>
         {change && (
           <p
             className={cn(

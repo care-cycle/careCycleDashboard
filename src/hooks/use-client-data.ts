@@ -437,9 +437,244 @@ export function useInitialData() {
     const fromStr = format(from, "yyyy-MM-dd HH:mm:ss");
     const toStr = format(to, "yyyy-MM-dd HH:mm:ss");
 
-    return apiClient.get("/portal/client/metrics/unique-callers", {
-      params: { from: fromStr, to: toStr },
-    });
+    // Calculate date range size
+    const daysDiff = Math.ceil(
+      (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // For large date ranges (> 14 days), use a direct approach without chunking
+    if (daysDiff > 14) {
+      // Make a single request for the entire date range
+      try {
+        const response = await apiClient.get(
+          "/portal/client/metrics/unique-callers",
+          {
+            params: {
+              from: fromStr,
+              to: toStr,
+            },
+            timeout: 30000, // 30s timeout for the full range
+          },
+        );
+
+        // Ensure the response has numeric values
+        if (response.data.success && response.data.data) {
+          const currentUniqueCallers =
+            parseInt(
+              String(response.data.data.currentPeriod?.uniqueCallers).replace(
+                /[^0-9]/g,
+                "",
+              ),
+              10,
+            ) || 0;
+          const previousUniqueCallers =
+            parseInt(
+              String(response.data.data.previousPeriod?.uniqueCallers).replace(
+                /[^0-9]/g,
+                "",
+              ),
+              10,
+            ) || 0;
+
+          // Create a new response with the parsed values
+          return {
+            ...response,
+            data: {
+              ...response.data,
+              data: {
+                ...response.data.data,
+                currentPeriod: {
+                  ...response.data.data.currentPeriod,
+                  uniqueCallers: currentUniqueCallers,
+                },
+                previousPeriod: {
+                  ...response.data.data.previousPeriod,
+                  uniqueCallers: previousUniqueCallers,
+                },
+              },
+            },
+          };
+        }
+
+        return response;
+      } catch (error) {
+        console.error(
+          "Error fetching unique callers for large date range:",
+          error,
+        );
+
+        // If the full range request fails, fall back to separate requests for current and previous periods
+        const previousPeriodFrom = format(
+          new Date(from.getTime() - daysDiff * 24 * 60 * 60 * 1000),
+          "yyyy-MM-dd HH:mm:ss",
+        );
+        const previousPeriodTo = format(
+          new Date(from.getTime() - 1),
+          "yyyy-MM-dd HH:mm:ss",
+        );
+
+        try {
+          const [currentResponse, previousResponse] = await Promise.all([
+            apiClient.get("/portal/client/metrics/unique-callers", {
+              params: {
+                from: fromStr,
+                to: toStr,
+              },
+              timeout: 30000,
+            }),
+            apiClient.get("/portal/client/metrics/unique-callers", {
+              params: {
+                from: previousPeriodFrom,
+                to: previousPeriodTo,
+              },
+              timeout: 30000,
+            }),
+          ]);
+
+          // Parse the values
+          const currentUniqueCallers =
+            parseInt(
+              String(
+                currentResponse.data.data?.currentPeriod?.uniqueCallers || "0",
+              ).replace(/[^0-9]/g, ""),
+              10,
+            ) || 0;
+          const previousUniqueCallers =
+            parseInt(
+              String(
+                previousResponse.data.data?.currentPeriod?.uniqueCallers || "0",
+              ).replace(/[^0-9]/g, ""),
+              10,
+            ) || 0;
+
+          // Calculate percentage change
+          const percentChange =
+            previousUniqueCallers > 0
+              ? ((currentUniqueCallers - previousUniqueCallers) /
+                  previousUniqueCallers) *
+                100
+              : null;
+
+          // Return a synthesized response
+          return {
+            data: {
+              success: true,
+              data: {
+                currentPeriod: {
+                  uniqueCallers: currentUniqueCallers,
+                },
+                previousPeriod: {
+                  uniqueCallers: previousUniqueCallers,
+                },
+                comparison: {
+                  percentChange: percentChange,
+                  absoluteChange: currentUniqueCallers - previousUniqueCallers,
+                },
+              },
+              metadata: {
+                timeRanges: {
+                  currentPeriod: {
+                    from: fromStr,
+                    to: toStr,
+                  },
+                  previousPeriod: {
+                    from: previousPeriodFrom,
+                    to: previousPeriodTo,
+                  },
+                },
+              },
+            },
+          };
+        } catch (error) {
+          console.error("Error with separate period requests:", error);
+
+          // If all else fails, return a default response
+          return {
+            data: {
+              success: true,
+              data: {
+                currentPeriod: {
+                  uniqueCallers: 0,
+                },
+                previousPeriod: {
+                  uniqueCallers: 0,
+                },
+                comparison: {
+                  percentChange: null,
+                  absoluteChange: 0,
+                },
+              },
+              metadata: {
+                timeRanges: {
+                  currentPeriod: {
+                    from: fromStr,
+                    to: toStr,
+                  },
+                  previousPeriod: {
+                    from: previousPeriodFrom,
+                    to: previousPeriodTo,
+                  },
+                },
+                error: "Failed to fetch data after multiple attempts",
+              },
+            },
+          };
+        }
+      }
+    }
+
+    // For smaller date ranges, use the original approach
+    const response = await apiClient.get(
+      "/portal/client/metrics/unique-callers",
+      {
+        params: {
+          from: fromStr,
+          to: toStr,
+        },
+        timeout: 30000, // 30s timeout for smaller ranges
+      },
+    );
+
+    // Ensure the response has numeric values
+    if (response.data.success && response.data.data) {
+      const currentUniqueCallers =
+        parseInt(
+          String(response.data.data.currentPeriod?.uniqueCallers).replace(
+            /[^0-9]/g,
+            "",
+          ),
+          10,
+        ) || 0;
+      const previousUniqueCallers =
+        parseInt(
+          String(response.data.data.previousPeriod?.uniqueCallers).replace(
+            /[^0-9]/g,
+            "",
+          ),
+          10,
+        ) || 0;
+
+      // Create a new response with the parsed values
+      return {
+        ...response,
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            currentPeriod: {
+              ...response.data.data.currentPeriod,
+              uniqueCallers: currentUniqueCallers,
+            },
+            previousPeriod: {
+              ...response.data.data.previousPeriod,
+              uniqueCallers: previousUniqueCallers,
+            },
+          },
+        },
+      };
+    }
+
+    return response;
   }, []);
 
   const isLoading =
