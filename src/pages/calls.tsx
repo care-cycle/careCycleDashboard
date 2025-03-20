@@ -343,15 +343,14 @@ export default function CallsPage() {
 
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
+      {selectedCall && (
+        <MemoizedCallDetails
+          key={selectedCall.id}
+          call={selectedCall}
+          onClose={handleCallClose}
+        />
+      )}
       <div className="space-y-6">
-        {selectedCall && (
-          <MemoizedCallDetails
-            key={selectedCall.id}
-            call={selectedCall}
-            onClose={handleCallClose}
-          />
-        )}
-
         <div className="flex items-start justify-end gap-4">
           <Select
             value={selectedCampaignId}

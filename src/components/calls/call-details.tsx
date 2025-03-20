@@ -115,20 +115,18 @@ export const CallDetails = memo(function CallDetails({
 
   return (
     <div
-      className={`fixed inset-0 z-50 transition-opacity duration-150 ${
+      className={`fixed inset-0 z-50 flex items-start justify-end pointer-events-none transition-opacity duration-150 ${
         isClosing ? "opacity-0" : "opacity-100"
       }`}
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm pointer-events-auto"
         onClick={handleClose}
-      >
-        <div className="sticky top-0 z-10 flex w-full border-b bg-background/95 backdrop-blur opacity-40" />
-      </div>
+      />
 
       {/* Details Panel */}
-      <div className="absolute top-0 bottom-0 right-0 w-[480px] bg-white/95 backdrop-blur-xl shadow-2xl border-l">
+      <div className="h-full w-[480px] bg-white/95 backdrop-blur-xl shadow-2xl border-l pointer-events-auto">
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
             <div className="space-y-1">
@@ -165,12 +163,13 @@ export const CallDetails = memo(function CallDetails({
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            <AudioPlayer
-              url={call.recordingUrl}
-              className="glass-panel"
-              preloadedAudio={preloadedAudio}
-              ref={audioRef}
-            />
+            <div className="glass-panel p-0 rounded-lg">
+              <AudioPlayer
+                url={call.recordingUrl}
+                preloadedAudio={preloadedAudio}
+                ref={audioRef}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               {callDetails.map((detail, index) => (

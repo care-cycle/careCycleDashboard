@@ -202,6 +202,9 @@ importers:
       vercel:
         specifier: ^39.2.5
         version: 39.2.5(rollup@4.24.4)
+      wavesurfer.js:
+        specifier: ^7.9.1
+        version: 7.9.1
       zod:
         specifier: ^3.22.4
         version: 3.23.8
@@ -3951,6 +3954,9 @@ packages:
         optional: true
       terser:
         optional: true
+
+  wavesurfer.js@7.9.1:
+    resolution: {integrity: sha512-+pG8X9c9BrfAW8KR54OPzZcAj/57sOL08He/tc6/7Mt6NCX3IfDFwexQxXVTILggGZUOUk7tFKfny32yGrysKA==}
 
   web-vitals@0.2.4:
     resolution: {integrity: sha512-6BjspCO9VriYy12z356nL6JBS0GYeEcA457YyRzD+dD6XYCQ75NKhcOHUMHentOE7OcVCIXXDvOm0jKFfQG2Gg==}
@@ -7949,6 +7955,8 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.17.6
       fsevents: 2.3.3
+
+  wavesurfer.js@7.9.1: {}
 
   web-vitals@0.2.4: {}
 

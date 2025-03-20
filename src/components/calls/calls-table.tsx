@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -96,11 +96,17 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
   };
 
   return (
-    <TableHead ref={setNodeRef} style={style}>
+    <TableHead
+      ref={setNodeRef}
+      style={style}
+      className={header === "Source" ? "text-center" : ""}
+    >
       <Button
         variant="ghost"
         onClick={onSort}
-        className="hover:text-gray-900 text-gray-600 flex items-center gap-2 px-2 h-10"
+        className={`hover:text-gray-900 text-gray-600 flex items-center gap-2 px-2 h-10 ${
+          header === "Source" ? "justify-center w-full" : ""
+        }`}
       >
         <GripVertical
           className="h-4 w-4 text-muted-foreground cursor-grab"
@@ -139,20 +145,15 @@ export function CallsTable({
 }: CallsTableProps) {
   const { isRedacted } = useRedaction();
   const navigate = useNavigate();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Audio preloading
-  const preloadAudio = (url: string) => {
-    if (audioRef.current) {
-      audioRef.current.src = url;
-      audioRef.current.load();
-    }
-  };
-
-  // Create hidden audio element on mount
-  useEffect(() => {
-    audioRef.current = new Audio();
-  }, []);
+  // Enhanced call select handler
+  const handleCallSelect = useCallback(
+    (call: Call) => {
+      console.log("Call selected:", call.recordingUrl);
+      onCallSelect(call);
+    },
+    [onCallSelect],
+  );
 
   const nonConnectedDispositions = useMemo(
     () => [
@@ -282,8 +283,7 @@ export function CallsTable({
               <TableRow
                 key={call.id}
                 className="hover:bg-black/5 cursor-pointer"
-                onClick={() => onCallSelect(call)}
-                onMouseEnter={() => preloadAudio(call.recordingUrl)}
+                onClick={() => handleCallSelect(call)}
               >
                 <TableCell>
                   <div className="h-8 w-8 flex items-center justify-center">
@@ -296,7 +296,10 @@ export function CallsTable({
                   </div>
                 </TableCell>
                 {columns.map((column) => (
-                  <TableCell key={column}>
+                  <TableCell
+                    key={column}
+                    className={column === "Source" ? "text-center" : ""}
+                  >
                     {column === "Caller ID" &&
                       (isRedacted
                         ? redactData(call.callerId)
@@ -317,11 +320,7 @@ export function CallsTable({
                     {column === "Disposition" && call.disposition}
                     {column === "Created At" &&
                       format(new Date(call.createdAt), "MMM d, yyyy h:mm a")}
-                    {column === "Source" && (
-                      <span className="flex items-center justify-center">
-                        {call.source || "-"}
-                      </span>
-                    )}
+                    {column === "Source" && (call.source || "-")}
                   </TableCell>
                 ))}
                 <TableCell>

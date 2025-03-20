@@ -538,12 +538,17 @@ export function ManageSources() {
           variant="outline"
           onClick={handleDownloadAllDocumentation}
           disabled={!sources || sources.length === 0}
+          className="bg-transparent"
         >
           <Download className="h-4 w-4 mr-2" />
           Download All Documentation
         </Button>
 
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setShowCreateDialog(true)}
+          className="bg-transparent"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Source
         </Button>

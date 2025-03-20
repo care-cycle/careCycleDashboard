@@ -4,12 +4,12 @@ import {
   useEffect,
   forwardRef,
   useImperativeHandle,
-  useCallback,
 } from "react";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import WaveSurfer from "wavesurfer.js";
 
 interface AudioPlayerProps {
   url: string;
@@ -20,56 +20,230 @@ interface AudioPlayerProps {
 export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
   ({ url, className, preloadedAudio }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const waveformRef = useRef<HTMLDivElement>(null);
+    const wavesurferRef = useRef<WaveSurfer | null>(null);
+    const isReadyRef = useRef(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [volume, setVolume] = useState(1);
+    const [isWaveformReady, setIsWaveformReady] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Forward the ref
     useImperativeHandle(ref, () => audioRef.current as HTMLAudioElement);
 
-    // Add cleanup effect
+    // Initialize WaveSurfer
     useEffect(() => {
-      return () => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          setIsPlaying(false);
+      if (!waveformRef.current || !url) return;
+
+      // Reset states
+      setIsLoading(true);
+      setIsWaveformReady(false);
+      setErrorMessage(null);
+      isReadyRef.current = false;
+
+      let isDestroyed = false;
+
+      // Cleanup previous instance first
+      if (wavesurferRef.current) {
+        try {
+          wavesurferRef.current.destroy();
+        } catch (error) {
+          console.error("Error destroying WaveSurfer instance:", error);
+        }
+        wavesurferRef.current = null;
+      }
+
+      const initWaveSurfer = async () => {
+        try {
+          // First validate that the URL is accessible
+          const response = await fetch(url, { method: "HEAD" });
+          if (!response.ok) {
+            throw new Error(
+              `Failed to validate audio URL: ${response.statusText}`,
+            );
+          }
+
+          const wavesurfer = WaveSurfer.create({
+            container: waveformRef.current!,
+            waveColor: "rgba(116, 224, 187, 0.7)",
+            progressColor: "rgba(41, 58, 249, 0.6)",
+            cursorColor: "rgba(41, 58, 249, 0.8)",
+            cursorWidth: 2,
+            barWidth: 2,
+            barGap: 0,
+            barRadius: 2,
+            height: 96,
+            barHeight: 1,
+            normalize: true,
+            backend: "MediaElement",
+            mediaControls: false,
+            autoplay: false,
+            interact: true,
+            dragToSeek: true,
+          });
+
+          if (isDestroyed) {
+            wavesurfer.destroy();
+            return;
+          }
+
+          wavesurfer.on("ready", () => {
+            if (isDestroyed) return;
+
+            isReadyRef.current = true;
+            setIsWaveformReady(true);
+            setIsLoading(false);
+            setDuration(wavesurfer.getDuration());
+            setErrorMessage(null);
+          });
+
+          wavesurfer.on("error", (error) => {
+            console.error("WaveSurfer error:", error);
+            setErrorMessage("Error loading audio visualization");
+            setIsLoading(false);
+          });
+
+          // Store wavesurfer instance
+          wavesurferRef.current = wavesurfer;
+
+          // Load the audio
+          await wavesurfer.load(url);
+        } catch (error) {
+          console.error("Error initializing WaveSurfer:", error);
+          setErrorMessage("Failed to initialize audio visualization");
+          setIsLoading(false);
         }
       };
-    }, []);
 
-    // Handle unmounting cleanup
-    useEffect(() => {
-      const currentAudio = audioRef.current;
+      // Initialize WaveSurfer with a small delay to ensure cleanup is complete
+      setTimeout(() => {
+        if (!isDestroyed) {
+          initWaveSurfer().catch((error) => {
+            console.error("Error in initWaveSurfer:", error);
+            setErrorMessage("Failed to initialize audio visualization");
+            setIsLoading(false);
+          });
+        }
+      }, 100);
 
+      // Cleanup on unmount or when url changes
       return () => {
-        if (currentAudio) {
-          currentAudio.pause();
-          currentAudio.currentTime = 0;
-          setIsPlaying(false);
+        isDestroyed = true;
+
+        if (wavesurferRef.current) {
+          try {
+            wavesurferRef.current.pause();
+            wavesurferRef.current.destroy();
+          } catch (error) {
+            console.error("Error during WaveSurfer cleanup:", error);
+          }
+          wavesurferRef.current = null;
         }
       };
-    }, [url]); // Cleanup when URL changes
+    }, [url]);
 
+    // Handle audio element
     useEffect(() => {
+      if (!url) return;
+
+      // Create new audio element if not preloaded
       if (preloadedAudio && preloadedAudio.src === url) {
         audioRef.current = preloadedAudio;
       } else {
-        audioRef.current = new Audio(url);
-        audioRef.current.load();
+        const audio = new Audio();
+
+        audio.onerror = (event) => {
+          if (event instanceof Event) {
+            const target = event.currentTarget as HTMLAudioElement;
+
+            if (target && target.error) {
+              switch (target.error.code) {
+                case MediaError.MEDIA_ERR_ABORTED:
+                  setErrorMessage("Audio playback was aborted.");
+                  break;
+                case MediaError.MEDIA_ERR_NETWORK:
+                  setErrorMessage(
+                    "A network error occurred while loading the audio.",
+                  );
+                  break;
+                case MediaError.MEDIA_ERR_DECODE:
+                  setErrorMessage("The audio could not be decoded.");
+                  break;
+                case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                  setErrorMessage("The audio format is not supported.");
+                  break;
+                default:
+                  setErrorMessage("An error occurred while loading the audio.");
+              }
+            }
+          }
+        };
+
+        audio.onloadedmetadata = () => {
+          setDuration(audio.duration);
+          setErrorMessage(null);
+        };
+
+        audio.crossOrigin = "anonymous";
+        audio.src = url;
+        audio.load();
+        audioRef.current = audio;
       }
+
+      return () => {
+        if (audioRef.current && audioRef.current !== preloadedAudio) {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        }
+      };
     }, [url, preloadedAudio]);
 
+    // Sync audio element with wavesurfer
     useEffect(() => {
       const audio = audioRef.current;
       if (!audio) return;
 
-      const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-      const handleLoadedMetadata = () => setDuration(audio.duration);
-      const handleEnded = () => setIsPlaying(false);
+      const handleTimeUpdate = () => {
+        setCurrentTime(audio.currentTime);
+
+        if (
+          wavesurferRef.current &&
+          !wavesurferRef.current.isPlaying() &&
+          isWaveformReady
+        ) {
+          try {
+            wavesurferRef.current.setTime(audio.currentTime);
+          } catch (error) {
+            console.error("Error syncing time:", error);
+          }
+        }
+      };
+
+      const handleLoadedMetadata = () => {
+        setDuration(audio.duration);
+        if (wavesurferRef.current && isWaveformReady) {
+          try {
+            setDuration(audio.duration);
+          } catch (error) {
+            console.error("Error syncing duration:", error);
+          }
+        }
+      };
+
+      const handleEnded = () => {
+        setIsPlaying(false);
+        if (wavesurferRef.current && isWaveformReady) {
+          try {
+            wavesurferRef.current.setTime(0);
+          } catch (error) {
+            console.error("Error resetting time:", error);
+          }
+        }
+      };
 
       audio.addEventListener("timeupdate", handleTimeUpdate);
       audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -80,128 +254,80 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
         audio.removeEventListener("ended", handleEnded);
       };
-    }, []);
-
-    // Draw waveform
-    const drawWaveform = useCallback(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Set canvas size
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-      const width = canvas.width / window.devicePixelRatio;
-      const height = canvas.height / window.devicePixelRatio;
-      const centerY = height / 2;
-
-      // Clear canvas
-      ctx.clearRect(0, 0, width, height);
-
-      // Generate smoother waveform data
-      const points = 200; // More points for smoother curve
-      const segments = 4; // Number of wave segments
-      const data = Array.from({ length: points }, (_, i) => {
-        const x = (i / points) * width;
-        const progress = i / points;
-
-        // Create a smoother, more natural-looking wave
-        const baseAmplitude = Math.sin(progress * Math.PI * segments) * 0.3;
-        const detail = Math.sin(progress * Math.PI * 12) * 0.1;
-        const microDetail = Math.sin(progress * Math.PI * 24) * 0.05;
-
-        // Combine waves and add slight randomness
-        const amplitude =
-          baseAmplitude + detail + microDetail + Math.random() * 0.1;
-
-        return { x, amplitude: Math.max(-0.8, Math.min(0.8, amplitude)) }; // Clamp values
-      });
-
-      // Draw waveform with smoother curves
-      ctx.beginPath();
-      ctx.strokeStyle = "rgb(14, 165, 233)"; // Sky blue color
-      ctx.lineWidth = 1.5; // Slightly thinner line for cleaner look
-
-      // Draw top curve with bezier interpolation
-      ctx.moveTo(data[0].x, centerY - data[0].amplitude * height * 0.4);
-      for (let i = 1; i < data.length - 2; i++) {
-        const xc = (data[i].x + data[i + 1].x) / 2;
-        const yc =
-          centerY -
-          ((data[i].amplitude + data[i + 1].amplitude) / 2) * height * 0.4;
-        ctx.quadraticCurveTo(
-          data[i].x,
-          centerY - data[i].amplitude * height * 0.4,
-          xc,
-          yc,
-        );
-      }
-
-      // Draw bottom curve (mirror)
-      for (let i = data.length - 1; i >= 1; i--) {
-        const xc = (data[i].x + data[i - 1].x) / 2;
-        const yc =
-          centerY +
-          ((data[i].amplitude + data[i - 1].amplitude) / 2) * height * 0.4;
-        ctx.quadraticCurveTo(
-          data[i].x,
-          centerY + data[i].amplitude * height * 0.4,
-          xc,
-          yc,
-        );
-      }
-
-      ctx.closePath();
-
-      // Add gradient fill
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, "rgba(14, 165, 233, 0.2)");
-      gradient.addColorStop(0.5, "rgba(14, 165, 233, 0.1)");
-      gradient.addColorStop(1, "rgba(14, 165, 233, 0.2)");
-      ctx.fillStyle = gradient;
-
-      ctx.fill();
-      ctx.stroke();
-    }, []);
-
-    // Draw on mount and window resize
-    useEffect(() => {
-      drawWaveform();
-      const handleResize = () => drawWaveform();
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
-    }, [drawWaveform]);
+    }, [isWaveformReady]);
 
     const togglePlay = () => {
       if (!audioRef.current) return;
+
       if (isPlaying) {
         audioRef.current.pause();
+        if (wavesurferRef.current && isWaveformReady) {
+          try {
+            wavesurferRef.current.pause();
+          } catch (error) {
+            console.error("Error pausing WaveSurfer:", error);
+          }
+        }
       } else {
         audioRef.current.play();
+        if (wavesurferRef.current && isWaveformReady) {
+          try {
+            wavesurferRef.current.play();
+          } catch (error) {
+            console.error("Error playing WaveSurfer:", error);
+          }
+        }
       }
+
       setIsPlaying(!isPlaying);
     };
 
     const toggleMute = () => {
       if (!audioRef.current) return;
+
       audioRef.current.muted = !isMuted;
+      if (wavesurferRef.current && isWaveformReady) {
+        try {
+          wavesurferRef.current.setVolume(isMuted ? volume : 0);
+        } catch (error) {
+          console.error("Error setting WaveSurfer volume:", error);
+        }
+      }
+
       setIsMuted(!isMuted);
     };
 
     const handleSeek = (value: number[]) => {
       if (!audioRef.current) return;
-      audioRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
+
+      const newTime = value[0];
+      audioRef.current.currentTime = newTime;
+
+      if (wavesurferRef.current && isWaveformReady) {
+        try {
+          wavesurferRef.current.setTime(newTime);
+        } catch (error) {
+          console.error("Error seeking in WaveSurfer:", error);
+        }
+      }
+
+      setCurrentTime(newTime);
     };
 
     const handleVolumeChange = (value: number[]) => {
       if (!audioRef.current) return;
+
       const newVolume = value[0];
       audioRef.current.volume = newVolume;
+
+      if (!isMuted && wavesurferRef.current && isWaveformReady) {
+        try {
+          wavesurferRef.current.setVolume(newVolume);
+        } catch (error) {
+          console.error("Error setting WaveSurfer volume:", error);
+        }
+      }
+
       setVolume(newVolume);
     };
 
@@ -212,45 +338,51 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     };
 
     return (
-      <div
-        className={cn(
-          "bg-white/20 backdrop-blur-xl border border-white/20",
-          "rounded-xl p-4 space-y-4 shadow-sm",
-          "transition-all duration-200 hover:bg-white/30",
-          className,
-        )}
-      >
-        <audio ref={audioRef} src={url} preload="metadata" />
+      <div className={cn("", className)}>
+        <audio
+          ref={audioRef}
+          src={url}
+          preload="metadata"
+          crossOrigin="anonymous"
+        />
 
-        {/* Waveform Visualization */}
-        <div
-          className="relative h-24 bg-white/10 rounded-lg overflow-hidden cursor-pointer"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const clickPosition = (e.clientX - rect.left) / rect.width;
-            if (audioRef.current) {
+        {/* Waveform container */}
+        <div className="relative rounded-lg overflow-hidden">
+          {isLoading && !errorMessage && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/5 z-10">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          )}
+
+          {errorMessage && !isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/5 z-10">
+              <div className="text-red-500 text-sm text-center px-4">
+                {errorMessage}
+              </div>
+            </div>
+          )}
+
+          <div
+            ref={waveformRef}
+            className="w-full h-[96px]"
+            onClick={(e) => {
+              if (!isWaveformReady || !wavesurferRef.current) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickPosition = (e.clientX - rect.left) / rect.width;
               const newTime = clickPosition * duration;
               handleSeek([newTime]);
-            }
-          }}
-        >
-          {/* Progress overlay */}
-          <div
-            className="absolute inset-0 bg-sky-500/10"
-            style={{ width: `${(currentTime / duration) * 100}%` }}
+            }}
           />
-
-          {/* Waveform canvas */}
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-white/20"
+            className="h-8 w-8"
             onClick={togglePlay}
+            disabled={isLoading}
           >
             {isPlaying ? (
               <Pause className="h-4 w-4" />
@@ -262,36 +394,38 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           <div className="flex-1">
             <Slider
               value={[currentTime]}
-              max={duration}
-              step={0.1}
+              max={duration || 100}
+              step={0.01}
               onValueChange={handleSeek}
-              className="cursor-pointer"
+              disabled={isLoading}
             />
           </div>
 
-          <span className="text-sm text-gray-600 tabular-nums">
+          <span className="text-sm text-gray-600 tabular-nums whitespace-nowrap">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full hover:bg-white/20"
-              onClick={toggleMute}
-            >
-              {isMuted ? (
-                <VolumeX className="h-4 w-4" />
-              ) : (
-                <Volume2 className="h-4 w-4" />
-              )}
-            </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={toggleMute}
+            disabled={isLoading}
+          >
+            {isMuted ? (
+              <VolumeX className="h-4 w-4" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </Button>
+
+          <div className="w-20">
             <Slider
               value={[isMuted ? 0 : volume]}
               max={1}
-              step={0.1}
+              step={0.01}
               onValueChange={handleVolumeChange}
-              className="w-20"
+              disabled={isLoading}
             />
           </div>
         </div>

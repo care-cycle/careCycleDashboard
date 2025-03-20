@@ -1,3 +1,5 @@
+import WaveSurfer from "wavesurfer.js";
+
 export interface Call {
   id: string;
   campaignId: string;
@@ -14,4 +16,6 @@ export interface Call {
   cost: number;
   testFlag: boolean;
   source?: string | null;
+  preloadedWaveform?: WaveSurfer;
+  preloadedAudio?: HTMLAudioElement | null;
 }
