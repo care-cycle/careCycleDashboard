@@ -15,6 +15,8 @@ import { assistantTypeLabels } from "@/components/charts/constants";
 import { AssistantCountChart } from "@/components/charts/assistant-count-chart";
 import { format, subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
+import { usePreferences } from "@/hooks/use-preferences";
+import { differenceInDays } from "date-fns";
 
 interface Campaign {
   id: string;
@@ -57,6 +59,8 @@ interface CampaignLike {
   name: string;
 }
 
+type HourData = Campaign["hours"][number];
+
 export default function Dashboard() {
   const today = new Date();
   const yesterday = subDays(today, 1);
@@ -70,8 +74,8 @@ export default function Dashboard() {
     };
   });
 
-  // Initialize selectedCampaign as null to handle auto-selection
-  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  // Use global campaign selection
+  const { selectedCampaignId } = usePreferences();
   const {
     metrics,
     isLoading,
@@ -80,58 +84,25 @@ export default function Dashboard() {
     fetchUniqueCallers,
   } = useInitialData();
 
-  // Auto-select single campaign
-  useEffect(() => {
-    if (!isLoading && metrics?.data) {
-      // Get campaigns directly from metrics.data
-      const campaignsData = metrics.data;
-      console.log("Raw campaigns data:", campaignsData);
+  const getHoursData = (campaignId: string): HourData[] => {
+    if (!metrics?.data?.data) return [];
 
-      // Handle object structure where campaign ID is the key
-      const campaignsList = Object.entries(campaignsData)
-        .filter(
-          ([id, data]) =>
-            // Filter out non-campaign entries
-            id !== "data" &&
-            id !== "status" &&
-            id !== "url" &&
-            id !== "metadata" && // Also exclude metadata
-            typeof data === "object" &&
-            data !== null,
-        )
-        .map(([id, data]: [string, any]) => ({
-          id,
-          name: data.name,
-          type: data.type,
-          hours: data.hours || [],
-        }));
-
-      console.log("Processed campaigns list:", campaignsList);
-
-      // If there's exactly one campaign, select it
-      if (campaignsList.length === 1) {
-        console.log("Auto-selecting single campaign:", campaignsList[0]);
-        setSelectedCampaign(campaignsList[0].id);
-      } else if (campaignsList.length > 1) {
-        // If there are multiple campaigns, select the first valid one
-        console.log(
-          "Multiple campaigns found, selecting first:",
-          campaignsList[0],
-        );
-        setSelectedCampaign(campaignsList[0].id);
-      } else {
-        // If no valid campaigns, set to "all"
-        console.log("No valid campaigns found, setting to 'all'");
-        setSelectedCampaign("all");
-      }
+    // For "all" campaigns, use the total data
+    if (campaignId === "all") {
+      return metrics.data.data.total || [];
     }
-  }, [isLoading, metrics]);
+
+    // For specific campaigns, find the campaign and use its hours data
+    const campaign = metrics.data.data.campaigns?.find(
+      (c: Campaign) => c.id === campaignId,
+    );
+    return campaign?.hours || [];
+  };
 
   // Update campaign selector to handle object structure
   const availableCampaigns = useMemo(() => {
     if (!metrics?.data) return [];
 
-    // Get campaigns directly from metrics.data
     const campaignsData = metrics.data;
     console.log("Building available campaigns from:", campaignsData);
     console.log(
@@ -139,15 +110,13 @@ export default function Dashboard() {
       JSON.stringify(metrics.data, null, 2).substring(0, 1000) + "...",
     );
 
-    // Handle object structure where campaign ID is the key
     const campaignsList = Object.entries(campaignsData)
       .filter(
         ([id, data]) =>
-          // Filter out non-campaign entries
           id !== "data" &&
           id !== "status" &&
           id !== "url" &&
-          id !== "metadata" && // Also exclude metadata
+          id !== "metadata" &&
           typeof data === "object" &&
           data !== null,
       )
@@ -171,36 +140,37 @@ export default function Dashboard() {
 
   // Update campaign finding logic
   const findCampaign = (campaignId: string) => {
-    if (!metrics?.data || campaignId === "all") return null;
+    if (!metrics?.data?.data || campaignId === "all") return null;
 
-    // Log all available campaign IDs for debugging
-    console.log(
-      "Available campaign IDs:",
-      Object.keys(metrics.data).filter(
-        (id) =>
-          id !== "data" && id !== "status" && id !== "url" && id !== "metadata",
-      ),
+    // Log the full metrics structure to debug
+    console.log("Full metrics structure:", {
+      hasData: Boolean(metrics.data.data),
+      topLevelKeys: Object.keys(metrics.data.data),
+      metricsData: metrics.data.data,
+    });
+
+    // Try to find campaign data in metrics.data.data.campaigns
+    const campaign = metrics.data.data.campaigns?.find(
+      (c: any) => c.id === campaignId,
     );
 
-    const campaignData = metrics.data[campaignId];
-    console.log(
-      "Found campaign data for ID:",
+    // Safe logging that handles undefined data
+    console.log("Found campaign data for ID:", {
       campaignId,
-      campaignData ? "exists" : "not found",
-    );
-    return campaignData ? { id: campaignId, ...campaignData } : null;
+      exists: Boolean(campaign),
+      dataStructure: campaign
+        ? JSON.stringify(campaign).slice(0, 200) + "..."
+        : "null",
+      dataKeys: campaign ? Object.keys(campaign) : [],
+    });
+
+    return campaign || null;
   };
 
   const callVolumeData = useMemo(() => {
-    if (isLoading || !metrics?.data) return [];
+    const hours = getHoursData(selectedCampaignId);
 
-    // Log the metrics data structure
-    console.log("Metrics data structure:", {
-      hasDataProperty: metrics.data.hasOwnProperty("data"),
-      dataKeys: metrics.data.data ? Object.keys(metrics.data.data) : [],
-      hasTotalProperty: metrics.data.data?.hasOwnProperty("total"),
-      totalLength: metrics.data.data?.total?.length,
-    });
+    if (!hours?.length) return [];
 
     const startDate = new Date(date?.from || new Date());
     startDate.setHours(0, 0, 0, 0);
@@ -214,39 +184,22 @@ export default function Dashboard() {
       endDate.getTime() - endDate.getTimezoneOffset() * 60000,
     );
 
-    let campaignData;
-    if (selectedCampaign === "all") {
-      campaignData = metrics.data.data?.total || [];
-      console.log("Using 'all' campaigns data:", {
-        path: "metrics.data.data.total",
-        exists: Boolean(metrics.data.data?.total),
-        length: metrics.data.data?.total?.length || 0,
-      });
-    } else {
-      const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours || [];
-      console.log("Using specific campaign data:", {
-        campaignId: selectedCampaign,
-        campaignExists: Boolean(campaign),
-        hoursExists: Boolean(campaign?.hours),
-        length: campaign?.hours?.length || 0,
-      });
-    }
-
-    console.log("Campaign data for call volume:", {
-      selectedCampaign,
-      dataLength: campaignData?.length || 0,
-      sampleData: campaignData?.[0],
+    console.log("Call volume data debug:", {
+      campaignId: selectedCampaignId,
+      hoursLength: hours?.length || 0,
+      sampleHours: hours?.slice(0, 3).map((hour: HourData) => ({
+        hour: hour.hour,
+        inbound: hour.inbound,
+        outbound: hour.outbound,
+      })),
     });
 
-    if (!campaignData?.length) return [];
-
-    const rawData = campaignData
-      .filter((metric: Campaign["hours"][number]) => {
+    const rawData = hours
+      .filter((metric: HourData) => {
         const metricDate = new Date(metric.hour);
         return metricDate >= startUTC && metricDate <= endUTC;
       })
-      .map((metric: Campaign["hours"][number]) => ({
+      .map((metric: HourData) => ({
         timestamp: new Date(metric.hour),
         hour: metric.hour,
         formattedHour: metric.hourFormatted,
@@ -255,12 +208,7 @@ export default function Dashboard() {
         Outbound: Number(metric.outbound) || 0,
       }));
 
-    console.log("Raw call volume data after filtering:", {
-      length: rawData.length,
-      sample: rawData[0],
-    });
-
-    const result = aggregateTimeseriesData<CallVolumeDataPoint>(
+    return aggregateTimeseriesData<CallVolumeDataPoint>(
       rawData,
       { from: startUTC, to: endUTC },
       (points) => ({
@@ -272,17 +220,26 @@ export default function Dashboard() {
         Outbound: points.reduce((sum, p) => sum + p.Outbound, 0),
       }),
     );
+  }, [date, selectedCampaignId, metrics]);
 
-    console.log("Final call volume data:", {
-      length: result.length,
-      sample: result[0],
+  // Use getHoursData for dispositions
+  const dispositionsData = useMemo(() => {
+    const hours = getHoursData(selectedCampaignId);
+
+    console.log("Dispositions data debug:", {
+      campaignId: selectedCampaignId,
+      hoursLength: hours?.length || 0,
+      sampleHours: hours?.slice(0, 3).map((hour) => ({
+        hour: hour.hour,
+        hourFormatted: hour.hourFormatted,
+        dateFormatted: hour.dateFormatted,
+        timestamp: new Date(hour.hour).getTime(),
+        dispositionCounts: hour.dispositionCounts,
+        rawHour: JSON.stringify(hour),
+      })),
     });
 
-    return result;
-  }, [date, metrics, selectedCampaign, isLoading]);
-
-  const dispositionsData = useMemo(() => {
-    if (isLoading || !metrics?.data) return [];
+    if (!hours?.length) return [];
 
     const startDate = new Date(date?.from || new Date());
     startDate.setHours(0, 0, 0, 0);
@@ -296,109 +253,81 @@ export default function Dashboard() {
       endDate.getTime() - endDate.getTimezoneOffset() * 60000,
     );
 
-    console.log("Date range for filtering:", {
-      from: startUTC.toISOString(),
-      to: endUTC.toISOString(),
-      fromOriginal: date?.from,
-      toOriginal: date?.to,
+    // Filter hours by date range
+    const filteredHours = hours.filter((hour) => {
+      const metricDate = new Date(hour.hour);
+      return metricDate >= startUTC && metricDate <= endUTC;
     });
 
-    let campaignData;
-    if (selectedCampaign === "all") {
-      campaignData = metrics.data.data?.total || [];
-      console.log("Using 'all' campaigns data for dispositions:", {
-        path: "metrics.data.data.total",
-        exists: Boolean(metrics.data.data?.total),
-        length: metrics.data.data?.total?.length || 0,
-      });
-    } else {
-      const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours || [];
-      console.log("Using specific campaign data for dispositions:", {
-        campaignId: selectedCampaign,
-        campaignExists: Boolean(campaign),
-        hoursExists: Boolean(campaign?.hours),
-        length: campaign?.hours?.length || 0,
-      });
-    }
+    if (!filteredHours.length) return [];
 
-    console.log("Campaign data for dispositions:", {
-      selectedCampaign,
-      dataLength: campaignData?.length || 0,
-      sampleData: campaignData?.[0],
-    });
+    // Calculate the date difference
+    const diffDays = differenceInDays(endUTC, startUTC);
 
-    if (!campaignData?.length) return [];
-
-    const rawData = campaignData
-      .filter((metric: Campaign["hours"][number]) => {
-        const metricDate = new Date(metric.hour);
-        return metricDate >= startUTC && metricDate <= endUTC;
-      })
-      .map((metric: Campaign["hours"][number]) => ({
-        timestamp: new Date(metric.hour),
-        formattedHour: metric.hourFormatted,
-        formattedDate: metric.dateFormatted,
-        ...Object.entries(metric.dispositionCounts).reduce(
-          (acc, [key, value]) => ({
-            ...acc,
-            [key]: Number(value) || 0,
-          }),
-          {},
-        ),
+    // Group and aggregate data based on time range
+    if (diffDays <= 2) {
+      // Hourly data for 2 days or less
+      return filteredHours.map((hour) => ({
+        timestamp: new Date(hour.hour).toISOString(),
+        ...hour.dispositionCounts,
       }));
+    } else if (diffDays <= 14) {
+      // Daily aggregation for 2-14 days
+      const dailyData = new Map();
 
-    console.log("Raw dispositions data after filtering:", {
-      length: rawData.length,
-      sample: rawData[0],
-      keys: rawData[0] ? Object.keys(rawData[0]) : [],
-    });
+      filteredHours.forEach((hour) => {
+        const date = new Date(hour.hour);
+        date.setHours(0, 0, 0, 0);
+        const dateKey = date.toISOString();
 
-    const result = aggregateTimeseriesData(
-      rawData,
-      { from: startUTC, to: endUTC },
-      (points) => {
-        // Aggregate all disposition counts
-        const dispositions = points.reduce(
-          (acc, point) => {
-            Object.entries(point)
-              .filter(
-                ([key]) =>
-                  key !== "timestamp" &&
-                  key !== "formattedHour" &&
-                  key !== "formattedDate",
-              )
-              .forEach(([key, value]) => {
-                acc[key] = (acc[key] || 0) + Number(value);
-              });
-            return acc;
-          },
-          {} as Record<string, number>,
-        );
+        if (!dailyData.has(dateKey)) {
+          dailyData.set(dateKey, {
+            timestamp: dateKey,
+            ...Object.fromEntries(
+              Object.keys(hour.dispositionCounts || {}).map((key) => [key, 0]),
+            ),
+          });
+        }
 
-        return {
-          ...dispositions,
-          formattedHour: points[0].formattedHour,
-          formattedDate: points[0].formattedDate,
-        };
-      },
-    );
+        const dayData = dailyData.get(dateKey);
+        Object.entries(hour.dispositionCounts || {}).forEach(([key, value]) => {
+          dayData[key] = (dayData[key] || 0) + (value as number);
+        });
+      });
 
-    // Convert timestamp to string for the chart component after aggregation
-    const finalResult = result.map((item) => ({
-      ...item,
-      timestamp: item.timestamp.toISOString(),
-      weekEnd: item.weekEnd ? item.weekEnd.toISOString() : undefined,
-    }));
+      return Array.from(dailyData.values());
+    } else {
+      // Weekly aggregation for > 14 days
+      const weeklyData = new Map();
 
-    console.log("Final dispositions data:", {
-      length: finalResult.length,
-      sample: finalResult[0],
-      keys: finalResult[0] ? Object.keys(finalResult[0]) : [],
-    });
+      filteredHours.forEach((hour) => {
+        const date = new Date(hour.hour);
+        date.setHours(0, 0, 0, 0);
+        // Set to start of week (Sunday)
+        date.setDate(date.getDate() - date.getDay());
+        const weekKey = date.toISOString();
 
-    return finalResult;
-  }, [date, metrics, selectedCampaign, isLoading]);
+        if (!weeklyData.has(weekKey)) {
+          weeklyData.set(weekKey, {
+            timestamp: weekKey,
+            weekEnd: new Date(
+              date.getTime() + 6 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
+            ...Object.fromEntries(
+              Object.keys(hour.dispositionCounts || {}).map((key) => [key, 0]),
+            ),
+          });
+        }
+
+        const weekData = weeklyData.get(weekKey);
+        Object.entries(hour.dispositionCounts || {}).forEach(([key, value]) => {
+          weekData[key] = (weekData[key] || 0) + (value as number);
+        });
+      });
+
+      return Array.from(weeklyData.values());
+    }
+  }, [selectedCampaignId, metrics, date]);
 
   const handleDateChange = async (newDate: DateRange | undefined) => {
     if (newDate?.from && newDate?.to) {
@@ -617,23 +546,18 @@ export default function Dashboard() {
       const hours = campaign.hours || [];
 
       // Calculate total calls for current period
-      const currentPeriodCalls = hours.reduce(
-        (sum: number, hour: Campaign["hours"][number]) => {
-          const hourDate = new Date(hour.hour);
-          if (
-            date?.from &&
-            date?.to &&
-            hourDate >= date.from &&
-            hourDate <= date.to
-          ) {
-            return (
-              sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0))
-            );
-          }
-          return sum;
-        },
-        0,
-      );
+      const currentPeriodCalls = hours.reduce((sum: number, hour: HourData) => {
+        const hourDate = new Date(hour.hour);
+        if (
+          date?.from &&
+          date?.to &&
+          hourDate >= date.from &&
+          hourDate <= date.to
+        ) {
+          return sum + (Number(hour.inbound || 0) + Number(hour.outbound || 0));
+        }
+        return sum;
+      }, 0);
 
       // Calculate previous period calls
       const daysDiff =
@@ -650,7 +574,7 @@ export default function Dashboard() {
         : new Date();
 
       const previousPeriodCalls = hours.reduce(
-        (sum: number, hour: Campaign["hours"][number]) => {
+        (sum: number, hour: HourData) => {
           const hourDate = new Date(hour.hour);
           if (hourDate >= previousFrom && hourDate <= previousTo) {
             return (
@@ -678,10 +602,10 @@ export default function Dashboard() {
       return { value: "0", change: "N/A", description: "" };
 
     let campaignData;
-    if (selectedCampaign === "all") {
+    if (selectedCampaignId === "all") {
       campaignData = metrics.data.data.total;
     } else {
-      const campaign = findCampaign(selectedCampaign);
+      const campaign = findCampaign(selectedCampaignId);
       campaignData = campaign?.hours;
     }
 
@@ -714,7 +638,7 @@ export default function Dashboard() {
     let previousPeriodTotalMs = 0;
 
     // Process each record
-    campaignData.forEach((metric: Campaign["hours"][number]) => {
+    campaignData.forEach((metric: HourData) => {
       const metricDate = new Date(metric.hour);
       const totalMs = Number(metric.totalMs || 0);
 
@@ -762,11 +686,14 @@ export default function Dashboard() {
       change,
       description: "",
     };
-  }, [date, metrics, selectedCampaign, isLoading]);
+  }, [date, metrics, selectedCampaignId, isLoading]);
 
-  const assistantCountData = useMemo(() => {
-    if (isLoading || !metrics?.data) return [];
+  const assistantTypesData = useMemo(() => {
+    const hours = getHoursData(selectedCampaignId);
 
+    if (!hours?.length) return [];
+
+    // Filter hours by date range
     const startDate = new Date(date?.from || new Date());
     startDate.setHours(0, 0, 0, 0);
     const startUTC = new Date(
@@ -779,70 +706,47 @@ export default function Dashboard() {
       endDate.getTime() - endDate.getTimezoneOffset() * 60000,
     );
 
-    let campaignData;
-    if (selectedCampaign === "all") {
-      campaignData = metrics.data.data?.total || [];
-      console.log("Using 'all' campaigns data for assistant types:", {
-        path: "metrics.data.data.total",
-        exists: Boolean(metrics.data.data?.total),
-        length: metrics.data.data?.total?.length || 0,
-      });
-    } else {
-      const campaign = findCampaign(selectedCampaign);
-      campaignData = campaign?.hours || [];
-      console.log("Using specific campaign data for assistant types:", {
-        campaignId: selectedCampaign,
-        campaignExists: Boolean(campaign),
-        hoursExists: Boolean(campaign?.hours),
-        length: campaign?.hours?.length || 0,
-      });
-    }
-
-    console.log("Campaign data for assistant types:", {
-      selectedCampaign,
-      dataLength: campaignData?.length || 0,
-      sampleData: campaignData?.[0],
+    // Filter hours within the date range
+    const filteredHours = hours.filter((hour: HourData) => {
+      const hourDate = new Date(hour.hour);
+      return hourDate >= startUTC && hourDate <= endUTC;
     });
 
-    if (!campaignData?.length) return [];
-
-    // Aggregate assistant type counts across the selected time period
-    const typeCounts = campaignData
-      .filter((metric: Campaign["hours"][number]) => {
-        const metricDate = new Date(metric.hour);
-        return metricDate >= startUTC && metricDate <= endUTC;
-      })
-      .reduce(
-        (acc: Record<string, number>, hour: Campaign["hours"][number]) => {
-          Object.entries(hour.assistantTypeCounts || {}).forEach(
-            ([type, count]) => {
-              acc[type] = (acc[type] || 0) + Number(count);
-            },
-          );
-          return acc;
-        },
-        {},
-      );
-
-    console.log("Assistant type counts:", typeCounts);
-
-    // Convert to array format and map to friendly names
-    const result = Object.entries(typeCounts)
-      .map(
-        ([type, count]): AssistantCountDataPoint => ({
-          name: assistantTypeLabels[type] || type,
-          value: Number(count),
-        }),
-      )
-      .sort((a, b) => b.value - a.value); // Sort by count descending
-
-    console.log("Final assistant count data:", {
-      length: result.length,
-      sample: result[0],
+    console.log("Assistant types data debug:", {
+      campaignId: selectedCampaignId,
+      totalHours: hours.length,
+      filteredHours: filteredHours.length,
+      dateRange: {
+        start: startUTC.toISOString(),
+        end: endUTC.toISOString(),
+      },
+      sampleHours: filteredHours.slice(0, 3).map((hour: HourData) => ({
+        hour: hour.hour,
+        assistantTypeCounts: hour.assistantTypeCounts,
+      })),
     });
 
-    return result;
-  }, [date, metrics, selectedCampaign, isLoading]);
+    if (!filteredHours.length) return [];
+
+    // Get all unique assistant types from the filtered hours
+    const allAssistantTypes = new Set<string>();
+    filteredHours.forEach((hour: HourData) => {
+      if (hour.assistantTypeCounts) {
+        Object.keys(hour.assistantTypeCounts).forEach((type) =>
+          allAssistantTypes.add(type),
+        );
+      }
+    });
+
+    // Transform the hours data into the format expected by AssistantCountChart
+    return Array.from(allAssistantTypes).map((name) => ({
+      name,
+      value: filteredHours.reduce(
+        (sum, hour) => sum + (hour.assistantTypeCounts?.[name] || 0),
+        0,
+      ),
+    }));
+  }, [selectedCampaignId, date, metrics]);
 
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
@@ -853,12 +757,6 @@ export default function Dashboard() {
               Dashboard
             </h1>
             <div className="flex gap-4">
-              <CampaignSelect
-                value={selectedCampaign}
-                onValueChange={setSelectedCampaign}
-                isLoading={isLoading || isMetricsLoading}
-                campaigns={availableCampaigns}
-              />
               <DateRangePicker
                 date={date}
                 onChange={handleDateChange}
@@ -898,7 +796,7 @@ export default function Dashboard() {
             />
             <div className="space-y-6">
               <AssistantCountChart
-                data={assistantCountData}
+                data={assistantTypesData}
                 isLoading={isMetricsLoading}
               />
               <CallVolumeChart
@@ -911,7 +809,7 @@ export default function Dashboard() {
           <ContactRateChart
             dateRange={date}
             campaignId={
-              selectedCampaign === "all"
+              selectedCampaignId === "all"
                 ? Object.entries(metrics?.data || {}).filter(
                     ([id, data]) =>
                       // Filter out non-campaign entries and ensure valid UUID
@@ -925,9 +823,9 @@ export default function Dashboard() {
                       ),
                   )[0]?.[0]
                 : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                      selectedCampaign,
+                      selectedCampaignId,
                     )
-                  ? selectedCampaign
+                  ? selectedCampaignId
                   : undefined
             }
           />

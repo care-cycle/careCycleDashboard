@@ -98,6 +98,7 @@ export default function CallsPage() {
     setShowConnectedOnly,
     callSearch: searchQuery,
     setCallSearch: setSearchQuery,
+    selectedCampaignId,
   } = usePreferences();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -137,12 +138,6 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCampaignId, setSelectedCampaignId] = useState(() => {
-    // If there's exactly one campaign, use its ID, otherwise use 'all'
-    return clientInfo?.campaigns?.length === 1
-      ? clientInfo.campaigns[0].id
-      : "all";
-  });
 
   // Add sorting state
   const [sortConfig, setSortConfig] = useState<{
@@ -351,37 +346,6 @@ export default function CallsPage() {
         />
       )}
       <div className="space-y-6">
-        <div className="flex items-start justify-end gap-4">
-          <Select
-            value={selectedCampaignId}
-            onValueChange={setSelectedCampaignId}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Campaign" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border shadow-md">
-              {campaignOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DateRangePicker
-            date={dateRange}
-            onChange={handleDateRangeChange}
-            defaultDate={{
-              from: yesterday,
-              to: today,
-            }}
-            minDate={
-              calls?.data?.[calls.data.length - 1]?.createdAt
-                ? new Date(calls.data[calls.data.length - 1].createdAt)
-                : undefined
-            }
-          />
-        </div>
-
         <CallFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -389,6 +353,17 @@ export default function CallsPage() {
           onTestCallsChange={setShowTestCalls}
           showConnectedOnly={showConnectedOnly}
           onConnectedOnlyChange={setShowConnectedOnly}
+          dateRange={dateRange}
+          onDateRangeChange={handleDateRangeChange}
+          defaultDateRange={{
+            from: yesterday,
+            to: today,
+          }}
+          minDate={
+            calls?.data?.[calls.data.length - 1]?.createdAt
+              ? new Date(calls.data[calls.data.length - 1].createdAt)
+              : undefined
+          }
         />
 
         <div className="mt-0">

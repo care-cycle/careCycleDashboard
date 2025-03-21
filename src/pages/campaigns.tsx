@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useInitialData } from "@/hooks/use-client-data";
 import { getTopMetrics } from "@/lib/metrics";
-import { CampaignSelect } from "@/components/campaign-select";
+import { usePreferences } from "@/hooks/use-preferences";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,8 +112,7 @@ export default function CampaignsPage() {
     clientInfo,
     isLoading,
   } = useInitialData();
-  const [selectedCampaignId, setSelectedCampaignId] =
-    React.useState<string>("");
+  const { selectedCampaignId } = usePreferences();
   const [pendingChanges, setPendingChanges] = React.useState<Partial<Campaign>>(
     {},
   );
@@ -181,13 +180,6 @@ export default function CampaignsPage() {
 
   const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
 
-  // Set the first campaign as selected when campaigns load
-  React.useEffect(() => {
-    if (campaigns.length > 0 && !selectedCampaignId) {
-      setSelectedCampaignId(campaigns[0].id);
-    }
-  }, [campaigns, selectedCampaignId]);
-
   // Initialize pendingChanges with selected campaign's SMS configuration
   React.useEffect(() => {
     if (selectedCampaign) {
@@ -198,6 +190,48 @@ export default function CampaignsPage() {
       });
     }
   }, [selectedCampaign]);
+
+  const handleStartEdit = (field: "name" | "description") => {
+    setEditingField(field);
+    setEditValue(selectedCampaign?.[field] || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditValue("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedCampaign || !editingField) return;
+
+    setIsSaving(true);
+    try {
+      const response = await apiClient.put(
+        `/portal/client/campaigns/${selectedCampaign.id}`,
+        { [editingField]: editValue },
+      );
+
+      if (!response.data) {
+        throw new Error("Failed to update campaign");
+      }
+
+      toast({
+        title: "Success",
+        description: `Campaign ${editingField} updated successfully`,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update campaign ${editingField}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      setEditingField(null);
+    }
+  };
 
   const handleSmsUpdate = async (
     campaignId: string,
@@ -234,12 +268,6 @@ export default function CampaignsPage() {
         smsUpdateData.smsTypes = { ...updateData.smsTypes };
       }
 
-      // Log the raw data before sending to API
-      console.log("[Campaign Update - SMS] Data being sent to API:", {
-        campaignId,
-        updateData: smsUpdateData,
-      });
-
       const response = await apiClient.put(
         `/portal/client/campaigns/${campaignId}`,
         smsUpdateData,
@@ -249,7 +277,6 @@ export default function CampaignsPage() {
         throw new Error("Failed to update campaign");
       }
 
-      // Invalidate campaigns query to refetch the latest data
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 
       toast({
@@ -275,7 +302,6 @@ export default function CampaignsPage() {
   ) => {
     setIsSaving(true);
     try {
-      // Only include retry-related fields
       const retryUpdateData = {
         retryStrategy: updateData.retryStrategy,
         retryDelays: updateData.retryDelays,
@@ -283,12 +309,6 @@ export default function CampaignsPage() {
         retrySettings: updateData.retrySettings,
         maxAttempts: updateData.maxAttempts,
       };
-
-      // Log the raw data before sending to API
-      console.log("[Campaign Update - Retry] Data being sent to API:", {
-        campaignId,
-        updateData: retryUpdateData,
-      });
 
       const response = await apiClient.put(
         `/portal/client/campaigns/${campaignId}`,
@@ -299,7 +319,6 @@ export default function CampaignsPage() {
         throw new Error("Failed to update campaign");
       }
 
-      // Invalidate campaigns query to refetch the latest data
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 
       toast({
@@ -343,49 +362,6 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleStartEdit = (field: "name" | "description") => {
-    setEditingField(field);
-    setEditValue(selectedCampaign?.[field] || "");
-  };
-
-  const handleSaveEdit = async () => {
-    if (!selectedCampaign || !editingField) return;
-
-    setIsSaving(true);
-    try {
-      const response = await apiClient.put(
-        `/portal/client/campaigns/${selectedCampaign.id}`,
-        { [editingField]: editValue },
-      );
-
-      if (!response.data) {
-        throw new Error("Failed to update campaign");
-      }
-
-      toast({
-        title: "Success",
-        description: `Campaign ${editingField} updated successfully`,
-      });
-
-      // Invalidate campaigns query to refetch the latest data
-      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to update campaign ${editingField}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-      setEditingField(null);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingField(null);
-    setEditValue("");
-  };
-
   if (isLoading || !campaignsData) {
     return (
       <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
@@ -396,18 +372,29 @@ export default function CampaignsPage() {
     );
   }
 
+  // Show prompt when no campaign is selected or "All Campaigns" is selected
+  if (!selectedCampaignId || selectedCampaignId === "all") {
+    return (
+      <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
+        <div className="container mx-auto p-6">
+          <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)]">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              Select a Campaign
+            </h2>
+            <p className="text-gray-500 text-center max-w-md">
+              Please select a specific campaign from the dropdown above to view
+              and manage its configuration.
+            </p>
+          </div>
+        </div>
+      </RootLayout>
+    );
+  }
+
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
       <div className="container mx-auto p-6">
         <div className="flex flex-col space-y-4 mb-6">
-          <div className="w-[300px]">
-            <CampaignSelect
-              value={selectedCampaignId}
-              onValueChange={setSelectedCampaignId}
-              campaigns={campaigns}
-            />
-          </div>
-
           {selectedCampaign && (
             <div className="flex items-center justify-between">
               <div className="space-y-2">

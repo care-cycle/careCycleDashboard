@@ -24,9 +24,17 @@ interface Campaign {
   campaign_status: string;
 }
 
-interface FormattedCustomer extends Customer {
+interface FormattedCustomer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  callerId: string;
+  state: string;
+  postalCode: string;
   customData?: CustomData;
   campaigns?: Campaign[];
+  doNotContact?: boolean;
 }
 
 // Helper function for pagination numbers
@@ -50,13 +58,15 @@ const getPageNumbers = (currentPage: number, totalPages: number) => {
 };
 
 export default function CustomersPage() {
-  const { customers, isCustomersLoading, todayMetrics } = useInitialData();
+  const { customers, isCustomersLoading, todayMetrics, campaigns, clientInfo } =
+    useInitialData();
   const location = useLocation();
   const {
     customerColumns: activeColumnKeys,
     setCustomerColumns: setActiveColumnKeys,
     customerSearch: searchQuery,
     setCustomerSearch: setSearchQuery,
+    selectedCampaignId,
   } = usePreferences();
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const customersTable = useRef<TableRef>(null);
@@ -153,20 +163,45 @@ export default function CustomersPage() {
     }
   }, [location.search, setSearchQuery]); // React to URL changes
 
+  // Add effect to monitor campaign changes
+  useEffect(() => {
+    console.log("CustomersPage - Campaign changed:", {
+      selectedCampaignId,
+      availableCampaigns: clientInfo?.campaigns,
+      totalCustomers: customers?.customers?.length,
+    });
+  }, [selectedCampaignId, clientInfo?.campaigns, customers?.customers?.length]);
+
   const formattedCustomers = useMemo(() => {
     if (!customers?.customers) return [];
 
     return customers.customers
-      .filter((customer: FormattedCustomer) => {
+      .filter((customer: Customer) => {
+        const formattedCustomer = customer as FormattedCustomer;
         // Filter out placeholder/empty records
-        if (!customer || !customer.id) return false;
+        if (!formattedCustomer || !formattedCustomer.id) return false;
         if (
-          customer.firstName === "firstName" &&
-          customer.lastName === "lastName"
+          formattedCustomer.firstName === "firstName" &&
+          formattedCustomer.lastName === "lastName"
         )
           return false;
-        if (customer.email === "email" && customer.callerId === "phone")
+        if (
+          formattedCustomer.email === "email" &&
+          formattedCustomer.callerId === "phone"
+        )
           return false;
+
+        // Filter by selected campaign
+        if (selectedCampaignId !== "all") {
+          const customerCampaigns = formattedCustomer.campaigns || [];
+          const isInSelectedCampaign = customerCampaigns.some(
+            (campaign) => campaign.campaign_id === selectedCampaignId,
+          );
+
+          if (!isInSelectedCampaign) {
+            return false;
+          }
+        }
 
         if (!debouncedSearch) return true;
 
@@ -175,18 +210,25 @@ export default function CustomersPage() {
         const searchDigits = debouncedSearch.replace(/\D/g, "");
 
         // Check phone number first for better performance
-        if (customer.callerId && customer.callerId !== "phone") {
-          const callerIdDigits = customer.callerId.replace(/\D/g, "");
+        if (
+          formattedCustomer.callerId &&
+          formattedCustomer.callerId !== "phone"
+        ) {
+          const callerIdDigits = formattedCustomer.callerId.replace(/\D/g, "");
           if (callerIdDigits === searchDigits) return true;
         }
 
         // Check basic fields
         const basicFieldsMatch = [
-          customer.firstName !== "firstName" ? customer.firstName : null,
-          customer.lastName !== "lastName" ? customer.lastName : null,
-          customer.email !== "email" ? customer.email : null,
-          customer.state !== "state" ? customer.state : null,
-          customer.postalCode,
+          formattedCustomer.firstName !== "firstName"
+            ? formattedCustomer.firstName
+            : null,
+          formattedCustomer.lastName !== "lastName"
+            ? formattedCustomer.lastName
+            : null,
+          formattedCustomer.email !== "email" ? formattedCustomer.email : null,
+          formattedCustomer.state !== "state" ? formattedCustomer.state : null,
+          formattedCustomer.postalCode,
         ].some((field) => {
           if (!field) return false;
           const fieldLower = field.toLowerCase();
@@ -201,21 +243,32 @@ export default function CustomersPage() {
           .some((key) => {
             const field = key.replace("data_", "");
             const value =
-              customer.customData?.[field] ?? customer[field as keyof Customer];
+              formattedCustomer.customData?.[field] ??
+              formattedCustomer[field as keyof FormattedCustomer];
             if (!value || value === "null") return false;
             const valueLower = String(value).toLowerCase();
             return valueLower.includes(searchLower);
           });
       })
-      .map((customer: FormattedCustomer) => ({
-        ...customer,
-        campaigns: customer.campaigns?.map((campaign: Campaign) => ({
-          campaign_id: campaign.campaign_id,
-          campaign_name: campaign.campaign_name,
-          campaign_status: campaign.campaign_status,
-        })),
-      }));
-  }, [customers, debouncedSearch, activeColumnKeys]);
+      .map((customer: Customer) => {
+        const formattedCustomer = customer as FormattedCustomer;
+        return {
+          ...formattedCustomer,
+          campaigns: formattedCustomer.campaigns?.map((campaign: Campaign) => ({
+            campaign_id: campaign.campaign_id,
+            campaign_name: campaign.campaign_name,
+            campaign_status: campaign.campaign_status,
+          })),
+        };
+      });
+  }, [
+    customers,
+    debouncedSearch,
+    activeColumnKeys,
+    selectedCampaignId,
+    campaigns,
+    clientInfo,
+  ]);
 
   // Move sorting logic before pagination
   const sortedAndFilteredCustomers = useMemo(() => {
@@ -225,7 +278,8 @@ export default function CustomersPage() {
     if (sortConfig.key && sortConfig.direction) {
       result = [...result].sort(
         (a: FormattedCustomer, b: FormattedCustomer) => {
-          let aValue: string | number, bValue: string | number;
+          let aValue: string | number = "";
+          let bValue: string | number = "";
 
           switch (sortConfig.key) {
             case "customer":
@@ -332,69 +386,71 @@ export default function CustomersPage() {
     ];
 
     // Create rows array with visible data
-    const rows = formattedCustomers.map((customer: FormattedCustomer) => {
-      const rowData = visibleColumns.map(
-        (col: { key: string; label: string }) => {
-          switch (col.key) {
-            case "customer":
-              return `"${customer.firstName} ${customer.lastName || ""}"`;
-            case "contact":
-              return `"${customer.callerId || ""}${customer.email ? `, ${customer.email}` : ""}"`;
-            case "location": {
-              const location = [
-                customer.state,
-                customer.timezone,
-                customer.postalCode,
-              ]
-                .filter(Boolean)
-                .join(", ");
-              return `"${location || "-"}"`;
-            }
-            case "campaigns": {
-              const campaigns = customer.campaigns
-                ?.map((c: Campaign) => c.campaign_name)
-                .join(", ");
-              return `"${campaigns || "-"}"`;
-            }
-            case "calls":
-              return customer.totalCalls?.toString() || "0";
-            case "last-contact":
-              return customer.lastCallDate || "-";
-            default:
-              // Handle custom columns
-              if (col.key.startsWith("data_")) {
-                const field = col.key.replace("data_", "");
-                const value =
-                  customer.customData?.[field] ??
-                  customer[field as keyof Customer];
-                if (
-                  value === null ||
-                  value === undefined ||
-                  value === "null" ||
-                  value === ""
-                )
-                  return '"-"';
-                if (typeof value === "boolean")
-                  return `"${value ? "Yes" : "No"}"`;
-                if (typeof value === "object") {
-                  const stringified = JSON.stringify(value);
-                  return `"${stringified === "null" ? "-" : stringified}"`;
-                }
-                return `"${String(value) === "null" ? "-" : String(value)}"`;
+    const rows = sortedAndFilteredCustomers.map(
+      (customer: FormattedCustomer) => {
+        const rowData = visibleColumns.map(
+          (col: { key: string; label: string }) => {
+            switch (col.key) {
+              case "customer":
+                return `"${customer.firstName} ${customer.lastName || ""}"`;
+              case "contact":
+                return `"${customer.callerId || ""}${customer.email ? `, ${customer.email}` : ""}"`;
+              case "location": {
+                const location = [
+                  customer.state,
+                  customer.timezone,
+                  customer.postalCode,
+                ]
+                  .filter(Boolean)
+                  .join(", ");
+                return `"${location || "-"}"`;
               }
-              return '"-"';
-          }
-        },
-      );
+              case "campaigns": {
+                const campaigns = customer.campaigns
+                  ?.map((c: Campaign) => c.campaign_name)
+                  .join(", ");
+                return `"${campaigns || "-"}"`;
+              }
+              case "calls":
+                return customer.totalCalls?.toString() || "0";
+              case "last-contact":
+                return customer.lastCallDate || "-";
+              default:
+                // Handle custom columns
+                if (col.key.startsWith("data_")) {
+                  const field = col.key.replace("data_", "");
+                  const value =
+                    customer.customData?.[field] ??
+                    customer[field as keyof Customer];
+                  if (
+                    value === null ||
+                    value === undefined ||
+                    value === "null" ||
+                    value === ""
+                  )
+                    return '"-"';
+                  if (typeof value === "boolean")
+                    return `"${value ? "Yes" : "No"}"`;
+                  if (typeof value === "object") {
+                    const stringified = JSON.stringify(value);
+                    return `"${stringified === "null" ? "-" : stringified}"`;
+                  }
+                  return `"${String(value) === "null" ? "-" : String(value)}"`;
+                }
+                return '"-"';
+            }
+          },
+        );
 
-      // Add special columns
-      rowData.push(
-        customer.doNotContact ? "Yes" : "No",
-        customer.smsConsent ? "Yes" : "No",
-      );
+        // Add special columns
+        rowData.push(
+          customer.doNotContact ? "Yes" : "No",
+          customer.smsConsent ? "Yes" : "No",
+        );
 
-      return rowData.join(",");
-    });
+        return rowData.join(",");
+      },
+    );
 
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

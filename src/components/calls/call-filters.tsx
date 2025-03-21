@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useDebounce } from "@/hooks/use-debounce";
+import { DateRange } from "react-day-picker";
+import { DateRangePicker } from "@/components/date-range-picker";
 
 interface CallFiltersProps {
   searchQuery: string;
@@ -11,6 +13,10 @@ interface CallFiltersProps {
   onTestCallsChange: (show: boolean) => void;
   showConnectedOnly: boolean;
   onConnectedOnlyChange: (show: boolean) => void;
+  dateRange: DateRange | undefined;
+  onDateRangeChange: (date: DateRange | undefined) => void;
+  defaultDateRange: DateRange;
+  minDate?: Date;
 }
 
 export function CallFilters({
@@ -20,6 +26,10 @@ export function CallFilters({
   onTestCallsChange,
   showConnectedOnly,
   onConnectedOnlyChange,
+  dateRange,
+  onDateRangeChange,
+  defaultDateRange,
+  minDate,
 }: CallFiltersProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const debouncedSearchQuery = useDebounce(localSearchQuery, 250);
@@ -37,13 +47,21 @@ export function CallFilters({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between w-full glass-panel p-4 rounded-lg">
-        <div className="relative flex-1 max-w-[630px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Search calls..."
-            className="w-full bg-white/50 pl-9"
-            value={localSearchQuery}
-            onChange={(e) => setLocalSearchQuery(e.target.value)}
+        <div className="flex items-center gap-4 flex-1">
+          <div className="relative flex-1 max-w-[400px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search calls..."
+              className="w-full bg-white/50 pl-9"
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
+            />
+          </div>
+          <DateRangePicker
+            date={dateRange}
+            onChange={onDateRangeChange}
+            defaultDate={defaultDateRange}
+            minDate={minDate}
           />
         </div>
 

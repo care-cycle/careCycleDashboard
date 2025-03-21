@@ -13,6 +13,10 @@ import { CalendarActions } from "@/components/ui/calendar-actions";
 import { AppointmentData, convertTimezone } from "@/lib/calendar-utils";
 import type { Appointment } from "@/hooks/use-client-data";
 import { AppointmentActions } from "@/components/ui/appointment-actions";
+import { useUI } from "@/hooks/use-ui";
+import { usePreferences } from "@/hooks/use-preferences";
+import { subDays } from "date-fns";
+import { MemoizedAppointmentDetails } from "@/components/ui/appointment-details";
 
 export default function Appointments() {
   const { toast } = useToast();
@@ -24,17 +28,23 @@ export default function Appointments() {
     appointments: initialAppointments,
     isAppointmentsLoading,
   } = useInitialData();
+  const { selectedCampaignId } = usePreferences();
   const [allAppointments, setAllAppointments] =
     useState<Appointment[]>(initialAppointments);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date(),
-  );
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc" | null;
+  }>({ key: "", direction: null });
   const [searchQuery, setSearchQuery] = useState(
     () => searchParams.get("search") || "",
   );
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
-  // Handle URL search param
+  // Add effect to handle search from URL
   useEffect(() => {
     const searchFromUrl = searchParams.get("search");
     if (searchFromUrl) {
@@ -60,37 +70,14 @@ export default function Appointments() {
     loadAppointments();
   }, [fetchAppointments, toast]);
 
-  // Filter appointments for the current month view
+  // Filter appointments for upcoming ones
   const appointments = useMemo(() => {
+    const now = new Date();
     return allAppointments.filter((appointment) => {
-      try {
-        const ianaTimezone = convertTimezone(appointment.timezone || null);
-
-        // Use moment-timezone to get the correct date in the appointment's timezone
-        const tzMoment = moment
-          .utc(appointment.appointmentDateTime)
-          .tz(ianaTimezone);
-
-        // Check if the appointment is in the current month view
-        return (
-          tzMoment.month() === currentMonth.getMonth() &&
-          tzMoment.year() === currentMonth.getFullYear()
-        );
-      } catch (e) {
-        // Fallback to browser timezone if there's an error
-        console.warn("Error filtering appointments by month:", e);
-        const appointmentDate = new Date(appointment.appointmentDateTime);
-        return (
-          appointmentDate.getMonth() === currentMonth.getMonth() &&
-          appointmentDate.getFullYear() === currentMonth.getFullYear()
-        );
-      }
+      const appointmentDate = new Date(appointment.appointmentDateTime);
+      return appointmentDate > now;
     });
-  }, [allAppointments, currentMonth]);
-
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-  };
+  }, [allAppointments]);
 
   const handleMonthChange = (month: Date) => {
     setCurrentMonth(month);
@@ -141,48 +128,54 @@ export default function Appointments() {
     }
   };
 
-  // Filter appointments based on search query
+  // At the top of your component, define the campaign options
+  const campaignOptions = useMemo(() => {
+    if (!clientInfo?.campaigns) return [];
+
+    return [
+      { value: "all", label: "All Campaigns" },
+      ...clientInfo.campaigns.map((campaign) => ({
+        value: campaign.id,
+        label: campaign.name || campaign.description,
+      })),
+    ];
+  }, [clientInfo?.campaigns]);
+
+  // Update the filteredAppointments useMemo to include search filtering
   const filteredAppointments = useMemo(() => {
-    if (!searchQuery) {
-      // If no search query, show future appointments
-      return allAppointments.filter((appointment) => {
-        let appointmentDate;
-        try {
-          const ianaTimezone = convertTimezone(appointment.timezone || null);
-          appointmentDate = moment
-            .utc(appointment.appointmentDateTime)
-            .tz(ianaTimezone);
-        } catch (e) {
-          console.warn("Invalid timezone:", appointment.timezone);
-          appointmentDate = moment
-            .utc(appointment.appointmentDateTime)
-            .tz("America/New_York");
-        }
+    return (appointments || []).filter((appointment) => {
+      const campaignMatch =
+        selectedCampaignId === "all" ||
+        appointment.campaignId === selectedCampaignId;
 
-        return appointmentDate.isAfter(moment());
-      });
-    }
+      if (!searchQuery) return campaignMatch;
 
-    // If there's a search query, search through all appointments
-    const searchLower = searchQuery.toLowerCase();
-    const searchDigits = searchQuery.replace(/\D/g, "");
+      // Convert search term to lowercase once
+      const searchLower = searchQuery.toLowerCase();
+      const searchDigits = searchQuery.replace(/\D/g, "");
 
-    return allAppointments.filter((appointment) => {
-      // Check phone number (callerId)
+      // Check phone number fields first
       if (appointment.callerId) {
         const callerIdDigits = appointment.callerId.replace(/\D/g, "");
-        if (callerIdDigits.includes(searchDigits)) return true;
+        if (callerIdDigits === searchDigits) return true;
       }
 
-      // Then check other fields
-      return (
-        (appointment.firstName?.toLowerCase() || "").includes(searchLower) ||
-        (appointment.lastName?.toLowerCase() || "").includes(searchLower) ||
-        appointment.customerId.toLowerCase().includes(searchLower) ||
-        appointment.campaignName.toLowerCase().includes(searchLower)
-      );
+      // Then check all other fields
+      const searchMatch = Object.entries(appointment).some(([, value]) => {
+        if (value === null || value === undefined) return false;
+
+        // Convert value to lowercase string for comparison
+        const valueStr =
+          typeof value === "object"
+            ? JSON.stringify(value).toLowerCase()
+            : String(value).toLowerCase();
+
+        return valueStr.includes(searchLower);
+      });
+
+      return campaignMatch && searchMatch;
     });
-  }, [allAppointments, searchQuery]);
+  }, [appointments, selectedCampaignId, searchQuery]);
 
   // Convert appointments to AppointmentData type for calendar actions
   const appointmentsData: AppointmentData[] = useMemo(() => {
@@ -202,8 +195,19 @@ export default function Appointments() {
     }));
   }, [filteredAppointments]);
 
+  const handleAppointmentClose = () => {
+    setSelectedAppointment(null);
+  };
+
   return (
-    <RootLayout hideKnowledgeSearch topMetrics={getTopMetrics(todayMetrics)}>
+    <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>
+      {selectedAppointment && (
+        <MemoizedAppointmentDetails
+          key={selectedAppointment.id}
+          appointment={selectedAppointment}
+          onClose={handleAppointmentClose}
+        />
+      )}
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Appointments List */}
@@ -335,15 +339,15 @@ export default function Appointments() {
           </div>
 
           {/* Right Column - Calendar */}
-          <div className="flex-1 rounded-lg border min-h-[calc(100vh-12rem)]">
-            <AppointmentCalendar
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              onMonthChange={handleMonthChange}
-              appointments={appointments}
-              onAppointmentClick={handleAppointmentClick}
-              onCustomerSearch={navigateToCustomer}
-            />
+          <div className="flex-1 min-h-[500px] lg:min-h-[calc(100vh-12rem)] rounded-lg border overflow-hidden flex flex-col">
+            <div className="flex-1 p-4">
+              <AppointmentCalendar
+                appointments={appointmentsData}
+                month={currentMonth}
+                onMonthChange={handleMonthChange}
+                onAppointmentClick={handleAppointmentClick}
+              />
+            </div>
           </div>
         </div>
       </div>

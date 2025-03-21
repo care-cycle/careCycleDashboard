@@ -14,6 +14,10 @@ export interface PreferencesContextType {
   setShowConnectedOnly: (show: boolean) => void;
   callSearch: string;
   setCallSearch: (search: string) => void;
+
+  // Campaign selection
+  selectedCampaignId: string;
+  setSelectedCampaignId: (id: string) => void;
 }
 
 export const PreferencesContext = createContext<

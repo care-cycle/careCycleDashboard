@@ -96,17 +96,11 @@ function SortableHeader({ header, onSort }: SortableHeaderProps) {
   };
 
   return (
-    <TableHead
-      ref={setNodeRef}
-      style={style}
-      className={header === "Source" ? "text-center" : ""}
-    >
+    <TableHead ref={setNodeRef} style={style} className="text-center">
       <Button
         variant="ghost"
         onClick={onSort}
-        className={`hover:text-gray-900 text-gray-600 flex items-center gap-2 px-2 h-10 ${
-          header === "Source" ? "justify-center w-full" : ""
-        }`}
+        className="hover:text-gray-900 text-gray-600 flex items-center justify-center gap-2 px-2 h-10 w-full"
       >
         <GripVertical
           className="h-4 w-4 text-muted-foreground cursor-grab"
@@ -296,10 +290,7 @@ export function CallsTable({
                   </div>
                 </TableCell>
                 {columns.map((column) => (
-                  <TableCell
-                    key={column}
-                    className={column === "Source" ? "text-center" : ""}
-                  >
+                  <TableCell key={column} className="text-center">
                     {column === "Caller ID" &&
                       (isRedacted
                         ? redactData(call.callerId)
@@ -323,7 +314,7 @@ export function CallsTable({
                     {column === "Source" && (call.source || "-")}
                   </TableCell>
                 ))}
-                <TableCell>
+                <TableCell className="text-center">
                   {call.testFlag && (
                     <TooltipProvider>
                       <Tooltip>

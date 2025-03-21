@@ -21,6 +21,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [showConnectedOnly, setShowConnectedOnly] = useState(true);
   const [callSearch, setCallSearch] = useState("");
 
+  // Campaign selection state
+  const [selectedCampaignId, setSelectedCampaignId] = useState("all");
+
   return (
     <PreferencesContext.Provider
       value={{
@@ -34,6 +37,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setShowConnectedOnly,
         callSearch,
         setCallSearch,
+        selectedCampaignId,
+        setSelectedCampaignId,
       }}
     >
       {children}

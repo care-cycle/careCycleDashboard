@@ -26,29 +26,22 @@ interface CustomXAxisTickProps {
   };
 }
 
-const CustomTooltip = ({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{
-    payload: {
-      name: string;
-    };
-    value: number;
-  }>;
-}) => {
+const CustomTooltip = ({ active, payload, total }: any) => {
   if (!active || !payload || !payload.length || !payload[0]) return null;
 
   const data = payload[0];
-  if (!data?.payload) return null;
+  const value = data.value;
+  const name = data.payload.name;
+
+  const percentage = total ? ((value / total) * 100).toFixed(1) : null;
 
   return (
     <div className="glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
       <div className="flex flex-col gap-1">
-        <span className="text-sm text-gray-600">{data.payload.name}</span>
+        <span className="text-sm text-gray-600">{name}</span>
         <span className="text-sm font-medium">
-          {data.value.toLocaleString()} {data.value === 1 ? "call" : "calls"}
+          {value.toLocaleString()} {value === 1 ? "call" : "calls"}
+          {percentage && ` (${percentage}%)`}
         </span>
       </div>
     </div>
@@ -56,10 +49,18 @@ const CustomTooltip = ({
 };
 
 const CustomXAxisTick = ({ x, y, payload }: CustomXAxisTickProps) => {
-  const words = payload.value.split(" ");
+  // Split the label into parts for better formatting
+  const parts = payload.value.split(" ");
+  const maxWordsPerLine = 2;
+  const lines: string[] = [];
+
+  for (let i = 0; i < parts.length; i += maxWordsPerLine) {
+    lines.push(parts.slice(i, i + maxWordsPerLine).join(" "));
+  }
+
   return (
     <g transform={`translate(${x},${y})`}>
-      {words.map((word: string, index: number) => (
+      {lines.map((line, index) => (
         <text
           key={index}
           x={0}
@@ -67,9 +68,9 @@ const CustomXAxisTick = ({ x, y, payload }: CustomXAxisTickProps) => {
           dy={12}
           textAnchor="middle"
           fill="#64748B"
-          fontSize={12}
+          fontSize={11}
         >
-          {word}
+          {line}
         </text>
       ))}
     </g>
@@ -84,7 +85,7 @@ export function AssistantCountChart({
     return (
       <Card className="glass-panel interactive cursor-pointer h-[400px]">
         <CardHeader>
-          <CardTitle className="text-gray-900">Assistant Types</CardTitle>
+          <CardTitle className="text-gray-900">Call Types</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -97,7 +98,7 @@ export function AssistantCountChart({
     return (
       <Card className="glass-panel interactive cursor-pointer h-[400px]">
         <CardHeader>
-          <CardTitle className="text-gray-900">Assistant Types</CardTitle>
+          <CardTitle className="text-gray-900">Call Types</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[calc(100%-65px)]">
           <p className="text-gray-500">No data over selected time period</p>
@@ -109,13 +110,13 @@ export function AssistantCountChart({
   return (
     <Card className="glass-panel interactive cursor-pointer h-[400px]">
       <CardHeader>
-        <CardTitle className="text-gray-900">Assistant Types</CardTitle>
+        <CardTitle className="text-gray-900">Call Types</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 h-[calc(100%-65px)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 20, right: 30, left: 40, bottom: 0 }}
+            margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
             barSize={40}
           >
             <CartesianGrid
@@ -127,7 +128,7 @@ export function AssistantCountChart({
               dataKey="name"
               height={60}
               interval={0}
-              tick={<CustomXAxisTick />}
+              tick={CustomXAxisTick}
               tickLine={false}
               axisLine={{ stroke: "#E2E8F0" }}
             />
