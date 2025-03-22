@@ -58,17 +58,6 @@ export function AppointmentCalendar({
   // Get client info to access the client's timezone
   const { clientInfo } = useClientData();
 
-  // Log appointments data when component receives it
-  console.log("Calendar received appointments:", {
-    count: appointments.length,
-    appointments: appointments.map((apt) => ({
-      id: apt.id,
-      date: apt.appointmentDateTime,
-      name: `${apt.firstName || ""} ${apt.lastName || ""}`.trim() || "Unnamed",
-      timezone: apt.timezone,
-    })),
-  });
-
   // Memoize the appointments data to prevent unnecessary recalculations
   const appointmentsData = useMemo(() => {
     return appointments.map((apt) => ({
@@ -298,11 +287,11 @@ export function AppointmentCalendar({
         const dayAppointments = getAppointmentsForDate(date);
 
         return (
-          <div className="h-full w-full relative group">
+          <div className="h-full w-full relative">
             <div className="absolute top-1 right-2 text-sm font-medium">
               {date.getDate()}
             </div>
-            <div className="mt-6 space-y-1 overflow-y-auto max-h-[calc(100%-2rem)]">
+            <div className="mt-6 space-y-1 max-h-full">
               {dayAppointments.map((apt) => {
                 // Find the appointment data from our memoized array
                 const appointmentData = appointmentsData.find(
@@ -314,6 +303,11 @@ export function AppointmentCalendar({
                   apt.appointmentDateTime,
                   apt.timezone,
                 );
+
+                const displayName =
+                  apt.firstName || apt.lastName
+                    ? `${apt.firstName || ""} ${apt.lastName || ""}`
+                    : "Unnamed Customer";
 
                 return (
                   <TooltipProvider key={apt.id} delayDuration={300}>
@@ -338,7 +332,6 @@ export function AppointmentCalendar({
                               "flex items-center justify-between",
                             )}
                             onClick={(e) => {
-                              // Stop propagation to prevent the day button's click handler from firing
                               e.stopPropagation();
                               e.preventDefault();
                               handleAppointmentClick(e, apt.id);
@@ -352,8 +345,8 @@ export function AppointmentCalendar({
                             }}
                             tabIndex={0}
                           >
-                            <div className="flex items-center relative">
-                              <div className="w-full truncate pr-6 group-hover/appointment:pr-12">
+                            <div className="flex items-center min-w-0 flex-1">
+                              <div className="truncate">
                                 <time
                                   className={cn(
                                     "font-medium",
@@ -378,9 +371,7 @@ export function AppointmentCalendar({
                                       : "opacity-80",
                                   )}
                                 >
-                                  {apt.firstName || apt.lastName
-                                    ? `${apt.firstName || ""} ${apt.lastName || ""}`
-                                    : "Unnamed Customer"}
+                                  {displayName}
                                 </span>
                               </div>
                             </div>
@@ -389,11 +380,7 @@ export function AppointmentCalendar({
                         {!isAnyDropdownOpen && (
                           <TooltipContent>
                             <div className="space-y-1">
-                              <p className="font-medium">
-                                {apt.firstName || apt.lastName
-                                  ? `${apt.firstName || ""} ${apt.lastName || ""}`
-                                  : "Unnamed Customer"}
-                              </p>
+                              <p className="font-medium">{displayName}</p>
                               <p className="text-xs">
                                 {formatTime(
                                   apt.appointmentDateTime,

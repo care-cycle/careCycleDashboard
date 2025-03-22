@@ -720,10 +720,21 @@ export function useClientData() {
   });
 
   const fetchAppointments = useCallback(async () => {
-    const response = await apiClient.get<AppointmentsResponse>(
-      "/portal/client/customers/appointments",
-    );
-    return response.data.results;
+    console.log("🎯 Starting fetchAppointments");
+    try {
+      const response = await apiClient.get<AppointmentsResponse>(
+        "/portal/client/customers/appointments",
+      );
+      console.log("✅ Appointments API Response:", {
+        status: response.status,
+        count: response.data?.results?.length,
+        sample: response.data?.results?.slice(0, 2),
+      });
+      return response.data.results;
+    } catch (error) {
+      console.error("❌ Error fetching appointments:", error);
+      throw error;
+    }
   }, []);
 
   const fetchContactRates = useCallback(

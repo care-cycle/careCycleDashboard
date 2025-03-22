@@ -81,7 +81,7 @@ export default function Appointments() {
 
   // Filter appointments for upcoming ones
   const appointments = useMemo(() => {
-    return allAppointments;
+    return allAppointments || [];
   }, [allAppointments]);
 
   const handleMonthChange = (month: Date) => {
@@ -157,10 +157,61 @@ export default function Appointments() {
     return Array.from(types);
   }, [allAppointments]);
 
-  // Update the filteredAppointments useMemo
-  const filteredAppointments = useMemo(() => {
+  // Convert appointments to AppointmentData type for calendar
+  const appointmentsData = useMemo(() => {
+    return appointments.map((apt) => ({
+      id: apt.id,
+      customerId: apt.customerId,
+      firstName: apt.firstName,
+      lastName: apt.lastName,
+      timezone: apt.timezone,
+      state: apt.state,
+      postalCode: apt.postalCode,
+      appointmentDateTime: apt.appointmentDateTime,
+      appointmentAttended: apt.appointmentAttended || false,
+      campaignId: apt.campaignId,
+      campaignName: apt.campaignName,
+      callerId: apt.callerId,
+      appointmentType: apt.appointmentType,
+    }));
+  }, [appointments]);
+
+  // Filter appointments for calendar view (all appointments)
+  const calendarAppointments = useMemo(() => {
+    const filtered = appointmentsData.filter((appointment) => {
+      const campaignMatch =
+        effectiveCampaignId === "all" ||
+        appointment.campaignId === effectiveCampaignId;
+
+      if (!searchQuery) return campaignMatch;
+
+      const searchLower = searchQuery.toLowerCase();
+      const searchDigits = searchQuery.replace(/\D/g, "");
+
+      if (appointment.callerId) {
+        const callerIdDigits = appointment.callerId.replace(/\D/g, "");
+        if (callerIdDigits === searchDigits) return true;
+      }
+
+      const searchMatch = Object.entries(appointment).some(([, value]) => {
+        if (value === null || value === undefined) return false;
+        const valueStr =
+          typeof value === "object"
+            ? JSON.stringify(value).toLowerCase()
+            : String(value).toLowerCase();
+        return valueStr.includes(searchLower);
+      });
+
+      return campaignMatch && searchMatch;
+    });
+
+    return filtered;
+  }, [appointmentsData, effectiveCampaignId, searchQuery]);
+
+  // Filter appointments for list view (upcoming only)
+  const upcomingAppointments = useMemo(() => {
     const now = moment();
-    const filtered = (appointments || []).filter((appointment) => {
+    const filtered = appointmentsData.filter((appointment) => {
       const appointmentDate = moment(appointment.appointmentDateTime);
       const isFuture = appointmentDate.isAfter(now);
 
@@ -170,7 +221,6 @@ export default function Appointments() {
 
       if (!searchQuery) return campaignMatch && isFuture;
 
-      // Rest of the existing filtering logic
       const searchLower = searchQuery.toLowerCase();
       const searchDigits = searchQuery.replace(/\D/g, "");
 
@@ -192,26 +242,7 @@ export default function Appointments() {
     });
 
     return filtered;
-  }, [appointments, effectiveCampaignId, searchQuery]);
-
-  // Convert appointments to AppointmentData type for calendar actions
-  const appointmentsData: AppointmentData[] = useMemo(() => {
-    return filteredAppointments.map((apt) => ({
-      id: apt.id,
-      customerId: apt.customerId,
-      firstName: apt.firstName,
-      lastName: apt.lastName,
-      timezone: apt.timezone,
-      state: apt.state,
-      postalCode: apt.postalCode,
-      appointmentDateTime: apt.appointmentDateTime,
-      appointmentAttended: apt.appointmentAttended || false,
-      campaignId: apt.campaignId,
-      campaignName: apt.campaignName,
-      callerId: apt.callerId,
-      appointmentType: apt.appointmentType,
-    }));
-  }, [filteredAppointments]);
+  }, [appointmentsData, effectiveCampaignId, searchQuery]);
 
   const handleAppointmentClose = () => {
     setSelectedAppointment(null);
@@ -236,7 +267,7 @@ export default function Appointments() {
                   <h2 className="text-lg font-semibold">
                     Upcoming Appointments
                   </h2>
-                  <CalendarActions appointments={appointmentsData} />
+                  <CalendarActions appointments={upcomingAppointments} />
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -271,14 +302,14 @@ export default function Appointments() {
                       Loading appointments...
                     </div>
                   </div>
-                ) : filteredAppointments.length === 0 ? (
+                ) : upcomingAppointments.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-24 text-gray-500">
                     <CalendarIcon className="h-8 w-8 mb-2 opacity-50" />
-                    <p className="text-sm">No appointments found</p>
+                    <p className="text-sm">No upcoming appointments found</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredAppointments.map((appointment: Appointment) => (
+                    {upcomingAppointments.map((appointment) => (
                       <div
                         key={appointment.id}
                         className={cn(
@@ -378,7 +409,7 @@ export default function Appointments() {
           <div className="flex-1 min-h-[800px] lg:min-h-[calc(100vh-6rem)] rounded-lg border overflow-auto">
             <div className="h-full p-4">
               <AppointmentCalendar
-                appointments={appointmentsData}
+                appointments={calendarAppointments}
                 month={currentMonth}
                 onMonthChange={handleMonthChange}
                 onAppointmentClick={handleAppointmentClick}
