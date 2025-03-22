@@ -156,6 +156,7 @@ export interface Appointment {
   campaignId: string;
   campaignName: string;
   callerId: string | null;
+  appointmentType: string | null;
 }
 
 interface AppointmentsResponse {

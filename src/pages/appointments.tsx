@@ -1,7 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { AppointmentCalendar } from "@/components/ui/appointment-calendar";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Calendar as CalendarIcon, UserSearch } from "lucide-react";
+import {
+  Search,
+  Calendar as CalendarIcon,
+  UserSearch,
+  Filter,
+} from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import moment from "moment-timezone";
 import { useClientData, useInitialData } from "@/hooks/use-client-data";
@@ -43,6 +48,10 @@ export default function Appointments() {
   const [searchQuery, setSearchQuery] = useState(
     () => searchParams.get("search") || "",
   );
+  const [selectedType, setSelectedType] = useState<string | "all">("all");
+
+  // Force selectedCampaignId to "all" if it's undefined
+  const effectiveCampaignId = selectedCampaignId || "all";
 
   // Add effect to handle search from URL
   useEffect(() => {
@@ -72,11 +81,7 @@ export default function Appointments() {
 
   // Filter appointments for upcoming ones
   const appointments = useMemo(() => {
-    const now = new Date();
-    return allAppointments.filter((appointment) => {
-      const appointmentDate = new Date(appointment.appointmentDateTime);
-      return appointmentDate > now;
-    });
+    return allAppointments;
   }, [allAppointments]);
 
   const handleMonthChange = (month: Date) => {
@@ -141,41 +146,53 @@ export default function Appointments() {
     ];
   }, [clientInfo?.campaigns]);
 
-  // Update the filteredAppointments useMemo to include search filtering
+  // Get unique appointment types
+  const appointmentTypes = useMemo(() => {
+    const types = new Set<string>();
+    allAppointments.forEach((apt) => {
+      if (apt.appointmentType) {
+        types.add(apt.appointmentType);
+      }
+    });
+    return Array.from(types);
+  }, [allAppointments]);
+
+  // Update the filteredAppointments useMemo
   const filteredAppointments = useMemo(() => {
-    return (appointments || []).filter((appointment) => {
+    const now = moment();
+    const filtered = (appointments || []).filter((appointment) => {
+      const appointmentDate = moment(appointment.appointmentDateTime);
+      const isFuture = appointmentDate.isAfter(now);
+
       const campaignMatch =
-        selectedCampaignId === "all" ||
-        appointment.campaignId === selectedCampaignId;
+        effectiveCampaignId === "all" ||
+        appointment.campaignId === effectiveCampaignId;
 
-      if (!searchQuery) return campaignMatch;
+      if (!searchQuery) return campaignMatch && isFuture;
 
-      // Convert search term to lowercase once
+      // Rest of the existing filtering logic
       const searchLower = searchQuery.toLowerCase();
       const searchDigits = searchQuery.replace(/\D/g, "");
 
-      // Check phone number fields first
       if (appointment.callerId) {
         const callerIdDigits = appointment.callerId.replace(/\D/g, "");
-        if (callerIdDigits === searchDigits) return true;
+        if (callerIdDigits === searchDigits) return isFuture;
       }
 
-      // Then check all other fields
       const searchMatch = Object.entries(appointment).some(([, value]) => {
         if (value === null || value === undefined) return false;
-
-        // Convert value to lowercase string for comparison
         const valueStr =
           typeof value === "object"
             ? JSON.stringify(value).toLowerCase()
             : String(value).toLowerCase();
-
         return valueStr.includes(searchLower);
       });
 
-      return campaignMatch && searchMatch;
+      return campaignMatch && searchMatch && isFuture;
     });
-  }, [appointments, selectedCampaignId, searchQuery]);
+
+    return filtered;
+  }, [appointments, effectiveCampaignId, searchQuery]);
 
   // Convert appointments to AppointmentData type for calendar actions
   const appointmentsData: AppointmentData[] = useMemo(() => {
@@ -192,6 +209,7 @@ export default function Appointments() {
       campaignId: apt.campaignId,
       campaignName: apt.campaignName,
       callerId: apt.callerId,
+      appointmentType: apt.appointmentType,
     }));
   }, [filteredAppointments]);
 
@@ -211,26 +229,42 @@ export default function Appointments() {
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Appointments List */}
-          <div className="lg:w-[300px] flex-shrink-0 h-[500px] lg:h-[calc(100vh-12rem)] rounded-lg border">
-            <div className="p-4 h-full">
-              <div className="flex flex-col gap-3">
+          <div className="lg:w-[300px] flex-shrink-0 rounded-lg border min-h-[800px] lg:h-[calc(100vh-6rem)]">
+            <div className="flex flex-col h-full">
+              <div className="p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">
                     Upcoming Appointments
                   </h2>
                   <CalendarActions appointments={appointmentsData} />
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Search by phone number or name..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    className="pl-8"
-                  />
+
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Input
+                      placeholder="Search by phone number or name..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      className="pl-8"
+                    />
+                  </div>
+
+                  {/* Appointment type indicators */}
+                  <div className="flex items-center gap-4 px-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 rounded bg-purple-100 border border-purple-200" />
+                      <span className="text-purple-800">Member Care</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 rounded bg-blue-100 border border-blue-200" />
+                      <span className="text-blue-800">Sales</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="mt-3 space-y-2 overflow-y-auto h-[calc(100%-5rem)]">
+
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
                 {isAppointmentsLoading ? (
                   <div className="flex items-center justify-center h-24">
                     <div className="animate-pulse text-gray-500">
@@ -243,104 +277,106 @@ export default function Appointments() {
                     <p className="text-sm">No appointments found</p>
                   </div>
                 ) : (
-                  filteredAppointments.map((appointment: Appointment) => (
-                    <div
-                      key={appointment.id}
-                      className={cn(
-                        "relative group cursor-pointer",
-                        "border rounded-lg p-3",
-                        "hover:bg-black/5 transition-all duration-200",
-                      )}
-                      onClick={() =>
-                        navigateToCustomer(
-                          appointment.customerId,
-                          appointment.callerId,
-                        )
-                      }
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-medium text-gray-900 text-sm">
-                            {appointment.firstName || appointment.lastName
-                              ? `${appointment.firstName || ""} ${appointment.lastName || ""}`
-                              : "Unnamed Customer"}
-                          </h3>
-                          <div className="mt-0.5 space-y-0.5">
-                            <p className="text-xs font-medium text-gray-900">
-                              {formatAppointmentTime(
-                                appointment.appointmentDateTime,
-                              )}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              {appointment.campaignName}
-                            </p>
-                            {appointment.callerId && (
-                              <p className="text-xs text-gray-600">
-                                {appointment.callerId}
+                  <div className="space-y-2">
+                    {filteredAppointments.map((appointment: Appointment) => (
+                      <div
+                        key={appointment.id}
+                        className={cn(
+                          "relative group cursor-pointer",
+                          "border rounded-lg p-3",
+                          "hover:bg-black/5 transition-all duration-200",
+                        )}
+                        onClick={() =>
+                          navigateToCustomer(
+                            appointment.customerId,
+                            appointment.callerId,
+                          )
+                        }
+                      >
+                        <div className="flex justify-between items-start gap-1">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-gray-900 text-sm">
+                              {appointment.firstName || appointment.lastName
+                                ? `${appointment.firstName || ""} ${appointment.lastName || ""}`
+                                : "Unnamed Customer"}
+                            </h3>
+                            <div className="mt-0.5 space-y-0.5">
+                              <p className="text-xs font-medium text-gray-900">
+                                {formatAppointmentTime(
+                                  appointment.appointmentDateTime,
+                                )}
                               </p>
-                            )}
+                              <p className="text-xs text-gray-600">
+                                {appointment.campaignName}
+                              </p>
+                              {appointment.callerId && (
+                                <p className="text-xs text-gray-600">
+                                  {appointment.callerId}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateToCustomer(
-                                appointment.customerId,
-                                appointment.callerId,
-                              );
-                            }}
-                            className={cn(
-                              "text-gray-400 hover:text-blue-600",
-                              "transition-colors duration-200",
-                              "flex-shrink-0 h-6 w-6 flex items-center justify-center",
-                              "hover:bg-gray-100 rounded-full",
-                            )}
-                            title={
-                              appointment.callerId
-                                ? `Search customer: ${appointment.callerId}`
-                                : "Search customer"
-                            }
-                          >
-                            <UserSearch size={16} />
-                          </button>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            {moment(appointment.appointmentDateTime).isAfter(
-                              moment(),
-                            ) && (
-                              <AppointmentActions
-                                appointment={{
-                                  id: appointment.id,
-                                  customerId: appointment.customerId,
-                                  firstName: appointment.firstName,
-                                  lastName: appointment.lastName,
-                                  timezone: appointment.timezone,
-                                  state: appointment.state,
-                                  postalCode: appointment.postalCode,
-                                  appointmentDateTime:
-                                    appointment.appointmentDateTime,
-                                  appointmentAttended:
-                                    appointment.appointmentAttended || false,
-                                  campaignId: appointment.campaignId,
-                                  campaignName: appointment.campaignName,
-                                  callerId: appointment.callerId,
-                                }}
-                                showCalendarOnly={true}
-                              />
-                            )}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigateToCustomer(
+                                  appointment.customerId,
+                                  appointment.callerId,
+                                );
+                              }}
+                              className={cn(
+                                "text-gray-400 hover:text-blue-600",
+                                "transition-colors duration-200",
+                                "flex-shrink-0 h-6 w-6 flex items-center justify-center",
+                                "hover:bg-gray-100 rounded-full",
+                              )}
+                              title={
+                                appointment.callerId
+                                  ? `Search customer: ${appointment.callerId}`
+                                  : "Search customer"
+                              }
+                            >
+                              <UserSearch size={16} />
+                            </button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              {moment(appointment.appointmentDateTime).isAfter(
+                                moment(),
+                              ) && (
+                                <AppointmentActions
+                                  appointment={{
+                                    id: appointment.id,
+                                    customerId: appointment.customerId,
+                                    firstName: appointment.firstName,
+                                    lastName: appointment.lastName,
+                                    timezone: appointment.timezone,
+                                    state: appointment.state,
+                                    postalCode: appointment.postalCode,
+                                    appointmentDateTime:
+                                      appointment.appointmentDateTime,
+                                    appointmentAttended:
+                                      appointment.appointmentAttended || false,
+                                    campaignId: appointment.campaignId,
+                                    campaignName: appointment.campaignName,
+                                    callerId: appointment.callerId,
+                                  }}
+                                  showCalendarOnly={true}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Right Column - Calendar */}
-          <div className="flex-1 min-h-[500px] lg:min-h-[calc(100vh-12rem)] rounded-lg border overflow-hidden flex flex-col">
-            <div className="flex-1 p-4">
+          <div className="flex-1 min-h-[800px] lg:min-h-[calc(100vh-6rem)] rounded-lg border overflow-auto">
+            <div className="h-full p-4">
               <AppointmentCalendar
                 appointments={appointmentsData}
                 month={currentMonth}

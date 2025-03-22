@@ -36,6 +36,7 @@ export interface AppointmentCalendarProps
     state?: string | null;
     postalCode?: string | null;
     campaignId: string;
+    appointmentType?: string | null;
   }>;
   onAppointmentClick?: (appointmentId: string) => void;
   onMonthChange?: (month: Date) => void;
@@ -57,6 +58,17 @@ export function AppointmentCalendar({
   // Get client info to access the client's timezone
   const { clientInfo } = useClientData();
 
+  // Log appointments data when component receives it
+  console.log("Calendar received appointments:", {
+    count: appointments.length,
+    appointments: appointments.map((apt) => ({
+      id: apt.id,
+      date: apt.appointmentDateTime,
+      name: `${apt.firstName || ""} ${apt.lastName || ""}`.trim() || "Unnamed",
+      timezone: apt.timezone,
+    })),
+  });
+
   // Memoize the appointments data to prevent unnecessary recalculations
   const appointmentsData = useMemo(() => {
     return appointments.map((apt) => ({
@@ -72,6 +84,7 @@ export function AppointmentCalendar({
       campaignId: apt.campaignId,
       campaignName: apt.campaignName || "",
       callerId: apt.callerId,
+      appointmentType: apt.appointmentType || null,
     }));
   }, [appointments]);
 
@@ -81,33 +94,23 @@ export function AppointmentCalendar({
 
   const getAppointmentsForDate = useCallback(
     (date: Date) => {
-      // Get the date string in local timezone for comparison
       const localDateString = date.toDateString();
-
       return appointments.filter((apt) => {
         try {
-          // Use the client's timezone to determine which day to display the appointment on
           const ianaTimezone = clientInfo?.timezone
             ? convertTimezone(clientInfo.timezone)
-            : "America/New_York"; // Fallback to a default timezone
-
-          // Create a moment object in UTC, then convert to the client's timezone
+            : "America/New_York";
           const aptMoment = moment
             .utc(apt.appointmentDateTime)
             .tz(ianaTimezone);
-
-          // Create a date object representing the appointment date in the client's timezone
           const aptLocalDate = new Date(
             aptMoment.year(),
             aptMoment.month(),
             aptMoment.date(),
           );
-
-          // Compare the appointment date with the calendar date
           return aptLocalDate.toDateString() === localDateString;
         } catch (e) {
-          // Fallback to browser timezone if there's an error
-          console.warn("Error comparing appointment dates:", e);
+          console.error("Error in date comparison:", e);
           return (
             new Date(apt.appointmentDateTime).toDateString() === localDateString
           );
@@ -247,7 +250,7 @@ export function AppointmentCalendar({
         "text-muted-foreground font-medium",
         "w-[calc(100%/7)] h-10 flex items-center justify-center",
       ),
-      row: "flex w-full flex-1 min-h-[8rem]",
+      row: "flex w-full flex-1 min-h-[10rem]",
       cell: cn(
         "relative w-[calc(100%/7)] p-0 first:rounded-l-lg last:rounded-r-lg",
         "[&:nth-child(7n)]:bg-gray-100/70 [&:nth-child(1)]:bg-gray-100/70",
@@ -272,6 +275,19 @@ export function AppointmentCalendar({
     [],
   );
 
+  const getAppointmentTypeStyles = (appointmentType: string | null) => {
+    if (!appointmentType) return null;
+
+    switch (appointmentType.toLowerCase()) {
+      case "member care":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "sales":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      default:
+        return null;
+    }
+  };
+
   // Memoize the components
   const dayPickerComponents = useMemo(
     () => ({
@@ -286,7 +302,7 @@ export function AppointmentCalendar({
             <div className="absolute top-1 right-2 text-sm font-medium">
               {date.getDate()}
             </div>
-            <div className="mt-6 space-y-1 max-h-[calc(100%-2rem)] overflow-y-auto">
+            <div className="mt-6 space-y-1 overflow-y-auto max-h-[calc(100%-2rem)]">
               {dayAppointments.map((apt) => {
                 // Find the appointment data from our memoized array
                 const appointmentData = appointmentsData.find(
@@ -311,10 +327,14 @@ export function AppointmentCalendar({
                                 ? apt.appointmentAttended
                                   ? "bg-green-100 text-green-800"
                                   : "bg-red-100 text-red-800"
-                                : "bg-[#74E0BB]/10 text-[#293AF9]",
-                              "hover:bg-[#74E0BB]/20 transition-colors",
+                                : apt.appointmentType
+                                  ? getAppointmentTypeStyles(
+                                      apt.appointmentType,
+                                    )
+                                  : "bg-[#74E0BB]/10 text-[#293AF9]",
+                              "hover:bg-opacity-80 transition-colors",
                               "cursor-alias group/appointment relative",
-                              "border border-transparent hover:border-[#74E0BB]/50",
+                              "border border-transparent",
                               "flex items-center justify-between",
                             )}
                             onClick={(e) => {
@@ -380,6 +400,20 @@ export function AppointmentCalendar({
                                   apt.timezone,
                                 )}
                               </p>
+                              {apt.appointmentType && (
+                                <p
+                                  className={cn(
+                                    "text-xs px-1.5 py-0.5 rounded inline-block",
+                                    apt.appointmentType
+                                      ? getAppointmentTypeStyles(
+                                          apt.appointmentType,
+                                        )
+                                      : "bg-[#74E0BB]/10 text-[#293AF9]",
+                                  )}
+                                >
+                                  {apt.appointmentType}
+                                </p>
+                              )}
                               {apt.campaignName && (
                                 <p className="text-xs text-muted-foreground">
                                   Campaign: {apt.campaignName}
