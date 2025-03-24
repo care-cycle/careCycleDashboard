@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { SignUp } from "@clerk/clerk-react";
 
-const PROD_DOMAIN = "https://app.nodable.ai";
+const PROD_DOMAIN = "https://app.carecycle.ai";
 const DEV_DOMAIN = "http://localhost:5173";
 
 export default function SignUpWrapper() {
@@ -16,7 +16,7 @@ export default function SignUpWrapper() {
         <div className="mb-8 text-center">
           <img
             src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/66bfa1f56b8fef22f0e4dfe5_Nodable%20Logo%20Black%20Text%2072%20ppi.png"
-            alt="Nodable Labs"
+            alt="careCycle"
             className="h-8 mx-auto mb-6"
           />
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -25,7 +25,7 @@ export default function SignUpWrapper() {
           <p className="text-sm text-gray-500 mt-1">
             {isVerificationStep
               ? "Check your email for a verification link"
-              : "Get started with Nodable Labs"}
+              : "Get started with careCycle"}
           </p>
         </div>
         <SignUp

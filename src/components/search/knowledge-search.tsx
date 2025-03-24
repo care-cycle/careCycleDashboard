@@ -134,7 +134,7 @@ export function KnowledgeSearch() {
               handleSubmit(query);
             }
           }}
-          placeholder="Search call data with Nodable Knowledge... (⌘K)"
+          placeholder="Search call data with careCycle Knowledge... (⌘K)"
           className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-900 placeholder:text-gray-500"
         />
         <button
@@ -175,11 +175,11 @@ export function KnowledgeSearch() {
               <div className="flex items-center gap-3">
                 <img
                   src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"
-                  alt="Nodable Knowledge"
+                  alt="careCycle Knowledge"
                   className="w-6 h-6"
                 />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Nodable Knowledge
+                  careCycle Knowledge
                 </h2>
               </div>
               <div className="flex items-center gap-2">

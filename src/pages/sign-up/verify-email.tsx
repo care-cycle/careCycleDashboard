@@ -13,7 +13,7 @@ export function VerifyEmail() {
         <div className="mb-8 text-center">
           <img
             src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/66bfa1f56b8fef22f0e4dfe5_Nodable%20Logo%20Black%20Text%2072%20ppi.png"
-            alt="Nodable Labs"
+            alt="careCycle"
             className="h-8 mx-auto mb-6"
           />
           <h1 className="text-2xl font-semibold text-gray-900">

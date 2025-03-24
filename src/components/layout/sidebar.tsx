@@ -174,14 +174,14 @@ export function Sidebar({ className }: SidebarProps) {
               alt={logoAlt}
               className={cn(
                 "absolute top-0 left-0 h-10 w-[260px] transition-all duration-300",
-                "object-contain object-left bg-white/40 left-[10px]",
+                "object-contain object-left left-[10px] -top-[2px]",
                 isExpanded ? "opacity-100" : "opacity-0",
               )}
             />
             <img
               src={logoSrc.collapsed}
               alt={logoAlt}
-              className="absolute h-10 w-10 opacity-100 z-10 bg-white/40 left-[10px]"
+              className="absolute h-14 w-14 opacity-100 z-10 left-[4px] -top-[12px]"
             />
           </div>
         </div>

@@ -18,12 +18,14 @@ import {
   SITE_SEVERITY_LEVELS,
 } from "@/constants/feedback";
 import { useUser } from "@clerk/clerk-react";
+import { useLocation } from "react-router-dom";
 
 type FeedbackType = keyof typeof SITE_FEEDBACK_TYPES;
 type SeverityLevel = keyof typeof SITE_SEVERITY_LEVELS;
 
 export function FeedbackWidget() {
   const { user } = useUser();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType | "">("");
   const [severity, setSeverity] = useState<SeverityLevel | "">("");
@@ -53,6 +55,14 @@ export function FeedbackWidget() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open]);
+
+  // Hide on sign-in and sign-up pages
+  if (
+    location.pathname.startsWith("/sign-in") ||
+    location.pathname.startsWith("/sign-up")
+  ) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!type || !severity || !feedback.trim()) {

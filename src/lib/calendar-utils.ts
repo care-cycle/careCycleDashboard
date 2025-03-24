@@ -64,11 +64,11 @@ export const generateICSForAppointment = (
     return [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Nodable//Appointment Calendar//EN",
+      "PRODID:-//careCycle//Appointment Calendar//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
-      `UID:${appointment.id}@nodable.com`,
+      `UID:${appointment.id}`,
       `DTSTAMP:${now}`,
       `DTSTART:${formatDate(startDate)}`,
       `DTEND:${formatDate(endDate)}`,
@@ -96,7 +96,7 @@ export const generateICSForAppointments = (
     const calendarHeader = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Nodable//Appointment Calendar//EN",
+      "PRODID:-//careCycle//Appointment Calendar//",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
     ].join("\r\n");
@@ -129,7 +129,7 @@ export const generateICSForAppointments = (
 
         return [
           "BEGIN:VEVENT",
-          `UID:${appointment.id}@nodable.com`,
+          `UID:${appointment.id}`,
           `DTSTAMP:${now}`,
           `DTSTART:${formatDate(startDate)}`,
           `DTEND:${formatDate(endDate)}`,

@@ -52,7 +52,7 @@ export function CalendarActions({
     const icsContent = generateICSForAppointments(futureAppointments);
     if (!icsContent) return;
 
-    const filename = `nodable_appointments_${new Date().toISOString().split("T")[0]}.ics`;
+    const filename = `careCycle_appointments_${new Date().toISOString().split("T")[0]}.ics`;
     downloadFile(icsContent, filename);
 
     toast({

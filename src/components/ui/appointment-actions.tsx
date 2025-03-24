@@ -91,7 +91,7 @@ export function AppointmentActions({
             .replace(/\s+/g, "_")
         : "appointment";
 
-    const filename = `nodable_${customerName}_${new Date(appointment.appointmentDateTime).toISOString().split("T")[0]}.ics`;
+    const filename = `carecycle_${customerName}_${new Date(appointment.appointmentDateTime).toISOString().split("T")[0]}.ics`;
     downloadFile(icsContent, filename);
   }, [appointment, isFuture]);
 
