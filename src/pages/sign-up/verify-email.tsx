@@ -12,7 +12,7 @@ export function VerifyEmail() {
       <div className="w-full max-w-[480px] p-6">
         <div className="mb-8 text-center">
           <img
-            src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/66bfa1f56b8fef22f0e4dfe5_Nodable%20Logo%20Black%20Text%2072%20ppi.png"
+            src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b1dc686c0fa648631187_Color%201%20(on%20white).png"
             alt="careCycle"
             className="h-8 mx-auto mb-6"
           />

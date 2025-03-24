@@ -24,7 +24,7 @@ export function RootLayout({
         {/* Left orb */}
         <div
           aria-hidden="true"
-          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#74E0BB] left-32 top-32"
+          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#17bebb] left-32 top-32"
           style={{
             animation: "float2 20s ease-in-out infinite alternate",
             animationDelay: "-2.5s",
@@ -37,7 +37,7 @@ export function RootLayout({
         {/* Right orb */}
         <div
           aria-hidden="true"
-          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#293AF9] right-32 bottom-32"
+          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-30 bg-[#6564db] right-32 bottom-32"
           style={{
             animation: "float2 20s ease-in-out infinite alternate",
             animationDelay: "-5s",

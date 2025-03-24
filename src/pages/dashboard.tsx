@@ -104,11 +104,6 @@ export default function Dashboard() {
     if (!metrics?.data) return [];
 
     const campaignsData = metrics.data;
-    console.log("Building available campaigns from:", campaignsData);
-    console.log(
-      "Full metrics data structure:",
-      JSON.stringify(metrics.data, null, 2).substring(0, 1000) + "...",
-    );
 
     const campaignsList = Object.entries(campaignsData)
       .filter(
@@ -127,8 +122,6 @@ export default function Dashboard() {
         hours: data.hours || [],
       }));
 
-    console.log("Available campaigns list:", campaignsList);
-
     return [
       { id: "all", name: "All Campaigns" },
       ...campaignsList.map((campaign) => ({
@@ -142,27 +135,9 @@ export default function Dashboard() {
   const findCampaign = (campaignId: string) => {
     if (!metrics?.data?.data || campaignId === "all") return null;
 
-    // Log the full metrics structure to debug
-    console.log("Full metrics structure:", {
-      hasData: Boolean(metrics.data.data),
-      topLevelKeys: Object.keys(metrics.data.data),
-      metricsData: metrics.data.data,
-    });
-
-    // Try to find campaign data in metrics.data.data.campaigns
     const campaign = metrics.data.data.campaigns?.find(
       (c: any) => c.id === campaignId,
     );
-
-    // Safe logging that handles undefined data
-    console.log("Found campaign data for ID:", {
-      campaignId,
-      exists: Boolean(campaign),
-      dataStructure: campaign
-        ? JSON.stringify(campaign).slice(0, 200) + "..."
-        : "null",
-      dataKeys: campaign ? Object.keys(campaign) : [],
-    });
 
     return campaign || null;
   };
@@ -183,16 +158,6 @@ export default function Dashboard() {
     const endUTC = new Date(
       endDate.getTime() - endDate.getTimezoneOffset() * 60000,
     );
-
-    console.log("Call volume data debug:", {
-      campaignId: selectedCampaignId,
-      hoursLength: hours?.length || 0,
-      sampleHours: hours?.slice(0, 3).map((hour: HourData) => ({
-        hour: hour.hour,
-        inbound: hour.inbound,
-        outbound: hour.outbound,
-      })),
-    });
 
     const rawData = hours
       .filter((metric: HourData) => {
@@ -225,19 +190,6 @@ export default function Dashboard() {
   // Use getHoursData for dispositions
   const dispositionsData = useMemo(() => {
     const hours = getHoursData(selectedCampaignId);
-
-    console.log("Dispositions data debug:", {
-      campaignId: selectedCampaignId,
-      hoursLength: hours?.length || 0,
-      sampleHours: hours?.slice(0, 3).map((hour) => ({
-        hour: hour.hour,
-        hourFormatted: hour.hourFormatted,
-        dateFormatted: hour.dateFormatted,
-        timestamp: new Date(hour.hour).getTime(),
-        dispositionCounts: hour.dispositionCounts,
-        rawHour: JSON.stringify(hour),
-      })),
-    });
 
     if (!hours?.length) return [];
 
@@ -336,8 +288,6 @@ export default function Dashboard() {
 
       if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
         setDate(newDate);
-      } else {
-        console.error("Invalid date selection:", newDate);
       }
     }
   };
@@ -347,18 +297,12 @@ export default function Dashboard() {
     value: "0",
     change: "N/A",
     description: "",
-    rawValue: 0, // Add a raw numeric value for internal use
+    rawValue: 0,
   });
-
-  // Add debug logging for customersEngaged state changes
-  useEffect(() => {
-    console.log("customersEngaged state changed:", customersEngaged);
-  }, [customersEngaged]);
 
   // Consolidated effect to update customersEngaged
   useEffect(() => {
     let isMounted = true;
-    // Clear previous state when date changes to prevent stale data
     setCustomersEngaged({
       value: "Loading...",
       change: "Fetching data...",
@@ -372,17 +316,10 @@ export default function Dashboard() {
           const from = new Date(date.from!);
           const to = new Date(date.to!);
 
-          // Log the date range being requested
           const daysDiff =
             Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) +
             1;
-          console.log("Fetching unique callers for date range:", {
-            from: from.toISOString(),
-            to: to.toISOString(),
-            daysDiff,
-          });
 
-          // Show loading state for large date ranges
           if (daysDiff > 14) {
             setCustomersEngaged({
               value: "Loading...",
@@ -392,23 +329,10 @@ export default function Dashboard() {
             });
           }
 
-          // Create a controller to abort the request if it takes too long
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s overall timeout
-
-          console.log("Calling fetchUniqueCallers with:", {
-            from: from.toISOString(),
-            to: to.toISOString(),
-          });
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
 
           const response = await fetchUniqueCallers(from, to);
-
-          console.log("fetchUniqueCallers response:", {
-            success: response.data.success,
-            currentPeriod: response.data.data?.currentPeriod,
-            previousPeriod: response.data.data?.previousPeriod,
-            comparison: response.data.data?.comparison,
-          });
 
           clearTimeout(timeoutId);
 
@@ -418,8 +342,6 @@ export default function Dashboard() {
             const { currentPeriod, previousPeriod, comparison } =
               response.data.data;
 
-            // Ensure uniqueCallers is a proper number - parse it strictly
-            // First convert to string, then remove any non-numeric characters, then parse as integer
             const rawValue =
               typeof currentPeriod?.uniqueCallers === "number"
                 ? currentPeriod.uniqueCallers
@@ -430,14 +352,6 @@ export default function Dashboard() {
                     ),
                     10,
                   ) || 0;
-
-            // Debug log to check the value before setting state
-            console.log("Setting customersEngaged with value:", {
-              rawValue: currentPeriod?.uniqueCallers,
-              parsedValue: rawValue,
-              formattedValue: rawValue.toLocaleString(),
-              valueType: typeof currentPeriod?.uniqueCallers,
-            });
 
             setCustomersEngaged({
               value: rawValue.toLocaleString(),
@@ -458,11 +372,7 @@ export default function Dashboard() {
             });
           }
         } catch (error: any) {
-          console.error("Error fetching unique callers:", error);
-
-          // Handle timeout specifically
           if (error.code === "ECONNABORTED" || error.name === "AbortError") {
-            // Get the date range values from the closure
             const fromDate = date?.from ? new Date(date.from) : new Date();
             const toDate = date?.to ? new Date(date.to) : new Date();
             const daysDiff =
@@ -498,39 +408,25 @@ export default function Dashboard() {
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.data?.campaigns) return [];
 
-    // Handle empty object case
     if (Object.keys(metrics.data.data.campaigns).length === 0) {
-      // console.log('Empty campaigns object detected');
       return [];
     }
 
-    // Ensure we have a valid campaigns structure
     if (
       !metrics.data.data.campaigns ||
       typeof metrics.data.data.campaigns !== "object"
     ) {
-      console.error("Invalid campaigns data structure");
       return [];
     }
 
-    // Convert campaigns to array if it's an object
     const campaignsArray = Array.isArray(metrics.data.data.campaigns)
       ? metrics.data.data.campaigns
       : Object.values(metrics.data.data.campaigns);
 
-    // Validate the converted array
     if (!Array.isArray(campaignsArray)) {
-      console.error("Failed to convert campaigns to array");
       return [];
     }
 
-    console.log("campaignsArray after conversion:", {
-      isArray: Array.isArray(campaignsArray),
-      length: campaignsArray.length,
-      sample: campaignsArray[0],
-    });
-
-    // Filter out any invalid campaign entries
     const validCampaigns = campaignsArray.filter((c: any): c is Campaign => {
       const campaignLike = c as CampaignLike;
       return (
@@ -542,10 +438,8 @@ export default function Dashboard() {
     });
 
     return validCampaigns.map((campaign: Campaign) => {
-      // Get all hours for this campaign
       const hours = campaign.hours || [];
 
-      // Calculate total calls for current period
       const currentPeriodCalls = hours.reduce((sum: number, hour: HourData) => {
         const hourDate = new Date(hour.hour);
         if (
@@ -559,7 +453,6 @@ export default function Dashboard() {
         return sum;
       }, 0);
 
-      // Calculate previous period calls
       const daysDiff =
         date?.from && date?.to
           ? Math.ceil(
@@ -710,20 +603,6 @@ export default function Dashboard() {
     const filteredHours = hours.filter((hour: HourData) => {
       const hourDate = new Date(hour.hour);
       return hourDate >= startUTC && hourDate <= endUTC;
-    });
-
-    console.log("Assistant types data debug:", {
-      campaignId: selectedCampaignId,
-      totalHours: hours.length,
-      filteredHours: filteredHours.length,
-      dateRange: {
-        start: startUTC.toISOString(),
-        end: endUTC.toISOString(),
-      },
-      sampleHours: filteredHours.slice(0, 3).map((hour: HourData) => ({
-        hour: hour.hour,
-        assistantTypeCounts: hour.assistantTypeCounts,
-      })),
     });
 
     if (!filteredHours.length) return [];

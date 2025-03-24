@@ -117,7 +117,7 @@ export function KnowledgeSearch() {
         )}
       >
         <img
-          src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"
+          src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b20fb2f3fb0483a2b834_careCycle%20Emblem%20Profile%20Picture%20-%20Color%201%20(on%20white).png"
           alt=""
           className="w-4 h-4"
         />
@@ -174,7 +174,7 @@ export function KnowledgeSearch() {
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <img
-                  src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png"
+                  src="https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b20fb2f3fb0483a2b834_careCycle%20Emblem%20Profile%20Picture%20-%20Color%201%20(on%20white).png"
                   alt="careCycle Knowledge"
                   className="w-6 h-6"
                 />

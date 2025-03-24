@@ -17,7 +17,7 @@ export function CallsByCampaign({ data }: CallsByCampaignProps) {
   }
 
   return (
-    <Card>
+    <Card className="glass-panel interactive cursor-pointer">
       <CardHeader>
         <CardTitle>Campaign Activity</CardTitle>
       </CardHeader>

@@ -17,6 +17,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useRedaction } from "@/hooks/use-redaction";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { AnimatedOrbs } from "@/components/ui/animated-orbs";
 
 const navigationItems = [
   {
@@ -125,37 +126,10 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <div className="relative h-full">
-      {/* Animated orbs */}
-      <div className="fixed inset-0 -z-10 isolate pointer-events-none">
-        <div
-          aria-hidden="true"
-          className="absolute w-[400px] h-[400px] rounded-full blur-[100px] opacity-30 bg-[#74E0BB] -left-1/2 top-0 pointer-events-none select-none"
-          style={{
-            animation: "float1 25s ease-in-out infinite alternate",
-            zIndex: -9999,
-            pointerEvents: "none",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute w-[300px] h-[300px] rounded-full blur-[100px] opacity-30 bg-[#293AF9] -right-1/2 bottom-32 pointer-events-none select-none"
-          style={{
-            animation: "float2 20s ease-in-out infinite alternate",
-            animationDelay: "-5s",
-            zIndex: -9999,
-            pointerEvents: "none",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-          }}
-        />
-      </div>
-
       {/* Sidebar content */}
       <div
         className={cn(
-          "relative h-full bg-white/40 backdrop-blur-xl border-r border-white/30",
+          "relative h-full bg-white/40 backdrop-blur-xl",
           "shadow-[0_0_15px_rgba(0,0,0,0.03)]",
           "transition-all duration-300 ease-in-out",
           "flex flex-col",
@@ -181,7 +155,7 @@ export function Sidebar({ className }: SidebarProps) {
             <img
               src={logoSrc.collapsed}
               alt={logoAlt}
-              className="absolute h-14 w-14 opacity-100 z-10 left-[4px] -top-[12px]"
+              className="absolute h-12 w-12 opacity-100 z-10 left-[8px] -top-[8px]"
             />
           </div>
         </div>

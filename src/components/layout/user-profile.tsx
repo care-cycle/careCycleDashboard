@@ -29,7 +29,7 @@ export function UserProfile({
     email: isRedacted ? "***" : user?.primaryEmailAddress?.emailAddress,
     imageUrl:
       user?.imageUrl ||
-      "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/6722f2e1aa50560b1eae60a1_favicon-nodable-knowledge.png",
+      "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b20fb2f3fb0483a2b834_careCycle%20Emblem%20Profile%20Picture%20-%20Color%201%20(on%20white).png",
   };
 
   const handleLogout = async () => {

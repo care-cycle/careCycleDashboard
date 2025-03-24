@@ -58,7 +58,9 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        "sticky top-0 z-10 w-full",
+        "bg-white/40 backdrop-blur-xl",
+        "shadow-[0_0_15px_rgba(0,0,0,0.03)]",
         className,
       )}
     >
@@ -67,10 +69,10 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
           value={selectedCampaignId}
           onValueChange={setSelectedCampaignId}
         >
-          <SelectTrigger className="w-[300px]">
+          <SelectTrigger className="w-[300px] bg-white/50 border-white/30 hover:bg-white/60 transition-colors">
             <SelectValue placeholder="Select Campaign" />
           </SelectTrigger>
-          <SelectContent className="bg-white border shadow-lg">
+          <SelectContent className="bg-white/80 backdrop-blur-xl border-white/30 shadow-lg">
             {campaignOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
@@ -79,12 +81,12 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center divide-x">
+        <div className="flex items-center">
           {metrics.map((metric) => (
             <TooltipProvider key={metric.title}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center space-x-3 px-6 hover:bg-black/5 transition-colors duration-200 h-14">
+                  <div className="flex items-center space-x-3 px-6 hover:bg-white/50 transition-colors duration-200 h-14 first:border-l-0">
                     <div className="flex items-center space-x-2 text-muted-foreground">
                       {getMetricIcon(metric.title)}
                       <span className="text-sm whitespace-nowrap">
@@ -97,7 +99,7 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
                   </div>
                 </TooltipTrigger>
                 {metric.info && (
-                  <TooltipContent>
+                  <TooltipContent className="bg-white/80 backdrop-blur-xl border-white/30">
                     <p>{metric.info}</p>
                   </TooltipContent>
                 )}
