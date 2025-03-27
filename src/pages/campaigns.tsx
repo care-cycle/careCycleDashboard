@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { RootLayout } from "@/components/layout/root-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,9 @@ import {
   Check,
   X,
   ChevronDown,
+  HelpCircle,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useInitialData } from "@/hooks/use-client-data";
 import { getTopMetrics } from "@/lib/metrics";
@@ -37,6 +40,12 @@ import type { Campaign, SmsTypes, SmsContent } from "@/types/campaign";
 import apiClient from "@/lib/api-client";
 import { transformToBackendFormat } from "@/utils/smsVariables";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CampaignData {
   [key: string]: {
@@ -246,7 +255,7 @@ export default function CampaignsPage() {
         smsTypes?: SmsTypes;
       } = {};
 
-      // Add SMS company name if present
+      // Add company name if present
       if (updateData.smsCompanyName) {
         smsUpdateData.smsCompanyName = updateData.smsCompanyName;
       }
@@ -302,12 +311,36 @@ export default function CampaignsPage() {
   ) => {
     setIsSaving(true);
     try {
-      const retryUpdateData = {
+      // Ensure we have all required fields for the retry configuration
+      const retryUpdateData: any = {
         retryStrategy: updateData.retryStrategy,
-        retryDelays: updateData.retryDelays,
-        retryPatterns: updateData.retryPatterns,
-        retrySettings: updateData.retrySettings,
-        maxAttempts: updateData.maxAttempts,
+      };
+
+      // Add retry patterns if present
+      if (updateData.retryPatterns) {
+        retryUpdateData.retryPatterns = updateData.retryPatterns;
+      }
+
+      // Add retry delays if present
+      if (updateData.retryDelays) {
+        retryUpdateData.retryDelays = updateData.retryDelays;
+      }
+
+      // Always include retry settings with defaults if not provided
+      retryUpdateData.retrySettings = updateData.retrySettings || {
+        cooldownPeriod: {
+          hours:
+            (updateData.retrySettings as Campaign["retrySettings"])
+              ?.cooldownPeriod?.hours || 24,
+          afterAttempts:
+            (updateData.retrySettings as Campaign["retrySettings"])
+              ?.cooldownPeriod?.afterAttempts || 3,
+        },
+        retryBehavior: {
+          onDayComplete: "NEXT_DAY_START",
+          onPatternComplete: "COOLDOWN",
+          onCooldownComplete: "END",
+        },
       };
 
       const response = await apiClient.put(
@@ -320,19 +353,35 @@ export default function CampaignsPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      setPendingChanges({});
+      setShowTcpaDialog(false);
 
       toast({
-        title: "Success",
-        description: "Retry configuration updated successfully",
+        title: "Retry Configuration Saved",
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-500" />
+            <span>Your retry settings have been updated successfully.</span>
+          </div>
+        ),
+        className: "border-emerald-500/20 bg-emerald-50",
       });
-      setPendingChanges({});
     } catch (error) {
       console.error("[Campaign Update - Retry] Error details:", error);
       toast({
-        title: "Error",
-        description: "Failed to update retry configuration",
-        variant: "destructive",
+        title: "Failed to Save",
+        description: (
+          <div className="flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-red-500" />
+            <span>
+              There was an error saving your retry configuration. Please try
+              again.
+            </span>
+          </div>
+        ),
+        className: "border-red-500/20 bg-red-50",
       });
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -355,10 +404,13 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     if (selectedCampaign) {
-      handleRetryUpdate(selectedCampaign.id, pendingChanges);
-      setShowTcpaDialog(false);
+      try {
+        await handleRetryUpdate(selectedCampaign.id, pendingChanges);
+      } catch (error) {
+        console.error("Error saving retry configuration:", error);
+      }
     }
   };
 
@@ -525,7 +577,7 @@ export default function CampaignsPage() {
                 <Collapsible open={isSmsOpen} onOpenChange={setIsSmsOpen}>
                   <div className="flex items-center justify-between p-6">
                     <h3 className="text-lg font-medium text-gray-900">
-                      SMS Config
+                      SMS Configuration
                     </h3>
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="w-9 p-0">
@@ -554,12 +606,89 @@ export default function CampaignsPage() {
                 </Collapsible>
               </div>
 
-              <div className="glass-panel rounded-lg overflow-hidden">
+              <div className="glass-panel rounded-lg overflow-visible">
                 <Collapsible open={isRetryOpen} onOpenChange={setIsRetryOpen}>
                   <div className="flex items-center justify-between p-6">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Retry Configuration
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        Retry Configuration
+                      </h3>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="inline-flex">
+                              <HelpCircle className="w-4 h-4 text-gray-400" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="right"
+                            align="start"
+                            className="max-w-[400px] p-4 space-y-4"
+                            sideOffset={5}
+                          >
+                            <div>
+                              <h4 className="font-medium mb-2">
+                                About Retry Strategies
+                              </h4>
+                              <div className="space-y-4">
+                                <div>
+                                  <h5 className="font-medium text-sm mb-1">
+                                    None
+                                  </h5>
+                                  <p className="text-sm text-gray-600">
+                                    No retry attempts will be made. The campaign
+                                    will only attempt to contact each customer
+                                    once. Choose this when you only need a
+                                    single contact attempt per customer.
+                                  </p>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-sm mb-1">
+                                    Pattern
+                                  </h5>
+                                  <p className="text-sm text-gray-600">
+                                    Best for complex, multi-day campaigns where
+                                    contact urgency varies over time. Ideal for
+                                    lead qualification, sales follow-up, and
+                                    time-sensitive notifications.
+                                  </p>
+                                  <ul className="text-sm text-gray-600 mt-2 space-y-1">
+                                    <li>
+                                      • Days: Schedule different attempt
+                                      frequencies across multiple days
+                                    </li>
+                                    <li>
+                                      • Attempts: Set the maximum number of
+                                      contact tries per day
+                                    </li>
+                                    <li>
+                                      • Interval: Configure time between
+                                      attempts in minutes
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-sm mb-1">
+                                    Delays
+                                  </h5>
+                                  <p className="text-sm text-gray-600">
+                                    Perfect for simple, consistent follow-ups
+                                    with evenly spaced attempts. Ideal for
+                                    welcome calls, appointment reminders, and
+                                    verification calls.
+                                  </p>
+                                  <p className="text-sm text-gray-600 mt-2">
+                                    Example: Try again after 1 hour, then 3
+                                    hours, then 6 hours for a gradual follow-up
+                                    pattern.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" className="w-9 p-0">
                         <ChevronDown
@@ -569,7 +698,7 @@ export default function CampaignsPage() {
                     </CollapsibleTrigger>
                   </div>
 
-                  <CollapsibleContent className="transition-all duration-300 ease-in-out">
+                  <CollapsibleContent className="transition-all duration-300 ease-in-out overflow-visible">
                     <RetryConfig
                       campaign={selectedCampaign as Campaign}
                       pendingChanges={pendingChanges}

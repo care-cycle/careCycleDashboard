@@ -29,6 +29,8 @@ export interface SmsTypes {
   missedFirstContact: boolean;
   appointmentReminder: boolean;
   missedInquiry: boolean;
+  newInquiry: boolean;
+  informationalFollowup: boolean;
 }
 
 export interface SmsContent {
@@ -38,7 +40,9 @@ export interface SmsContent {
   missedAppointment: string;
   missedFirstContact: string;
   appointmentReminder: string;
-  missedInquiry?: string;
+  missedInquiry: string;
+  newInquiry: string;
+  informationalFollowup: string;
 }
 
 export interface CustomerStats {

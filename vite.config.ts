@@ -22,6 +22,23 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       },
     },
+    build: {
+      assetsDir: 'assets',
+      copyPublicDir: true,
+      rollupOptions: {
+        output: {
+          assetFileNames: (assetInfo) => {
+            if (!assetInfo.name) return 'assets/[name]-[hash][extname]';
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (ext === 'otf' || ext === 'ttf') {
+              return assetInfo.name;
+            }
+            return 'assets/[name]-[hash][extname]';
+          }
+        }
+      }
+    },
     server: {
       host: env.VITE_DEV_HOST,
       port: parseInt(env.VITE_DEV_PORT),
