@@ -100,14 +100,20 @@ export default function Dashboard() {
 
     // For "all" campaigns, use the total data
     if (campaignId === "all") {
-      return metrics.data.data.total || [];
+      return Array.isArray(metrics.data.data.total)
+        ? metrics.data.data.total
+        : [];
     }
 
     // For specific campaigns, find the campaign and use its hours data
-    const campaign = metrics.data.data.campaigns?.find(
-      (c: Campaign) => c.id === campaignId,
-    );
-    return campaign?.hours || [];
+    const campaigns = metrics.data.data.campaigns;
+    if (!campaigns || typeof campaigns !== "object") return [];
+
+    const campaign = Array.isArray(campaigns)
+      ? campaigns.find((c: Campaign) => c?.id === campaignId)
+      : Object.values(campaigns).find((c: Campaign) => c?.id === campaignId);
+
+    return Array.isArray(campaign?.hours) ? campaign.hours : [];
   };
 
   // Update campaign selector to handle object structure
@@ -585,7 +591,7 @@ export default function Dashboard() {
   const assistantTypesData = useMemo(() => {
     const hours = getHoursData(selectedCampaignId);
 
-    if (!hours?.length) return [];
+    if (!Array.isArray(hours) || !hours.length) return [];
 
     // Filter hours by date range
     const startDate = new Date(date?.from || new Date());
@@ -602,6 +608,7 @@ export default function Dashboard() {
 
     // Filter hours within the date range
     const filteredHours = hours.filter((hour: HourData) => {
+      if (!hour || typeof hour !== "object") return false;
       const hourDate = new Date(hour.hour);
       return hourDate >= startUTC && hourDate <= endUTC;
     });
@@ -611,10 +618,15 @@ export default function Dashboard() {
     // Get all unique assistant types from the filtered hours
     const allAssistantTypes = new Set<string>();
     filteredHours.forEach((hour: HourData) => {
-      if (hour.assistantTypeCounts) {
-        Object.keys(hour.assistantTypeCounts).forEach((type) =>
-          allAssistantTypes.add(type),
-        );
+      if (
+        hour?.assistantTypeCounts &&
+        typeof hour.assistantTypeCounts === "object"
+      ) {
+        Object.keys(hour.assistantTypeCounts).forEach((type) => {
+          if (typeof type === "string") {
+            allAssistantTypes.add(type);
+          }
+        });
       }
     });
 
