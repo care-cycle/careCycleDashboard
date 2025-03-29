@@ -1,11 +1,7 @@
 // src/App.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-import { UIProvider } from "./contexts/ui-context";
 import { AnimatePresence } from "framer-motion";
-import { RedactionProvider } from "./contexts/redaction-context";
-import { PrivateRoute } from "./components/auth/private-route";
-import { AdminRoute } from "./components/auth/admin-route";
 import { VerifyEmail } from "./pages/sign-up/verify-email";
 import SignUpPage from "./pages/sign-up";
 import Dashboard from "./pages/dashboard";
@@ -14,21 +10,17 @@ import SignIn from "./pages/sign-in";
 import ProfilePage from "./pages/user/profile";
 import BillingPage from "./pages/user/billing";
 import { useInitialData } from "./hooks/use-client-data";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Customers from "./pages/customers";
 import CampaignsPage from "./pages/campaigns";
 import Appointments from "./pages/appointments";
 import InquiriesPage from "./pages/inquiries";
 import SourcesPage from "./pages/sources";
 import ManageSourcesPage from "./pages/sources/manage";
-import { FeedbackWidget } from "./components/ui/feedback-widget";
-import { PreferencesProvider } from "@/contexts/preferences-context";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { AdminRoute } from "./components/auth/admin-route";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { UnauthorizedPage } from "./pages/unauthorized";
 
-// Create a client
-const queryClient = new QueryClient();
-
-function App() {
+export function App() {
   const { isLoaded, isSignedIn } = useAuth();
   const { isLoading: isLoadingInitialData } = useInitialData();
 
@@ -55,138 +47,58 @@ function App() {
   }
 
   return (
-    <UIProvider>
-      <PreferencesProvider>
-        <AnimatePresence mode="wait">
-          <Routes>
-            {/* Root redirect */}
-            <Route
-              path="/"
-              element={
-                isSignedIn ? (
-                  <Navigate to="/dashboard" replace />
-                ) : (
-                  <Navigate to="/sign-in" replace />
-                )
-              }
-            />
+    <AnimatePresence mode="wait">
+      <Routes>
+        {/* Public routes */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="/sign-in/*" element={<SignIn />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-            {/* Dashboard route */}
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-
-            {/* Public Routes */}
-            <Route path="/sign-in/*" element={<SignIn />} />
-            <Route path="/sign-up/*" element={<SignUpPage />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-
-            {/* Private Routes */}
-            <Route
-              path="/calls"
-              element={
-                <PrivateRoute>
-                  <Calls />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/user/profile"
-              element={
-                <PrivateRoute>
-                  <ProfilePage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/user/billing"
-              element={
-                <PrivateRoute>
-                  <AdminRoute>
-                    <BillingPage />
-                  </AdminRoute>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/customers"
-              element={
-                <PrivateRoute>
-                  <Customers />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/campaigns"
-              element={
-                <PrivateRoute>
-                  <AdminRoute>
-                    <CampaignsPage />
-                  </AdminRoute>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/appointments"
-              element={
-                <PrivateRoute>
-                  <Appointments />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/inquiries"
-              element={
-                <PrivateRoute>
-                  <InquiriesPage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/sources"
-              element={
-                <PrivateRoute>
-                  <AdminRoute>
-                    <SourcesPage />
-                  </AdminRoute>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/sources/manage"
-              element={
-                <PrivateRoute>
-                  <AdminRoute>
-                    <ManageSourcesPage />
-                  </AdminRoute>
-                </PrivateRoute>
-              }
-            />
-
-            {/* Catch all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
-      </PreferencesProvider>
-    </UIProvider>
-  );
-}
-
-// Main App component
-export default function AppWrapper() {
-  return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <RedactionProvider>
-          <App />
-          <FeedbackWidget />
-        </RedactionProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+        {/* Protected routes - including default redirects */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/calls" element={<Calls />} />
+          <Route path="/user/profile" element={<ProfilePage />} />
+          <Route
+            path="/user/billing"
+            element={
+              <AdminRoute>
+                <BillingPage />
+              </AdminRoute>
+            }
+          />
+          <Route path="/customers" element={<Customers />} />
+          <Route
+            path="/campaigns"
+            element={
+              <AdminRoute>
+                <CampaignsPage />
+              </AdminRoute>
+            }
+          />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/inquiries" element={<InquiriesPage />} />
+          <Route
+            path="/sources"
+            element={
+              <AdminRoute>
+                <SourcesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/sources/manage"
+            element={
+              <AdminRoute>
+                <ManageSourcesPage />
+              </AdminRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+    </AnimatePresence>
   );
 }

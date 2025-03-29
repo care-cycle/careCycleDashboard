@@ -59,7 +59,8 @@ export function FeedbackWidget() {
   // Hide on sign-in and sign-up pages
   if (
     location.pathname.startsWith("/sign-in") ||
-    location.pathname.startsWith("/sign-up")
+    location.pathname.startsWith("/sign-up") ||
+    location.pathname.startsWith("/unauthorized")
   ) {
     return null;
   }

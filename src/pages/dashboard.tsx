@@ -17,6 +17,8 @@ import { format, subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
 import { usePreferences } from "@/hooks/use-preferences";
 import { differenceInDays } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { intervalManager } from "@/utils/interval-manager";
 
 interface Campaign {
   id: string;
@@ -74,8 +76,9 @@ export default function Dashboard() {
     };
   });
 
-  // Use global campaign selection
+  // Use global campaign selection and auth
   const { selectedCampaignId } = usePreferences();
+  const { user, loading } = useAuth();
   const {
     metrics,
     isLoading,
@@ -84,6 +87,14 @@ export default function Dashboard() {
     fetchUniqueCallers,
   } = useInitialData();
 
+  const [customersEngaged, setCustomersEngaged] = useState({
+    value: "0",
+    change: "N/A",
+    description: "",
+    rawValue: 0,
+  });
+
+  // All hooks and memoized values
   const getHoursData = (campaignId: string): HourData[] => {
     if (!metrics?.data?.data) return [];
 
@@ -291,14 +302,6 @@ export default function Dashboard() {
       }
     }
   };
-
-  // Add state for customers engaged
-  const [customersEngaged, setCustomersEngaged] = useState({
-    value: "0",
-    change: "N/A",
-    description: "",
-    rawValue: 0,
-  });
 
   // Consolidated effect to update customersEngaged
   useEffect(() => {
@@ -626,6 +629,25 @@ export default function Dashboard() {
       ),
     }));
   }, [selectedCampaignId, date, metrics]);
+
+  // Now handle loading and auth states
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-gray-400 border-t-transparent rounded-full">
+          <span className="sr-only">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.organizationStatus === "removed") {
+    return null;
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <RootLayout topMetrics={getTopMetrics(todayMetrics)} hideKnowledgeSearch>

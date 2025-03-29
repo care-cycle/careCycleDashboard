@@ -1,5 +1,6 @@
 // src/lib/api-client.ts
 import axios from "axios";
+import { intervalManager } from "@/utils/interval-manager";
 
 // Add Clerk types to window object
 declare global {
@@ -13,12 +14,13 @@ declare global {
 }
 
 const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
+const API_BASE_URL = isDevelopment
+  ? "http://localhost:3000/api"
+  : "https://api.nodable.ai/api";
 
 // Create API client
 const apiClient = axios.create({
-  baseURL: isDevelopment
-    ? "http://localhost:3000/api"
-    : "https://api.nodable.ai/api",
+  baseURL: API_BASE_URL,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -37,6 +39,7 @@ apiClient.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.debug("[Auth] Token obtained and set in headers");
       } else {
         console.warn("No auth token available");
       }
@@ -46,6 +49,7 @@ apiClient.interceptors.request.use(
 
     if (isDevelopment) {
       console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
+      console.debug("[Auth] Request headers:", config.headers);
     }
     return config;
   },
@@ -73,6 +77,7 @@ apiClient.interceptors.response.use(
           status: error.response.status,
           data: error.response.data,
           url: error.config.url,
+          headers: error.config.headers,
         });
       }
     }

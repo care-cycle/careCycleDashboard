@@ -18,7 +18,7 @@ import { useRedaction } from "@/hooks/use-redaction";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { AnimatedOrbs } from "@/components/ui/animated-orbs";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useUserRole } from "@/hooks/use-auth";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -109,7 +109,7 @@ export function Sidebar({ className }: SidebarProps) {
 
   const logoSrc = {
     collapsed: "/carecyclelogo.svg",
-    expanded: "/carecyclelogofull.svg",
+    expanded: "/carecyclelogopartial.svg",
   };
   const logoAlt = "CareCycle";
 

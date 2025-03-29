@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useClerk } from "@clerk/clerk-react";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useUserRole } from "@/hooks/use-auth";
 
 interface UserProfileProps {
   isRedacted: boolean;

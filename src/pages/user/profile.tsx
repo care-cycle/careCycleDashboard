@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RegularHoursConfig } from "@/components/operating-hours/regular-hours";
 import { SpecialHoursConfig } from "@/components/operating-hours/special-hours";
 import { HolidayConfig } from "@/components/operating-hours/holiday-config";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useUserRole } from "@/hooks/use-auth";
 
 export default function ProfilePage() {
   const { organization } = useOrganization();

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useInitialData } from "@/hooks/use-client-data";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useUserRole } from "@/hooks/use-auth";
 import {
   Select,
   SelectContent,

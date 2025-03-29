@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { MeshGradientBackground } from "./MeshGradientBackground";
 
 interface Props {
   children: ReactNode;
@@ -26,12 +27,18 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback || (
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
+          <div className="min-h-screen flex flex-col items-center justify-center relative">
+            <MeshGradientBackground />
+            <img
+              src="/carecyclelogowhite.svg"
+              alt="CareCycle Logo"
+              className="w-64 mb-12"
+            />
+            <div className="text-center text-white">
+              <h2 className="text-2xl font-semibold mb-2">
                 Something went wrong
               </h2>
-              <p className="text-gray-600">Please try refreshing the page</p>
+              <p>Please try refreshing the page</p>
             </div>
           </div>
         )

@@ -24,12 +24,6 @@ export function KPICard({ title, value, change, info }: KPICardProps) {
 
   // Update display value when prop changes
   useEffect(() => {
-    // Log the incoming value for debugging
-    console.log(`KPICard "${title}" received value:`, {
-      value,
-      type: typeof value,
-    });
-
     // Ensure value is treated as a string without concatenation
     if (typeof value === "number") {
       setDisplayValue(value.toLocaleString());
