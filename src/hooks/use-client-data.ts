@@ -73,7 +73,7 @@ interface PaymentMethod {
   brand: string;
 }
 
-interface ClientInfo {
+export interface ClientInfo {
   id: string;
   name: string;
   email?: string;
@@ -141,6 +141,10 @@ interface ClientInfo {
     description?: string;
     status: string;
   }>;
+  user?: {
+    id: string;
+    role: string;
+  };
 }
 
 export interface Appointment {

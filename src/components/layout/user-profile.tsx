@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useClerk } from "@clerk/clerk-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface UserProfileProps {
   isRedacted: boolean;
@@ -23,6 +24,7 @@ export function UserProfile({
   const { toast } = useToast();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { isAdmin } = useUserRole();
 
   const userData = {
     fullName: isRedacted ? "***" : user?.fullName,
@@ -78,14 +80,18 @@ export function UserProfile({
         navigate("/user/profile");
       },
     },
-    {
-      icon: CreditCard,
-      label: "Billing & Usage",
-      onClick: () => {
-        setIsExpanded(false);
-        navigate("/user/billing");
-      },
-    },
+    ...(isAdmin
+      ? [
+          {
+            icon: CreditCard,
+            label: "Billing & Usage",
+            onClick: () => {
+              setIsExpanded(false);
+              navigate("/user/billing");
+            },
+          },
+        ]
+      : []),
     {
       icon: LogOut,
       label: "Log Out",
@@ -105,7 +111,11 @@ export function UserProfile({
             "border border-white/20 rounded-t-xl",
             "transition-all duration-150 ease-in-out",
             "overflow-hidden",
-            isExpanded ? "h-[132px] opacity-100" : "h-0 opacity-0",
+            isExpanded
+              ? isAdmin
+                ? "h-[132px] opacity-100"
+                : "h-[88px] opacity-100"
+              : "h-0 opacity-0",
           )}
         >
           {menuItems.map((item, index) => (

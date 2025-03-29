@@ -18,51 +18,7 @@ import { useRedaction } from "@/hooks/use-redaction";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { AnimatedOrbs } from "@/components/ui/animated-orbs";
-
-const navigationItems = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/dashboard",
-  },
-  {
-    title: "Calls",
-    icon: Phone,
-    href: "/calls",
-  },
-  {
-    title: "Customers",
-    icon: Users,
-    href: "/customers",
-  },
-  {
-    title: "Appointments",
-    icon: Calendar,
-    href: "/appointments",
-  },
-  {
-    title: "Inquiries",
-    icon: MessageSquare,
-    href: "/inquiries",
-  },
-  {
-    title: "Sources",
-    icon: Megaphone,
-    href: "/sources",
-  },
-  {
-    title: "Campaigns",
-    icon: CircuitBoard,
-    href: "/campaigns",
-  },
-  {
-    title: "Journeys",
-    icon: GitBranch,
-    href: "/journeys",
-    disabled: true,
-    badge: "Coming Soon",
-  },
-];
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -100,6 +56,56 @@ export function Sidebar({ className }: SidebarProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExpanded, setIsExpanded] = useSidebarState();
   const location = useLocation();
+  const { isAdmin } = useUserRole();
+
+  const navigationItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+    },
+    {
+      title: "Calls",
+      icon: Phone,
+      href: "/calls",
+    },
+    {
+      title: "Customers",
+      icon: Users,
+      href: "/customers",
+    },
+    {
+      title: "Appointments",
+      icon: Calendar,
+      href: "/appointments",
+    },
+    {
+      title: "Inquiries",
+      icon: MessageSquare,
+      href: "/inquiries",
+    },
+    ...(isAdmin
+      ? [
+          {
+            title: "Sources",
+            icon: Megaphone,
+            href: "/sources",
+          },
+          {
+            title: "Campaigns",
+            icon: CircuitBoard,
+            href: "/campaigns",
+          },
+        ]
+      : []),
+    {
+      title: "Journeys",
+      icon: GitBranch,
+      href: "/journeys",
+      disabled: true,
+      badge: "Coming Soon",
+    },
+  ];
 
   const logoSrc = {
     collapsed: "/carecyclelogo.svg",

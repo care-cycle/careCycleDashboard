@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useInitialData } from "@/hooks/use-client-data";
+import { useUserRole } from "@/hooks/use-user-role";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ interface TopMetricsBarProps extends React.HTMLAttributes<HTMLDivElement> {
 export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
   const { selectedCampaignId, setSelectedCampaignId } = usePreferences();
   const { clientInfo } = useInitialData();
+  const { isAdmin } = useUserRole();
 
   if (!metrics?.length) return null;
 
@@ -38,6 +40,17 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
       label: campaign.name || campaign.description,
     })) || []),
   ];
+
+  // Filter out cost metrics for non-admin users
+  const filteredMetrics = metrics.filter((metric) => {
+    if (!isAdmin) {
+      return (
+        !metric.title.toLowerCase().includes("cost") &&
+        !metric.title.toLowerCase().includes("spend")
+      );
+    }
+    return true;
+  });
 
   // Map metrics to icons
   const getMetricIcon = (title: string) => {
@@ -82,7 +95,7 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
         </Select>
 
         <div className="flex items-center">
-          {metrics.map((metric) => (
+          {filteredMetrics.map((metric) => (
             <TooltipProvider key={metric.title}>
               <Tooltip>
                 <TooltipTrigger asChild>

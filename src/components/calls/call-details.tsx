@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/use-user-role";
 import {
   Accordion,
   AccordionContent,
@@ -40,6 +41,7 @@ export const CallDetails = memo(function CallDetails({
     id: false,
     callerId: false,
   });
+  const { isAdmin } = useUserRole();
 
   // Add cleanup effect for audio
   useEffect(() => {
@@ -110,7 +112,10 @@ export const CallDetails = memo(function CallDetails({
     { icon: Clock, label: "Duration", value: call.duration },
     { icon: PhoneCall, label: "Direction", value: call.direction },
     { icon: CheckCircle2, label: "Disposition", value: call.disposition },
-    { icon: DollarSign, label: "Cost", value: `$${call.cost.toFixed(3)}` },
+    // Only show cost for admin users
+    ...(isAdmin
+      ? [{ icon: DollarSign, label: "Cost", value: `$${call.cost.toFixed(3)}` }]
+      : []),
   ];
 
   return (

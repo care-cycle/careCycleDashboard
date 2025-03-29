@@ -5,6 +5,7 @@ import { UIProvider } from "./contexts/ui-context";
 import { AnimatePresence } from "framer-motion";
 import { RedactionProvider } from "./contexts/redaction-context";
 import { PrivateRoute } from "./components/auth/private-route";
+import { AdminRoute } from "./components/auth/admin-route";
 import { VerifyEmail } from "./pages/sign-up/verify-email";
 import SignUpPage from "./pages/sign-up";
 import Dashboard from "./pages/dashboard";
@@ -106,7 +107,9 @@ function App() {
               path="/user/billing"
               element={
                 <PrivateRoute>
-                  <BillingPage />
+                  <AdminRoute>
+                    <BillingPage />
+                  </AdminRoute>
                 </PrivateRoute>
               }
             />
@@ -122,7 +125,9 @@ function App() {
               path="/campaigns"
               element={
                 <PrivateRoute>
-                  <CampaignsPage />
+                  <AdminRoute>
+                    <CampaignsPage />
+                  </AdminRoute>
                 </PrivateRoute>
               }
             />
@@ -146,7 +151,9 @@ function App() {
               path="/sources"
               element={
                 <PrivateRoute>
-                  <SourcesPage />
+                  <AdminRoute>
+                    <SourcesPage />
+                  </AdminRoute>
                 </PrivateRoute>
               }
             />
@@ -154,7 +161,9 @@ function App() {
               path="/sources/manage"
               element={
                 <PrivateRoute>
-                  <ManageSourcesPage />
+                  <AdminRoute>
+                    <ManageSourcesPage />
+                  </AdminRoute>
                 </PrivateRoute>
               }
             />
