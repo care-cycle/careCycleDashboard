@@ -411,37 +411,35 @@ export default function Dashboard() {
   const campaignMetrics = useMemo(() => {
     if (isLoading || !metrics?.data?.data?.campaigns) return [];
 
-    if (Object.keys(metrics.data.data.campaigns).length === 0) {
+    // Ensure campaigns is an object or array
+    const campaignsData = metrics.data.data.campaigns;
+    if (!campaignsData || typeof campaignsData !== "object") {
       return [];
     }
 
-    if (
-      !metrics.data.data.campaigns ||
-      typeof metrics.data.data.campaigns !== "object"
-    ) {
-      return [];
-    }
-
-    const campaignsArray = Array.isArray(metrics.data.data.campaigns)
-      ? metrics.data.data.campaigns
-      : Object.values(metrics.data.data.campaigns);
+    // Handle both array and object formats
+    const campaignsArray = Array.isArray(campaignsData)
+      ? campaignsData
+      : Object.values(campaignsData).filter(Boolean);
 
     if (!Array.isArray(campaignsArray)) {
       return [];
     }
 
     const validCampaigns = campaignsArray.filter((c: any): c is Campaign => {
+      if (!c || typeof c !== "object") return false;
+
       const campaignLike = c as CampaignLike;
-      return (
-        campaignLike &&
-        typeof campaignLike === "object" &&
-        typeof campaignLike.id === "string" &&
-        typeof campaignLike.name === "string"
-      );
+      const hasValidId = typeof campaignLike.id === "string";
+      const hasValidName = typeof campaignLike.name === "string";
+      const hasValidHours = Array.isArray(c.hours);
+
+      return hasValidId && hasValidName && hasValidHours;
     });
 
     return validCampaigns.map((campaign: Campaign) => {
-      const hours = campaign.hours || [];
+      // Ensure hours is always an array
+      const hours = Array.isArray(campaign.hours) ? campaign.hours : [];
 
       const currentPeriodCalls = hours.reduce((sum: number, hour: HourData) => {
         const hourDate = new Date(hour.hour);
