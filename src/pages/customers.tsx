@@ -466,7 +466,10 @@ export default function CustomersPage() {
 
   if (isCustomersLoading) {
     return (
-      <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
+      <RootLayout
+        topMetrics={getTopMetrics(todayMetrics)}
+        hideKnowledgeSearch={true}
+      >
         <div className="flex items-center justify-center h-64">
           <p>Loading customers...</p>
         </div>

@@ -19,6 +19,9 @@ interface AudioPlayerProps {
 
 export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
   ({ url, className, preloadedAudio }, ref) => {
+    const instanceId = useRef(
+      Math.random().toString(36).substring(2, 8),
+    ).current; // Unique ID for logging
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -39,7 +42,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     useEffect(() => {
       if (!waveformRef.current || !url) return;
 
-      // Reset states
       setIsLoading(true);
       setIsWaveformReady(false);
       setErrorMessage(null);
@@ -53,6 +55,8 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           wavesurferRef.current.destroy();
         } catch (error) {
           console.error("Error destroying WaveSurfer instance:", error);
+          setErrorMessage("Error loading audio visualization");
+          setIsLoading(false);
         }
         wavesurferRef.current = null;
       }
@@ -85,11 +89,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             interact: true,
             dragToSeek: true,
           });
-
-          if (isDestroyed) {
-            wavesurfer.destroy();
-            return;
-          }
 
           wavesurfer.on("ready", () => {
             if (isDestroyed) return;
@@ -195,131 +194,95 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       }
 
       return () => {
-        if (audioRef.current && audioRef.current !== preloadedAudio) {
-          audioRef.current.pause();
-          audioRef.current.src = "";
+        const audio = audioRef.current;
+        if (audio && audio !== preloadedAudio) {
+          audio.pause();
+          audio.src = "";
         }
       };
     }, [url, preloadedAudio]);
 
-    // Sync audio element with wavesurfer
+    // Sync audio element state with wavesurfer and UI
     useEffect(() => {
+      const wavesurfer = wavesurferRef.current;
       const audio = audioRef.current;
-      if (!audio) return;
 
-      const handleTimeUpdate = () => {
-        setCurrentTime(audio.currentTime);
+      if (!wavesurfer || !audio || !isWaveformReady) return;
 
-        if (
-          wavesurferRef.current &&
-          !wavesurferRef.current.isPlaying() &&
-          isWaveformReady
-        ) {
-          try {
-            wavesurferRef.current.setTime(audio.currentTime);
-          } catch (error) {
-            console.error("Error syncing time:", error);
-          }
-        }
+      // Use WaveSurfer's event for time updates
+      const handleWsAudioprocess = (time: number) => {
+        setCurrentTime(time);
       };
 
+      // Keep listening to the audio element for metadata and end events
       const handleLoadedMetadata = () => {
         setDuration(audio.duration);
-        if (wavesurferRef.current && isWaveformReady) {
-          try {
-            setDuration(audio.duration);
-          } catch (error) {
-            console.error("Error syncing duration:", error);
-          }
-        }
       };
-
       const handleEnded = () => {
         setIsPlaying(false);
-        if (wavesurferRef.current && isWaveformReady) {
-          try {
-            wavesurferRef.current.setTime(0);
-          } catch (error) {
-            console.error("Error resetting time:", error);
-          }
-        }
+        // No need to manually setTime(0) on wavesurfer here,
+        // as playing again will start from 0 or user can seek.
       };
 
-      audio.addEventListener("timeupdate", handleTimeUpdate);
+      wavesurfer.on("audioprocess", handleWsAudioprocess);
       audio.addEventListener("loadedmetadata", handleLoadedMetadata);
       audio.addEventListener("ended", handleEnded);
 
       return () => {
-        audio.removeEventListener("timeupdate", handleTimeUpdate);
+        // Important: Use wavesurfer.un() to remove listeners
+        wavesurfer.un("audioprocess", handleWsAudioprocess);
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
         audio.removeEventListener("ended", handleEnded);
       };
+      // Depend on isWaveformReady to ensure wavesurfer is initialized
     }, [isWaveformReady]);
 
     const togglePlay = () => {
-      if (!audioRef.current) return;
-
-      if (isPlaying) {
-        audioRef.current.pause();
-        if (wavesurferRef.current && isWaveformReady) {
-          try {
-            wavesurferRef.current.pause();
-          } catch (error) {
-            console.error("Error pausing WaveSurfer:", error);
-          }
-        }
-      } else {
-        audioRef.current.play();
-        if (wavesurferRef.current && isWaveformReady) {
-          try {
-            wavesurferRef.current.play();
-          } catch (error) {
-            console.error("Error playing WaveSurfer:", error);
-          }
-        }
+      // Only use wavesurfer to control playback
+      if (wavesurferRef.current && isWaveformReady) {
+        wavesurferRef.current.playPause();
+        setIsPlaying(!isPlaying); // Update our state based on the action we took
       }
-
-      setIsPlaying(!isPlaying);
     };
 
     const toggleMute = () => {
-      if (!audioRef.current) return;
+      if (!wavesurferRef.current || !isWaveformReady) return;
 
-      audioRef.current.muted = !isMuted;
-      if (wavesurferRef.current && isWaveformReady) {
-        try {
-          wavesurferRef.current.setVolume(isMuted ? volume : 0);
-        } catch (error) {
-          console.error("Error setting WaveSurfer volume:", error);
-        }
+      const newMuted = !isMuted;
+      try {
+        // Set volume to 0 if muted, otherwise restore previous volume
+        wavesurferRef.current.setVolume(newMuted ? 0 : volume);
+        setIsMuted(newMuted);
+      } catch (error) {
+        console.error(
+          "Error setting WaveSurfer volume for mute/unmute:",
+          error,
+        );
       }
-
-      setIsMuted(!isMuted);
     };
 
     const handleSeek = (value: number[]) => {
-      if (!audioRef.current) return;
-
       const newTime = value[0];
-      audioRef.current.currentTime = newTime;
-
-      if (wavesurferRef.current && isWaveformReady) {
+      // Seek using wavesurfer's seekTo, which expects progress (0-1)
+      if (wavesurferRef.current && isWaveformReady && duration > 0) {
+        const progress = newTime / duration;
         try {
-          wavesurferRef.current.setTime(newTime);
+          wavesurferRef.current.seekTo(progress);
+          setCurrentTime(newTime); // Update local state immediately for responsiveness
         } catch (error) {
           console.error("Error seeking in WaveSurfer:", error);
         }
+      } else if (audioRef.current) {
+        audioRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
       }
-
-      setCurrentTime(newTime);
     };
 
     const handleVolumeChange = (value: number[]) => {
-      if (!audioRef.current) return;
-
       const newVolume = value[0];
-      audioRef.current.volume = newVolume;
+      setVolume(newVolume);
 
+      // Only set volume via wavesurfer if not muted
       if (!isMuted && wavesurferRef.current && isWaveformReady) {
         try {
           wavesurferRef.current.setVolume(newVolume);
@@ -327,8 +290,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           console.error("Error setting WaveSurfer volume:", error);
         }
       }
-
-      setVolume(newVolume);
     };
 
     const formatTime = (time: number) => {

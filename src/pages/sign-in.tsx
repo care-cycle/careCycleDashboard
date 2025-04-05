@@ -4,7 +4,7 @@ import { MeshGradientBackground } from "../components/MeshGradientBackground";
 const BASE_URL =
   import.meta.env.VITE_NODE_ENV === "development"
     ? "http://localhost:5173"
-    : "https://clerk.carecycle.ai";
+    : "https://app.carecycle.ai";
 
 export default function SignInPage() {
   return (

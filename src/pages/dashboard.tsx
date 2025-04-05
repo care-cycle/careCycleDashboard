@@ -96,24 +96,52 @@ export default function Dashboard() {
 
   // All hooks and memoized values
   const getHoursData = (campaignId: string): HourData[] => {
-    if (!metrics?.data?.data) return [];
+    if (!metrics?.data?.data) {
+      return [];
+    }
 
     // For "all" campaigns, use the total data
     if (campaignId === "all") {
-      return Array.isArray(metrics.data.data.total)
-        ? metrics.data.data.total
-        : [];
+      const total = metrics.data.data.total;
+      if (!Array.isArray(total)) {
+        return [];
+      }
+      return total;
     }
 
     // For specific campaigns, find the campaign and use its hours data
     const campaigns = metrics.data.data.campaigns;
-    if (!campaigns || typeof campaigns !== "object") return [];
 
-    const campaign = Array.isArray(campaigns)
-      ? campaigns.find((c: Campaign) => c?.id === campaignId)
-      : Object.values(campaigns).find((c: Campaign) => c?.id === campaignId);
+    if (!campaigns || typeof campaigns !== "object") {
+      return [];
+    }
 
-    return Array.isArray(campaign?.hours) ? campaign.hours : [];
+    // Type guard to ensure we have a valid campaign
+    const isValidCampaign = (c: unknown): c is Campaign => {
+      return (
+        typeof c === "object" &&
+        c !== null &&
+        "id" in c &&
+        "hours" in c &&
+        Array.isArray((c as Campaign).hours)
+      );
+    };
+
+    let campaign: Campaign | undefined;
+    if (Array.isArray(campaigns)) {
+      campaign =
+        campaigns.find(isValidCampaign)?.id === campaignId
+          ? campaigns.find(isValidCampaign)
+          : undefined;
+    } else {
+      const campaignValues = Object.values(campaigns);
+      campaign =
+        campaignValues.find(isValidCampaign)?.id === campaignId
+          ? campaignValues.find(isValidCampaign)
+          : undefined;
+    }
+
+    return campaign?.hours || [];
   };
 
   // Update campaign selector to handle object structure
@@ -130,13 +158,15 @@ export default function Dashboard() {
           id !== "url" &&
           id !== "metadata" &&
           typeof data === "object" &&
-          data !== null,
+          data !== null &&
+          "name" in data &&
+          "type" in data,
       )
       .map(([id, data]: [string, any]) => ({
         id,
-        name: data.name || "24/7 Inbound Pre-Qualification",
-        type: data.type,
-        hours: data.hours || [],
+        name: data?.name || "24/7 Inbound Pre-Qualification",
+        type: data?.type || "unknown",
+        hours: Array.isArray(data?.hours) ? data.hours : [],
       }));
 
     return [
@@ -589,9 +619,15 @@ export default function Dashboard() {
   }, [date, metrics, selectedCampaignId, isLoading]);
 
   const assistantTypesData = useMemo(() => {
+    if (isLoading || !metrics?.data?.data) {
+      return [];
+    }
+
     const hours = getHoursData(selectedCampaignId);
 
-    if (!Array.isArray(hours) || !hours.length) return [];
+    if (!Array.isArray(hours) || !hours.length) {
+      return [];
+    }
 
     // Filter hours by date range
     const startDate = new Date(date?.from || new Date());
@@ -608,37 +644,50 @@ export default function Dashboard() {
 
     // Filter hours within the date range
     const filteredHours = hours.filter((hour: HourData) => {
-      if (!hour || typeof hour !== "object") return false;
+      if (!hour || typeof hour !== "object") {
+        return false;
+      }
       const hourDate = new Date(hour.hour);
       return hourDate >= startUTC && hourDate <= endUTC;
     });
 
-    if (!filteredHours.length) return [];
+    if (!filteredHours.length) {
+      return [];
+    }
 
     // Get all unique assistant types from the filtered hours
-    const allAssistantTypes = new Set<string>();
-    filteredHours.forEach((hour: HourData) => {
-      if (
-        hour?.assistantTypeCounts &&
-        typeof hour.assistantTypeCounts === "object"
-      ) {
-        Object.keys(hour.assistantTypeCounts).forEach((type) => {
-          if (typeof type === "string") {
-            allAssistantTypes.add(type);
-          }
-        });
-      }
-    });
+    try {
+      const allAssistantTypes = new Set<string>();
 
-    // Transform the hours data into the format expected by AssistantCountChart
-    return Array.from(allAssistantTypes).map((name) => ({
-      name,
-      value: filteredHours.reduce(
-        (sum, hour) => sum + (hour.assistantTypeCounts?.[name] || 0),
-        0,
-      ),
-    }));
-  }, [selectedCampaignId, date, metrics]);
+      filteredHours.forEach((hour: HourData) => {
+        if (!hour || typeof hour !== "object") {
+          return;
+        }
+
+        if (
+          hour?.assistantTypeCounts &&
+          typeof hour.assistantTypeCounts === "object"
+        ) {
+          Object.keys(hour.assistantTypeCounts).forEach((type) => {
+            if (typeof type === "string") {
+              allAssistantTypes.add(type);
+            }
+          });
+        }
+      });
+
+      // Transform the hours data into the format expected by AssistantCountChart
+      return Array.from(allAssistantTypes).map((name) => ({
+        name,
+        value: filteredHours.reduce(
+          (sum, hour) => sum + (hour.assistantTypeCounts?.[name] || 0),
+          0,
+        ),
+      }));
+    } catch (error) {
+      return [];
+    }
+  }, [selectedCampaignId, date, metrics, isLoading]);
 
   // Now handle loading and auth states
   if (loading) {
