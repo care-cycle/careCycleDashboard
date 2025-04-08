@@ -168,13 +168,15 @@ export const CallDetails = memo(function CallDetails({
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            <div className="glass-panel p-0 rounded-lg">
-              <AudioPlayer
-                url={call.recordingUrl}
-                preloadedAudio={preloadedAudio}
-                ref={audioRef}
-              />
-            </div>
+            {call.recordingUrl && (
+              <div className="glass-panel p-0 rounded-lg">
+                <AudioPlayer
+                  url={call.recordingUrl}
+                  preloadedAudio={preloadedAudio}
+                  ref={audioRef}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {callDetails.map((detail, index) => (
