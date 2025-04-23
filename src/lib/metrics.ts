@@ -32,11 +32,11 @@ export function getTopMetrics(
       value: totalCalls.toString(),
     },
     {
-      title: "Total Duration",
+      title: "Today's Duration",
       value: formatDuration(totalDurationMs),
     },
     {
-      title: "Total Cost",
+      title: "Today's Cost",
       value: `$${totalSpend.toFixed(2)}`,
     },
     {

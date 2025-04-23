@@ -61,15 +61,28 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
         wavesurferRef.current = null;
       }
 
-      const initWaveSurfer = async () => {
+      const initWaveSurfer = async (retryCount = 0) => {
+        const maxRetries = 2; // Allow 2 retries (total 3 attempts)
+        const retryDelay = 500; // Wait 500ms between retries
+
         try {
-          // First validate that the URL is accessible
-          const response = await fetch(url, { method: "HEAD" });
+          // Use GET for validation as HEAD might not be allowed by CORS/S3 policies on the pre-signed URL itself
+          const controller = new AbortController();
+          const signal = controller.signal;
+          const validationTimeout = setTimeout(() => controller.abort(), 5000);
+
+          console.log(`Attempt ${retryCount + 1}: Validating URL: ${url}`);
+          const response = await fetch(url, { method: "GET", signal });
+          clearTimeout(validationTimeout);
+
           if (!response.ok) {
-            throw new Error(
-              `Failed to validate audio URL: ${response.statusText}`,
-            );
+            const errorMsg =
+              response.status === 403
+                ? `Failed to validate audio URL: ${response.statusText} (Forbidden - possible temporary issue)`
+                : `Failed to validate audio URL: ${response.statusText}`;
+            throw new Error(errorMsg);
           }
+          console.log(`Attempt ${retryCount + 1}: URL Validation successful.`);
 
           const wavesurfer = WaveSurfer.create({
             container: waveformRef.current!,
@@ -92,7 +105,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
 
           wavesurfer.on("ready", () => {
             if (isDestroyed) return;
-
+            console.log(`Attempt ${retryCount + 1}: WaveSurfer ready.`);
             isReadyRef.current = true;
             setIsWaveformReady(true);
             setIsLoading(false);
@@ -101,20 +114,39 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           });
 
           wavesurfer.on("error", (error) => {
-            console.error("WaveSurfer error:", error);
-            setErrorMessage("Error loading audio visualization");
-            setIsLoading(false);
+            console.error(
+              `Attempt ${retryCount + 1}: WaveSurfer error:`,
+              error,
+            );
+            // Treat wavesurfer error as a trigger for retry as well
+            throw new Error("WaveSurfer initialization error");
           });
 
-          // Store wavesurfer instance
           wavesurferRef.current = wavesurfer;
 
-          // Load the audio
+          console.log(
+            `Attempt ${retryCount + 1}: Loading audio into WaveSurfer...`,
+          );
           await wavesurfer.load(url);
-        } catch (error) {
-          console.error("Error initializing WaveSurfer:", error);
-          setErrorMessage("Failed to initialize audio visualization");
-          setIsLoading(false);
+          console.log(`Attempt ${retryCount + 1}: WaveSurfer load initiated.`);
+        } catch (error: any) {
+          console.error(`Attempt ${retryCount + 1} failed:`, error.message);
+          if (retryCount < maxRetries) {
+            console.log(`Retrying in ${retryDelay}ms...`);
+            setTimeout(() => {
+              if (!isDestroyed) {
+                initWaveSurfer(retryCount + 1); // Recursive call for retry
+              }
+            }, retryDelay);
+          } else {
+            console.error(
+              "Max retries reached. Failed to initialize audio visualization.",
+            );
+            setErrorMessage(
+              "Failed to initialize audio visualization after multiple attempts.",
+            );
+            setIsLoading(false);
+          }
         }
       };
 
