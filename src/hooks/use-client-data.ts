@@ -86,7 +86,6 @@ export interface ClientInfo {
   topUpAmount?: string;
   enableTopUp: boolean;
   associatedNumbers?: string[];
-  customDataSchema?: Record<string, unknown>;
   createdAt: string;
   businessHours: Array<{
     dayOfWeek: number[];

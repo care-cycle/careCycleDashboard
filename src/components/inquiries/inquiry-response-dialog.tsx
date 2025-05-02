@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,18 +41,33 @@ interface InquiryResponseDialogProps {
   onClose: () => void;
 }
 
+// Helper function to check if a response exists and is non-empty
+const doesResponseExist = (response?: string): boolean => {
+  return typeof response === "string" && response.trim().length > 0;
+};
+
 export function InquiryResponseDialog({
   inquiry,
   onClose,
 }: InquiryResponseDialogProps) {
-  const [response, setResponse] = useState(inquiry?.response || "");
+  const [response, setResponse] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
-  const hasResponse = response.trim().length > 0;
+  // Determine if the inquiry already has a response from the start
+  const initialResponseExists = inquiry
+    ? doesResponseExist(inquiry.response)
+    : false;
+
+  // Update local state when the inquiry prop changes
+  useEffect(() => {
+    setResponse(inquiry?.response || "");
+  }, [inquiry]);
+
+  const hasLocalResponse = response.trim().length > 0;
 
   const handleSubmit = async () => {
-    if (!inquiry || !response.trim()) return;
+    if (!inquiry || !response.trim() || initialResponseExists) return; // Prevent submission if initial response exists
 
     setIsSubmitting(true);
 
@@ -109,7 +124,7 @@ export function InquiryResponseDialog({
 
             <div>
               <div className="text-sm text-muted-foreground">Agent</div>
-              <div className="text-lg">{inquiry.agentName}</div>
+              <div className="text-lg">{inquiry.agentName || "-"}</div>
             </div>
 
             <div>
@@ -128,14 +143,19 @@ export function InquiryResponseDialog({
               <Textarea
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
-                placeholder="Type your response here..."
+                placeholder={
+                  initialResponseExists
+                    ? "Response already submitted."
+                    : "Type your response here..."
+                }
                 className={cn(
                   "min-h-[150px] resize-none text-lg transition-colors",
-                  hasResponse
+                  !initialResponseExists && hasLocalResponse
                     ? "border-emerald-500 focus-visible:ring-emerald-500"
                     : "text-muted-foreground",
                 )}
-                disabled={isSubmitting}
+                disabled={isSubmitting || initialResponseExists} // Disable if submitting or if initial response exists
+                readOnly={initialResponseExists} // Make read-only if initial response exists
               />
             </div>
           </div>
@@ -149,20 +169,23 @@ export function InquiryResponseDialog({
               disabled={isSubmitting}
               className="px-8"
             >
-              Cancel
+              {initialResponseExists ? "Close" : "Cancel"}{" "}
+              {/* Change button text based on state */}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!hasResponse || isSubmitting}
-              className={cn(
-                "px-8 transition-colors",
-                hasResponse
-                  ? "bg-emerald-500 hover:bg-emerald-600"
-                  : "bg-muted-foreground/20",
-              )}
-            >
-              {isSubmitting ? "Submitting..." : "Submit Response"}
-            </Button>
+            {!initialResponseExists && ( // Conditionally render the submit button
+              <Button
+                onClick={handleSubmit}
+                disabled={!hasLocalResponse || isSubmitting}
+                className={cn(
+                  "px-8 transition-colors",
+                  hasLocalResponse
+                    ? "bg-emerald-500 hover:bg-emerald-600"
+                    : "bg-muted-foreground/20",
+                )}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Response"}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>
