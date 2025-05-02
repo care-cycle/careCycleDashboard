@@ -35,7 +35,6 @@ export interface ClientInfo {
   topUpAmount?: string;
   enableTopUp: boolean;
   associatedNumbers?: string[];
-  customDataSchema?: Record<string, unknown>;
   createdAt: string;
 
   // Computed fields
