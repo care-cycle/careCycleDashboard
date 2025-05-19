@@ -41,15 +41,12 @@ export function TopMetricsBar({ metrics = [], className }: TopMetricsBarProps) {
     })) || []),
   ];
 
-  // Filter out cost metrics for non-admin users
+  // Filter out cost metrics
   const filteredMetrics = metrics.filter((metric) => {
-    if (!isAdmin) {
-      return (
-        !metric.title.toLowerCase().includes("cost") &&
-        !metric.title.toLowerCase().includes("spend")
-      );
-    }
-    return true;
+    return (
+      !metric.title.toLowerCase().includes("cost") &&
+      !metric.title.toLowerCase().includes("spend")
+    );
   });
 
   // Map metrics to icons

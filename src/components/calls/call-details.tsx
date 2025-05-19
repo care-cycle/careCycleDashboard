@@ -14,7 +14,6 @@ import {
   Clock,
   PhoneCall,
   CheckCircle2,
-  DollarSign,
   Copy,
   Check,
 } from "lucide-react";
@@ -112,10 +111,6 @@ export const CallDetails = memo(function CallDetails({
     { icon: Clock, label: "Duration", value: call.duration },
     { icon: PhoneCall, label: "Direction", value: call.direction },
     { icon: CheckCircle2, label: "Disposition", value: call.disposition },
-    // Only show cost for admin users
-    ...(isAdmin
-      ? [{ icon: DollarSign, label: "Cost", value: `$${call.cost.toFixed(3)}` }]
-      : []),
   ];
 
   return (
