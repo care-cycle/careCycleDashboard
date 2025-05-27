@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { formatPhoneNumber, formatDate } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useRedaction } from "@/hooks/use-redaction";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 interface Inquiry {
   id: string;
@@ -61,6 +62,74 @@ export function InquiriesTable({
 }: InquiriesTableProps) {
   const navigate = useNavigate();
   const { isRedacted } = useRedaction();
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if user is typing in an input or textarea
+      const activeElement = document.activeElement;
+      const isTyping =
+        activeElement?.tagName === "INPUT" ||
+        activeElement?.tagName === "TEXTAREA";
+
+      if (isTyping || inquiries.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) => {
+            const newIndex = prev < inquiries.length - 1 ? prev + 1 : prev;
+            // Scroll to the selected row
+            if (tableRef.current) {
+              const rows = tableRef.current.querySelectorAll("tbody tr");
+              rows[newIndex]?.scrollIntoView({
+                block: "nearest",
+                behavior: "smooth",
+              });
+            }
+            return newIndex;
+          });
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) => {
+            const newIndex = prev > 0 ? prev - 1 : 0;
+            // Scroll to the selected row
+            if (tableRef.current) {
+              const rows = tableRef.current.querySelectorAll("tbody tr");
+              rows[newIndex]?.scrollIntoView({
+                block: "nearest",
+                behavior: "smooth",
+              });
+            }
+            return newIndex;
+          });
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < inquiries.length) {
+            const inquiry = inquiries[selectedIndex];
+            navigate(`/inquiries/${inquiry.id}`, {
+              state: {
+                filteredInquiries: inquiries,
+                currentIndex: selectedIndex,
+              },
+            });
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, inquiries, navigate]);
+
+  // Reset selected index when inquiries change
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [inquiries]);
 
   const handleSort = (key: InquiryKey) => {
     let direction: "asc" | "desc" | null = "asc";
@@ -213,7 +282,7 @@ export function InquiriesTable({
   );
 
   return (
-    <div className="rounded-md border glass-panel w-full">
+    <div className="rounded-md border glass-panel w-full" ref={tableRef}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -316,20 +385,23 @@ export function InquiriesTable({
         </TableHeader>
         <TableBody>
           {inquiries.length > 0 ? (
-            inquiries.map((inquiry) => (
+            inquiries.map((inquiry, index) => (
               <TableRow
                 key={inquiry.id}
-                className="hover:bg-black/5 cursor-pointer"
-                onClick={() =>
+                className={cn(
+                  "hover:bg-black/5 cursor-pointer transition-colors",
+                  selectedIndex === index &&
+                    "bg-blue-50 hover:bg-blue-100 outline outline-2 outline-blue-500 outline-offset-[-2px]",
+                )}
+                onClick={() => {
+                  setSelectedIndex(index);
                   navigate(`/inquiries/${inquiry.id}`, {
                     state: {
                       filteredInquiries: inquiries,
-                      currentIndex: inquiries.findIndex(
-                        (inq) => inq.id === inquiry.id,
-                      ),
+                      currentIndex: index,
                     },
-                  })
-                }
+                  });
+                }}
               >
                 <TableCell>
                   <div className="h-8 w-8 flex items-center justify-center">

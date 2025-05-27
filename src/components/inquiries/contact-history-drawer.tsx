@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, Phone, MessageSquare, Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatPhoneNumber } from "@/lib/utils";
@@ -48,15 +48,12 @@ export function ContactHistoryDrawer({
   hasCallSelected = false,
   selectedCallId,
 }: ContactHistoryDrawerProps) {
-  const [contactHistory, setContactHistory] = useState<ContactRecord[]>([]);
-
-  // Combine and sort contact history
-  useEffect(() => {
-    const combined = [...callsData, ...smsData].sort(
+  // Combine and sort contact history using useMemo to avoid infinite loops
+  const contactHistory = useMemo(() => {
+    return [...callsData, ...smsData].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    setContactHistory(combined);
   }, [callsData, smsData]);
 
   const formatDuration = (ms?: number) => {

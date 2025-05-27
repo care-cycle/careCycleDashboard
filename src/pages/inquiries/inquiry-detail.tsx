@@ -372,11 +372,13 @@ export default function InquiryDetailPage() {
           setShowContactHistory(false);
           setSelectedCallId(null);
           setSelectedCallData(null);
+          // Navigate immediately without waiting
           navigate(`/inquiries/${previousInquiry.id}`, {
             state: {
               filteredInquiries: inquiries,
               currentIndex: currentIndex - 1,
             },
+            replace: true, // Use replace to avoid building up history
           });
         } else if ((e.key === "ArrowRight" || e.key === "k") && nextInquiry) {
           e.preventDefault();
@@ -384,11 +386,13 @@ export default function InquiryDetailPage() {
           setShowContactHistory(false);
           setSelectedCallId(null);
           setSelectedCallData(null);
+          // Navigate immediately without waiting
           navigate(`/inquiries/${nextInquiry.id}`, {
             state: {
               filteredInquiries: inquiries,
               currentIndex: currentIndex + 1,
             },
+            replace: true, // Use replace to avoid building up history
           });
         } else if (e.key === "Escape") {
           e.preventDefault();
@@ -407,6 +411,18 @@ export default function InquiryDetailPage() {
     window.addEventListener("keydown", handleKeyNavigation);
     return () => window.removeEventListener("keydown", handleKeyNavigation);
   }, [handleKeyNavigation]);
+
+  // Cancel ongoing queries when navigating away
+  useEffect(() => {
+    return () => {
+      // Cancel any pending queries when component unmounts
+      queryClient.cancelQueries({ queryKey: ["inquiry"] });
+      queryClient.cancelQueries({ queryKey: ["call"] });
+      queryClient.cancelQueries({ queryKey: ["contact-calls"] });
+      queryClient.cancelQueries({ queryKey: ["contact-sms"] });
+      queryClient.cancelQueries({ queryKey: ["selected-call"] });
+    };
+  }, [queryClient]);
 
   const handleSubmit = async () => {
     if (!inquiry || inquiry.response) return;
@@ -706,6 +722,7 @@ export default function InquiryDetailPage() {
                       filteredInquiries: inquiries,
                       currentIndex: currentIndex - 1,
                     },
+                    replace: true,
                   })
                 }
                 disabled={!previousInquiry}
@@ -730,6 +747,7 @@ export default function InquiryDetailPage() {
                       filteredInquiries: inquiries,
                       currentIndex: currentIndex + 1,
                     },
+                    replace: true,
                   })
                 }
                 disabled={!nextInquiry}

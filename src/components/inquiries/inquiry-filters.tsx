@@ -39,7 +39,30 @@ export function InquiryFilters({
   isLoading = false,
 }: InquiryFiltersProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
+      {/* Keyboard navigation hint */}
+      <div className="flex justify-end">
+        <div className="flex items-center gap-3 text-[10px] text-gray-400">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+              ↑
+            </kbd>
+            <span className="text-gray-400">/</span>
+            <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+              ↓
+            </kbd>
+            <span className="text-gray-400 ml-1">Navigate</span>
+          </span>
+          <span className="text-gray-300">•</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+              Enter
+            </kbd>
+            <span className="text-gray-400 ml-1">View details</span>
+          </span>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between w-full glass-panel p-4 rounded-lg">
         <div className="relative flex-1 max-w-[630px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
