@@ -27,6 +27,8 @@ import {
   FileText,
   Clock,
   AlertCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { formatDate, formatPhoneNumber } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
@@ -140,6 +142,7 @@ export default function InquiryDetailPage() {
   const [selectedCallData, setSelectedCallData] = useState<CallData | null>(
     null,
   );
+  const [hasCopiedId, setHasCopiedId] = useState(false);
 
   // Get filtered inquiries from navigation state, or fall back to all inquiries
   const locationState = location.state as {
@@ -365,6 +368,10 @@ export default function InquiryDetailPage() {
       if (!isTyping) {
         if ((e.key === "ArrowLeft" || e.key === "j") && previousInquiry) {
           e.preventDefault();
+          // Close any open drawers before navigating
+          setShowContactHistory(false);
+          setSelectedCallId(null);
+          setSelectedCallData(null);
           navigate(`/inquiries/${previousInquiry.id}`, {
             state: {
               filteredInquiries: inquiries,
@@ -373,6 +380,10 @@ export default function InquiryDetailPage() {
           });
         } else if ((e.key === "ArrowRight" || e.key === "k") && nextInquiry) {
           e.preventDefault();
+          // Close any open drawers before navigating
+          setShowContactHistory(false);
+          setSelectedCallId(null);
+          setSelectedCallData(null);
           navigate(`/inquiries/${nextInquiry.id}`, {
             state: {
               filteredInquiries: inquiries,
@@ -381,6 +392,10 @@ export default function InquiryDetailPage() {
           });
         } else if (e.key === "Escape") {
           e.preventDefault();
+          // Close any open drawers before navigating
+          setShowContactHistory(false);
+          setSelectedCallId(null);
+          setSelectedCallData(null);
           navigate("/inquiries");
         }
       }
@@ -582,6 +597,25 @@ export default function InquiryDetailPage() {
     return formatPhoneNumber(phone);
   };
 
+  const copyInquiryId = useCallback(async () => {
+    if (!inquiry?.id) return;
+    try {
+      await navigator.clipboard.writeText(inquiry.id);
+      setHasCopiedId(true);
+      toast.success("Inquiry ID copied");
+      setTimeout(() => setHasCopiedId(false), 2000);
+    } catch (err) {
+      toast.error("Failed to copy ID");
+    }
+  }, [inquiry?.id]);
+
+  const formatShortId = (id: string) => {
+    if (!id) return "";
+    // Show first 8 characters and last 4 characters
+    if (id.length <= 12) return id;
+    return `${id.slice(0, 8)}...${id.slice(-4)}`;
+  };
+
   if (isLoadingInquiry) {
     return (
       <RootLayout topMetrics={getTopMetrics(todayMetrics)}>
@@ -640,92 +674,98 @@ export default function InquiryDetailPage() {
                   {formatStatus(inquiry.status)}
                 </span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Created {formatDate(inquiry.createdAt)}
-                {inquiries.length > 0 && (
-                  <span className="ml-2">
-                    • {currentIndex + 1} of {inquiries.length}
-                  </span>
-                )}
-              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                <button
+                  onClick={copyInquiryId}
+                  className="flex items-center gap-1.5 hover:text-gray-900 group"
+                  title="Click to copy full ID"
+                >
+                  <span>ID:</span>
+                  <span className="font-mono">{formatShortId(inquiry.id)}</span>
+                  {hasCopiedId ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 text-gray-400" />
+                  )}
+                </button>
+                <span>•</span>
+                <span>Created {formatDate(inquiry.createdAt)}</span>
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {/* Keyboard shortcuts hint */}
-            <div className="text-xs text-gray-500 flex items-center gap-4">
-              <span>Keyboard shortcuts:</span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
-                  ←
-                </kbd>
-                or
-                <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
-                  J
-                </kbd>
-                Previous
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
-                  →
-                </kbd>
-                or
-                <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
-                  K
-                </kbd>
-                Next
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
-                  Esc
-                </kbd>
-                Back to list
-              </span>
+            {/* Navigation arrows with position indicator */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  previousInquiry &&
+                  navigate(`/inquiries/${previousInquiry.id}`, {
+                    state: {
+                      filteredInquiries: inquiries,
+                      currentIndex: currentIndex - 1,
+                    },
+                  })
+                }
+                disabled={!previousInquiry}
+                title="Previous Inquiry (← or J)"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {inquiries.length > 0 && (
+                <span className="text-sm text-gray-600 font-medium px-2">
+                  {currentIndex + 1} of {inquiries.length}
+                </span>
+              )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  nextInquiry &&
+                  navigate(`/inquiries/${nextInquiry.id}`, {
+                    state: {
+                      filteredInquiries: inquiries,
+                      currentIndex: currentIndex + 1,
+                    },
+                  })
+                }
+                disabled={!nextInquiry}
+                title="Next Inquiry (→ or K)"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Navigation arrows */}
-              <div className="flex items-center gap-1 mr-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    previousInquiry &&
-                    navigate(`/inquiries/${previousInquiry.id}`, {
-                      state: {
-                        filteredInquiries: inquiries,
-                        currentIndex: currentIndex - 1,
-                      },
-                    })
-                  }
-                  disabled={!previousInquiry}
-                  title="Previous Inquiry (← or J)"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    nextInquiry &&
-                    navigate(`/inquiries/${nextInquiry.id}`, {
-                      state: {
-                        filteredInquiries: inquiries,
-                        currentIndex: currentIndex + 1,
-                      },
-                    })
-                  }
-                  disabled={!nextInquiry}
-                  title="Next Inquiry (→ or K)"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowContactHistory(true)}
-              >
-                View Contact History
-              </Button>
+            {/* Keyboard shortcuts hint - smaller and more subtle */}
+            <div className="text-[10px] text-gray-400 flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+                  ←
+                </kbd>
+                <span className="text-gray-400">/</span>
+                <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+                  J
+                </kbd>
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+                  →
+                </kbd>
+                <span className="text-gray-400">/</span>
+                <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+                  K
+                </kbd>
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 text-[10px] bg-gray-50 border border-gray-200 rounded text-gray-500">
+                  Esc
+                </kbd>
+              </span>
             </div>
           </div>
         </div>
@@ -1072,8 +1112,15 @@ export default function InquiryDetailPage() {
           {/* Right Column - Call Details */}
           <div>
             <Card className="h-full overflow-hidden flex flex-col">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Call Details</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowContactHistory(true)}
+                >
+                  View Contact History
+                </Button>
               </div>
               {isLoadingCall ? (
                 <div className="flex-1 flex items-center justify-center">
