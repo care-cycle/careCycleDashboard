@@ -13,6 +13,9 @@ interface InquiryFiltersProps {
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
+  agentFilter: string;
+  onAgentFilterChange: (value: string) => void;
+  agents: string[];
   isLoading?: boolean;
 }
 
@@ -30,6 +33,9 @@ export function InquiryFilters({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  agentFilter,
+  onAgentFilterChange,
+  agents,
   isLoading = false,
 }: InquiryFiltersProps) {
   return (
@@ -45,22 +51,41 @@ export function InquiryFilters({
             disabled={isLoading}
           />
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={onStatusFilterChange}
-          disabled={isLoading}
-        >
-          <SelectTrigger className="w-[200px] ml-4 bg-white/50">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white border shadow-md">
-            {STATUSES.map((status) => (
-              <SelectItem key={status.value} value={status.value}>
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={agentFilter}
+            onValueChange={onAgentFilterChange}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[200px] bg-white/50">
+              <SelectValue placeholder="Filter by agent" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border shadow-md">
+              <SelectItem value="all">All Agents</SelectItem>
+              {agents.map((agent) => (
+                <SelectItem key={agent} value={agent}>
+                  {agent}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={statusFilter}
+            onValueChange={onStatusFilterChange}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[200px] bg-white/50">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border shadow-md">
+              {STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

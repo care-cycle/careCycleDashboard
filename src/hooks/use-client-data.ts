@@ -223,10 +223,20 @@ interface Inquiry {
     | "unresolved"
     | "resolved"
     | "appointment_scheduled";
+  category?: string;
+  severity?: string;
+  resolutionType?: "carecycle" | "manual";
+  notes?: string;
   resolvedAt?: string;
   resolvedBy?: string;
   createdAt: string;
   updatedAt: string;
+  carrierName?: string;
+  planName?: string;
+  agentName?: string;
+  firstName?: string;
+  lastName?: string;
+  callerId?: string;
 }
 
 interface InquiriesResponse {

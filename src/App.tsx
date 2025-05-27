@@ -19,6 +19,7 @@ import ManageSourcesPage from "./pages/sources/manage";
 import { AdminRoute } from "./components/auth/admin-route";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { UnauthorizedPage } from "./pages/unauthorized";
+import InquiryDetailPage from "./pages/inquiries/inquiry-detail";
 
 export function App() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -80,6 +81,7 @@ export function App() {
           />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/inquiries" element={<InquiriesPage />} />
+          <Route path="/inquiries/:id" element={<InquiryDetailPage />} />
           <Route
             path="/sources"
             element={

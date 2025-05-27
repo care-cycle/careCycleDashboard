@@ -3,10 +3,11 @@ import { RootLayout } from "@/components/layout/root-layout";
 import { useInitialData } from "@/hooks/use-client-data";
 import { InquiryFilters } from "@/components/inquiries/inquiry-filters";
 import { InquiriesTable } from "@/components/inquiries/inquiries-table";
-import { InquiryResponseDialog } from "@/components/inquiries/inquiry-response-dialog";
+
 import { getTopMetrics } from "@/lib/metrics";
 
-interface Inquiry {
+// Type from inquiries table component
+type Inquiry = {
   id: string;
   customerCampaignId: string;
   callId: string;
@@ -18,6 +19,12 @@ interface Inquiry {
     | "unresolved"
     | "resolved"
     | "appointment_scheduled";
+  primaryCategory?: string;
+  subcategory?: string;
+  severity?: string;
+  suggestedHandling?: string;
+  resolutionType?: "carecycle" | "manual";
+  notes?: string;
   resolvedAt?: string;
   resolvedBy?: string;
   createdAt: string;
@@ -28,7 +35,7 @@ interface Inquiry {
   firstName?: string;
   lastName?: string;
   callerId?: string;
-}
+};
 
 type InquiryKey = keyof Inquiry;
 
@@ -56,11 +63,22 @@ export default function InquiriesPage() {
   const { inquiries, isInquiriesLoading, todayMetrics } = useInitialData();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [agentFilter, setAgentFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
     key: InquiryKey;
     direction: "asc" | "desc" | null;
   }>({ key: "createdAt", direction: "desc" });
+
+  // Get unique agents for filter dropdown
+  const uniqueAgents = useMemo(() => {
+    const agents = new Set<string>();
+    inquiries.forEach((inquiry) => {
+      if (inquiry.agentName) {
+        agents.add(inquiry.agentName);
+      }
+    });
+    return Array.from(agents).sort();
+  }, [inquiries]);
 
   // Filter and sort inquiries
   const filteredAndSortedInquiries = useMemo(() => {
@@ -82,22 +100,22 @@ export default function InquiriesPage() {
       result = result.filter((inquiry) => inquiry.status === statusFilter);
     }
 
+    // Apply agent filter
+    if (agentFilter !== "all") {
+      result = result.filter((inquiry) => inquiry.agentName === agentFilter);
+    }
+
     // Apply sorting
     if (sortConfig.key && sortConfig.direction) {
       result = sortInquiries(result, sortConfig);
     }
 
     return result;
-  }, [inquiries, searchQuery, statusFilter, sortConfig]);
+  }, [inquiries, searchQuery, statusFilter, agentFilter, sortConfig]);
 
   // Handle sorting
   const handleSort = (key: InquiryKey, direction: "asc" | "desc" | null) => {
     setSortConfig({ key, direction });
-  };
-
-  // Handle inquiry selection
-  const handleInquirySelect = (inquiry: Inquiry) => {
-    setSelectedInquiry(inquiry);
   };
 
   if (isInquiriesLoading) {
@@ -118,6 +136,9 @@ export default function InquiriesPage() {
           onSearchChange={setSearchQuery}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          agentFilter={agentFilter}
+          onAgentFilterChange={setAgentFilter}
+          agents={uniqueAgents}
           isLoading={isInquiriesLoading}
         />
 
@@ -130,14 +151,8 @@ export default function InquiriesPage() {
             inquiries={filteredAndSortedInquiries}
             onSort={handleSort}
             sortConfig={sortConfig}
-            onInquirySelect={handleInquirySelect}
           />
         )}
-
-        <InquiryResponseDialog
-          inquiry={selectedInquiry}
-          onClose={() => setSelectedInquiry(null)}
-        />
       </div>
     </RootLayout>
   );

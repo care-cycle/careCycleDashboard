@@ -67,7 +67,6 @@ export function RootLayout({
           <main className="flex-1 overflow-auto">
             <div className="p-4">{children}</div>
           </main>
-          {!hideKnowledgeSearch && <KnowledgeSearch />}
         </div>
       </div>
       <Toaster />

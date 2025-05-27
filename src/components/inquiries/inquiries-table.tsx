@@ -25,6 +25,12 @@ interface Inquiry {
     | "unresolved"
     | "resolved"
     | "appointment_scheduled";
+  primaryCategory?: string;
+  subcategory?: string;
+  severity?: string;
+  suggestedHandling?: string;
+  resolutionType?: "carecycle" | "manual";
+  notes?: string;
   resolvedAt?: string;
   resolvedBy?: string;
   createdAt: string;
@@ -46,14 +52,12 @@ interface InquiriesTableProps {
     key: InquiryKey;
     direction: "asc" | "desc" | null;
   };
-  onInquirySelect?: (inquiry: Inquiry) => void;
 }
 
 export function InquiriesTable({
   inquiries,
   onSort,
   sortConfig,
-  onInquirySelect,
 }: InquiriesTableProps) {
   const navigate = useNavigate();
   const { isRedacted } = useRedaction();
@@ -113,6 +117,78 @@ export function InquiriesTable({
       .join(" ");
   };
 
+  const formatCategory = (category?: string) => {
+    if (!category) return "";
+    const categoryMap: Record<string, string> = {
+      application_status: "Application Status",
+      plan_information: "Plan Information",
+      benefits_coverage: "Benefits & Coverage",
+      cost_billing: "Cost & Billing",
+      providers: "Providers",
+      id_cards_documentation: "ID Cards & Documentation",
+      benefit_utilization: "Benefit Utilization",
+      cancellation_plan_changes: "Cancellation & Plan Changes",
+      personal_info_updates: "Personal Info Updates",
+    };
+    return categoryMap[category.toLowerCase()] || category;
+  };
+
+  const getCategoryColor = (category?: string) => {
+    if (!category) return "bg-gray-100 text-gray-800";
+    switch (category.toLowerCase()) {
+      case "application_status":
+        return "bg-indigo-100 text-indigo-800";
+      case "plan_information":
+        return "bg-blue-100 text-blue-800";
+      case "benefits_coverage":
+        return "bg-cyan-100 text-cyan-800";
+      case "cost_billing":
+        return "bg-green-100 text-green-800";
+      case "providers":
+        return "bg-purple-100 text-purple-800";
+      case "id_cards_documentation":
+        return "bg-yellow-100 text-yellow-800";
+      case "benefit_utilization":
+        return "bg-pink-100 text-pink-800";
+      case "cancellation_plan_changes":
+        return "bg-red-100 text-red-800";
+      case "personal_info_updates":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getSeverityColor = (severity?: string) => {
+    if (!severity) return "bg-gray-100 text-gray-800";
+    switch (severity.toLowerCase()) {
+      case "critical":
+        return "bg-red-100 text-red-800";
+      case "at_risk":
+        return "bg-orange-100 text-orange-800";
+      case "urgent":
+        return "bg-yellow-100 text-yellow-800";
+      case "medium":
+        return "bg-green-100 text-green-800";
+      case "minor":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatSeverity = (severity?: string) => {
+    if (!severity) return "";
+    const severityMap: Record<string, string> = {
+      critical: "Critical",
+      at_risk: "At Risk",
+      urgent: "Urgent",
+      medium: "Medium",
+      minor: "Minor",
+    };
+    return severityMap[severity.toLowerCase()] || severity;
+  };
+
   // Helper function to render customer name with redaction
   const renderCustomerName = useCallback(
     (firstName?: string, lastName?: string) => {
@@ -153,12 +229,34 @@ export function InquiriesTable({
               </Button>
             </TableHead>
             <TableHead>
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("severity" as InquiryKey)}
+                  className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
+                >
+                  Severity
+                  <ArrowUpDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </TableHead>
+            <TableHead>
               <Button
                 variant="ghost"
                 onClick={() => handleSort("carrierName" as InquiryKey)}
                 className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
               >
                 Carrier & Plan
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("agentName" as InquiryKey)}
+                className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
+              >
+                Agent
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </TableHead>
@@ -175,22 +273,24 @@ export function InquiriesTable({
             <TableHead>
               <Button
                 variant="ghost"
-                onClick={() => handleSort("response" as InquiryKey)}
+                onClick={() => handleSort("primaryCategory" as InquiryKey)}
                 className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
               >
-                Response
+                Category
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </TableHead>
             <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => handleSort("status" as InquiryKey)}
-                className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
-              >
-                Status
-                <ArrowUpDown className="h-4 w-4" />
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("status" as InquiryKey)}
+                  className="hover:text-gray-900 text-gray-600 flex items-center gap-2"
+                >
+                  Status
+                  <ArrowUpDown className="h-4 w-4" />
+                </Button>
+              </div>
             </TableHead>
             <TableHead>
               <Button
@@ -220,7 +320,16 @@ export function InquiriesTable({
               <TableRow
                 key={inquiry.id}
                 className="hover:bg-black/5 cursor-pointer"
-                onClick={() => onInquirySelect?.(inquiry)}
+                onClick={() =>
+                  navigate(`/inquiries/${inquiry.id}`, {
+                    state: {
+                      filteredInquiries: inquiries,
+                      currentIndex: inquiries.findIndex(
+                        (inq) => inq.id === inquiry.id,
+                      ),
+                    },
+                  })
+                }
               >
                 <TableCell>
                   <div className="h-8 w-8 flex items-center justify-center">
@@ -243,6 +352,19 @@ export function InquiriesTable({
                   </div>
                 </TableCell>
                 <TableCell>
+                  <div className="flex justify-center">
+                    {inquiry.severity ? (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(inquiry.severity)}`}
+                      >
+                        {formatSeverity(inquiry.severity)}
+                      </span>
+                    ) : (
+                      "-"
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
                   <div className="flex flex-col">
                     <span className="font-medium">
                       {inquiry.carrierName || "-"}
@@ -252,18 +374,29 @@ export function InquiriesTable({
                     </span>
                   </div>
                 </TableCell>
+                <TableCell>
+                  <span className="font-medium">
+                    {inquiry.agentName || "-"}
+                  </span>
+                </TableCell>
                 <TableCell className="max-w-md">
                   <div className="line-clamp-2">{inquiry.inquiry}</div>
                 </TableCell>
-                <TableCell className="max-w-md">
-                  <div className="line-clamp-2">{inquiry.response || "-"}</div>
+                <TableCell>
+                  <span className="text-sm">
+                    {inquiry.primaryCategory
+                      ? formatCategory(inquiry.primaryCategory)
+                      : "-"}
+                  </span>
                 </TableCell>
                 <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(inquiry.status)}`}
-                  >
-                    {formatStatus(inquiry.status)}
-                  </span>
+                  <div className="flex justify-center">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusColor(inquiry.status)}`}
+                    >
+                      {formatStatus(inquiry.status)}
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {inquiry.resolvedAt ? formatDate(inquiry.resolvedAt) : "-"}
@@ -273,7 +406,7 @@ export function InquiriesTable({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-4">
+              <TableCell colSpan={10} className="text-center py-4">
                 No inquiries available
               </TableCell>
             </TableRow>
