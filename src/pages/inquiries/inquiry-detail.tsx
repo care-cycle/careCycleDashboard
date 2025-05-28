@@ -70,6 +70,7 @@ interface Inquiry {
   lastName?: string;
   callerId?: string;
   customer?: CustomerInfo | null;
+  call?: CallData | null;
 }
 
 interface CustomerInfo {
@@ -171,50 +172,11 @@ export default function InquiryDetailPage() {
   // Use customer data from inquiry response
   const customer = inquiry?.customer || null;
 
-  // Fetch call details if we have a callId
-  const { data: callData, isLoading: isLoadingCall } = useQuery({
-    queryKey: ["call", inquiry?.callId],
-    queryFn: async () => {
-      if (!inquiry?.callId) return null;
+  // Use call data from inquiry response
+  const callData = inquiry?.call || null;
 
-      const result = await apiClient.get("/portal/client/calls");
-
-      // The API returns data in a nested structure
-      const callsData = result.data?.d?.c || [];
-
-      // Find the specific call by ID
-      const call = callsData.find((c: any) => c.i === inquiry.callId);
-
-      if (!call) return null;
-
-      // Transform the API response to match our CallData interface
-      return {
-        id: call.i,
-        callerId: call.ca,
-        createdAt: call.cr,
-        disposition: call.d,
-        durationMs: call.du
-          ? (() => {
-              const match = call.du.match(/(\d+)m\s*(\d+)s/);
-              if (match) {
-                const minutes = parseInt(match[1]);
-                const seconds = parseInt(match[2]);
-                return (minutes * 60 + seconds) * 1000;
-              }
-              return 0;
-            })()
-          : undefined,
-        assistantType: call.at,
-        summary: call.su,
-        transcript: call.tr,
-        recordingUrl: call.r,
-        direction: call.di === "i" ? "inbound" : "outbound",
-        cost: call.co,
-        successEvaluation: call.se,
-      } as CallData;
-    },
-    enabled: !!inquiry?.callId,
-  });
+  // Remove the old call fetching logic since it's now included in the inquiry response
+  const isLoadingCall = false; // No longer loading separately
 
   // Fetch contact history (calls) when page loads
   const phoneNumber = inquiry?.callerId || customer?.callerId;
@@ -417,7 +379,6 @@ export default function InquiryDetailPage() {
     return () => {
       // Cancel any pending queries when component unmounts
       queryClient.cancelQueries({ queryKey: ["inquiry"] });
-      queryClient.cancelQueries({ queryKey: ["call"] });
       queryClient.cancelQueries({ queryKey: ["contact-calls"] });
       queryClient.cancelQueries({ queryKey: ["contact-sms"] });
       queryClient.cancelQueries({ queryKey: ["selected-call"] });
@@ -615,13 +576,68 @@ export default function InquiryDetailPage() {
 
   const copyInquiryId = useCallback(async () => {
     if (!inquiry?.id) return;
+
     try {
-      await navigator.clipboard.writeText(inquiry.id);
-      setHasCopiedId(true);
-      toast.success("Inquiry ID copied");
-      setTimeout(() => setHasCopiedId(false), 2000);
+      // First try the modern Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(inquiry.id);
+        setHasCopiedId(true);
+        toast.success("Inquiry ID copied");
+        setTimeout(() => setHasCopiedId(false), 2000);
+        return;
+      }
+
+      // Fallback method for older browsers or non-secure contexts
+      const textArea = document.createElement("textarea");
+      textArea.value = inquiry.id;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        setHasCopiedId(true);
+        toast.success("Inquiry ID copied");
+        setTimeout(() => setHasCopiedId(false), 2000);
+      } else {
+        throw new Error("Copy command failed");
+      }
     } catch (err) {
-      toast.error("Failed to copy ID");
+      console.error("Copy failed:", err);
+      // Show the ID in a prompt as a last resort
+      const userAgent = navigator.userAgent.toLowerCase();
+      if (
+        userAgent.includes("mobile") ||
+        userAgent.includes("android") ||
+        userAgent.includes("iphone")
+      ) {
+        // On mobile, show an alert with the ID
+        alert(`Inquiry ID: ${inquiry.id}\n\nPlease copy this ID manually.`);
+      } else {
+        // On desktop, try to select the text for manual copying
+        try {
+          const idElement = document.querySelector("[data-inquiry-id]");
+          if (idElement) {
+            const range = document.createRange();
+            range.selectNodeContents(idElement);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            toast.error(
+              "Auto-copy failed. ID is now selected - press Ctrl+C to copy",
+            );
+          } else {
+            toast.error(`Copy failed. ID: ${inquiry.id}`);
+          }
+        } catch (selectErr) {
+          toast.error(`Copy failed. ID: ${inquiry.id}`);
+        }
+      }
     }
   }, [inquiry?.id]);
 
@@ -697,7 +713,9 @@ export default function InquiryDetailPage() {
                   title="Click to copy full ID"
                 >
                   <span>ID:</span>
-                  <span className="font-mono">{formatShortId(inquiry.id)}</span>
+                  <span className="font-mono" data-inquiry-id>
+                    {formatShortId(inquiry.id)}
+                  </span>
                   {hasCopiedId ? (
                     <Check className="h-3 w-3 text-green-500" />
                   ) : (
