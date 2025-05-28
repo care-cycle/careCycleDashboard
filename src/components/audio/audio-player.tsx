@@ -15,10 +15,11 @@ interface AudioPlayerProps {
   url: string;
   className?: string;
   preloadedAudio?: HTMLAudioElement | null;
+  onError?: () => void;
 }
 
 export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
-  ({ url, className, preloadedAudio }, ref) => {
+  ({ url, className, preloadedAudio, onError }, ref) => {
     const instanceId = useRef(
       Math.random().toString(36).substring(2, 8),
     ).current; // Unique ID for logging
@@ -146,6 +147,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               "Failed to initialize audio visualization after multiple attempts.",
             );
             setIsLoading(false);
+            onError?.(); // Call the error callback
           }
         }
       };
@@ -210,6 +212,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
                 default:
                   setErrorMessage("An error occurred while loading the audio.");
               }
+              onError?.(); // Call the error callback
             }
           }
         };

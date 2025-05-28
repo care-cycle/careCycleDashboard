@@ -40,11 +40,14 @@ export const CallDetails = memo(function CallDetails({
     id: false,
     callerId: false,
   });
+  const [audioError, setAudioError] = useState(false);
   const { isAdmin } = useUserRole();
 
   // Add cleanup effect for audio
   useEffect(() => {
     const audio = audioRef.current;
+    // Reset audio error when call changes
+    setAudioError(false);
     // Cleanup function that runs when component unmounts OR when call changes
     return () => {
       if (audio) {
@@ -163,12 +166,13 @@ export const CallDetails = memo(function CallDetails({
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            {call.recordingUrl && (
+            {call.recordingUrl && !audioError && (
               <div className="glass-panel p-0 rounded-lg">
                 <AudioPlayer
                   url={call.recordingUrl}
                   preloadedAudio={preloadedAudio}
                   ref={audioRef}
+                  onError={() => setAudioError(true)}
                 />
               </div>
             )}

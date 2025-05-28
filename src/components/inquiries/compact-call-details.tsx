@@ -44,16 +44,20 @@ interface CompactCallDetailsProps {
 export function CompactCallDetails({ call }: CompactCallDetailsProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
+  const [audioError, setAudioError] = useState(false);
   const { isRedacted } = useRedaction();
 
   useEffect(() => {
+    // Reset audio error when call changes
+    setAudioError(false);
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
     };
-  }, []);
+  }, [call.id]);
 
   const formatDuration = (ms?: number) => {
     if (!ms) return "0:00";
@@ -121,9 +125,13 @@ export function CompactCallDetails({ call }: CompactCallDetailsProps) {
       </div>
 
       {/* Audio Player */}
-      {call.recordingUrl && (
+      {call.recordingUrl && !audioError && (
         <div className="rounded-lg overflow-hidden border mt-3 flex-shrink-0">
-          <AudioPlayer url={call.recordingUrl} ref={audioRef} />
+          <AudioPlayer
+            url={call.recordingUrl}
+            ref={audioRef}
+            onError={() => setAudioError(true)}
+          />
         </div>
       )}
 
