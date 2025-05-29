@@ -17,6 +17,7 @@ interface CallFiltersProps {
   onDateRangeChange: (date: DateRange | undefined) => void;
   defaultDateRange: DateRange;
   minDate?: Date;
+  isAgent?: boolean;
 }
 
 export function CallFilters({
@@ -30,6 +31,7 @@ export function CallFilters({
   onDateRangeChange,
   defaultDateRange,
   minDate,
+  isAgent = false,
 }: CallFiltersProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const debouncedSearchQuery = useDebounce(localSearchQuery, 250);
@@ -81,19 +83,21 @@ export function CallFilters({
               </label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="test-calls"
-                checked={showTestCalls}
-                onCheckedChange={onTestCallsChange}
-              />
-              <label
-                htmlFor="test-calls"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Show Test Calls
-              </label>
-            </div>
+            {!isAgent && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="test-calls"
+                  checked={showTestCalls}
+                  onCheckedChange={onTestCallsChange}
+                />
+                <label
+                  htmlFor="test-calls"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Show Test Calls
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </div>

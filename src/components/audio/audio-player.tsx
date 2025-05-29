@@ -49,6 +49,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       isReadyRef.current = false;
 
       let isDestroyed = false;
+      let currentController: AbortController | null = null;
 
       // Cleanup previous instance first
       if (wavesurferRef.current) {
@@ -66,15 +67,48 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
         const maxRetries = 2; // Allow 2 retries (total 3 attempts)
         const retryDelay = 500; // Wait 500ms between retries
 
+        // Check if component was destroyed before starting
+        if (isDestroyed) {
+          console.log(
+            `Component destroyed, skipping initialization attempt ${retryCount + 1}`,
+          );
+          return;
+        }
+
         try {
-          // Use GET for validation as HEAD might not be allowed by CORS/S3 policies on the pre-signed URL itself
-          const controller = new AbortController();
-          const signal = controller.signal;
-          const validationTimeout = setTimeout(() => controller.abort(), 5000);
+          // Create a new controller for this specific attempt
+          currentController = new AbortController();
+          const signal = currentController.signal;
+
+          // Set a reasonable timeout for the fetch request
+          const validationTimeout = setTimeout(() => {
+            if (currentController && !signal.aborted) {
+              currentController.abort();
+            }
+          }, 10000); // Increased to 10 seconds for better reliability
 
           console.log(`Attempt ${retryCount + 1}: Validating URL: ${url}`);
-          const response = await fetch(url, { method: "GET", signal });
+
+          // Check if destroyed before making the request
+          if (isDestroyed) {
+            clearTimeout(validationTimeout);
+            return;
+          }
+
+          const response = await fetch(url, {
+            method: "HEAD", // Use HEAD first for faster validation
+            signal,
+            headers: {
+              Range: "bytes=0-0", // Minimal range request to check accessibility
+            },
+          });
+
           clearTimeout(validationTimeout);
+
+          // Check if destroyed after the request
+          if (isDestroyed) {
+            return;
+          }
 
           if (!response.ok) {
             const errorMsg =
@@ -84,6 +118,11 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             throw new Error(errorMsg);
           }
           console.log(`Attempt ${retryCount + 1}: URL Validation successful.`);
+
+          // Check if destroyed before creating WaveSurfer
+          if (isDestroyed) {
+            return;
+          }
 
           const wavesurfer = WaveSurfer.create({
             container: waveformRef.current!,
@@ -115,6 +154,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           });
 
           wavesurfer.on("error", (error) => {
+            if (isDestroyed) return;
             console.error(
               `Attempt ${retryCount + 1}: WaveSurfer error:`,
               error,
@@ -122,6 +162,16 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             // Treat wavesurfer error as a trigger for retry as well
             throw new Error("WaveSurfer initialization error");
           });
+
+          // Check if destroyed before assigning to ref
+          if (isDestroyed) {
+            try {
+              wavesurfer.destroy();
+            } catch (e) {
+              console.error("Error destroying wavesurfer during cleanup:", e);
+            }
+            return;
+          }
 
           wavesurferRef.current = wavesurfer;
 
@@ -131,6 +181,21 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           await wavesurfer.load(url);
           console.log(`Attempt ${retryCount + 1}: WaveSurfer load initiated.`);
         } catch (error: any) {
+          // Don't log errors if the component was destroyed or signal was aborted due to cleanup
+          if (isDestroyed) {
+            console.log(
+              `Component destroyed during attempt ${retryCount + 1}, skipping error handling`,
+            );
+            return;
+          }
+
+          if (error.name === "AbortError") {
+            console.log(
+              `Attempt ${retryCount + 1} was aborted (likely due to component cleanup)`,
+            );
+            return; // Don't retry if aborted due to cleanup
+          }
+
           console.error(`Attempt ${retryCount + 1} failed:`, error.message);
           if (retryCount < maxRetries) {
             console.log(`Retrying in ${retryDelay}ms...`);
@@ -147,7 +212,10 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               "Failed to initialize audio visualization after multiple attempts.",
             );
             setIsLoading(false);
-            onError?.(); // Call the error callback
+            // Only call onError for persistent failures, not temporary loading issues
+            if (retryCount >= maxRetries) {
+              onError?.();
+            }
           }
         }
       };
@@ -156,9 +224,11 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       setTimeout(() => {
         if (!isDestroyed) {
           initWaveSurfer().catch((error) => {
-            console.error("Error in initWaveSurfer:", error);
-            setErrorMessage("Failed to initialize audio visualization");
-            setIsLoading(false);
+            if (!isDestroyed) {
+              console.error("Error in initWaveSurfer:", error);
+              setErrorMessage("Failed to initialize audio visualization");
+              setIsLoading(false);
+            }
           });
         }
       }, 100);
@@ -166,6 +236,12 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       // Cleanup on unmount or when url changes
       return () => {
         isDestroyed = true;
+
+        // Abort any ongoing fetch requests
+        if (currentController) {
+          currentController.abort();
+          currentController = null;
+        }
 
         if (wavesurferRef.current) {
           try {
@@ -202,17 +278,21 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
                   setErrorMessage(
                     "A network error occurred while loading the audio.",
                   );
+                  // Only hide component for network errors that are persistent
+                  onError?.();
                   break;
                 case MediaError.MEDIA_ERR_DECODE:
                   setErrorMessage("The audio could not be decoded.");
+                  onError?.();
                   break;
                 case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
                   setErrorMessage("The audio format is not supported.");
+                  onError?.();
                   break;
                 default:
                   setErrorMessage("An error occurred while loading the audio.");
+                  break;
               }
-              onError?.(); // Call the error callback
             }
           }
         };

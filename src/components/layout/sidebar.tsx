@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { AnimatedOrbs } from "@/components/ui/animated-orbs";
 import { useUserRole } from "@/hooks/use-auth";
+import apiClient from "@/lib/api-client";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -57,55 +58,101 @@ export function Sidebar({ className }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useSidebarState();
   const location = useLocation();
   const { isAdmin } = useUserRole();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
 
-  const navigationItems = [
-    {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-      href: "/dashboard",
-    },
-    {
-      title: "Calls",
-      icon: Phone,
-      href: "/calls",
-    },
-    {
-      title: "Customers",
-      icon: Users,
-      href: "/customers",
-    },
-    {
-      title: "Appointments",
-      icon: Calendar,
-      href: "/appointments",
-    },
-    {
-      title: "Inquiries",
-      icon: MessageSquare,
-      href: "/inquiries",
-    },
-    ...(isAdmin
-      ? [
-          {
-            title: "Sources",
-            icon: Megaphone,
-            href: "/sources",
-          },
-          {
-            title: "Campaigns",
-            icon: CircuitBoard,
-            href: "/campaigns",
-          },
-        ]
-      : []),
-    {
-      title: "Journeys",
-      icon: GitBranch,
-      href: "/journeys",
-      disabled: true,
-      badge: "Coming Soon",
-    },
-  ];
+  // Fetch user role
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const response = await apiClient.get("/portal/me");
+        setUserRole(response.data.role);
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      } finally {
+        setIsLoadingRole(false);
+      }
+    };
+
+    fetchUserRole();
+  }, []);
+
+  const isAgent = userRole === "agent";
+
+  // Define navigation items based on user role
+  const navigationItems = isAgent
+    ? [
+        // Agent-only navigation items
+        {
+          title: "Inquiries",
+          icon: MessageSquare,
+          href: "/inquiries",
+        },
+        {
+          title: "Customers",
+          icon: Users,
+          href: "/customers",
+        },
+        {
+          title: "Calls",
+          icon: Phone,
+          href: "/calls",
+        },
+        {
+          title: "Appointments",
+          icon: Calendar,
+          href: "/appointments",
+        },
+      ]
+    : [
+        // Regular user/admin navigation items
+        {
+          title: "Dashboard",
+          icon: LayoutDashboard,
+          href: "/dashboard",
+        },
+        {
+          title: "Calls",
+          icon: Phone,
+          href: "/calls",
+        },
+        {
+          title: "Customers",
+          icon: Users,
+          href: "/customers",
+        },
+        {
+          title: "Appointments",
+          icon: Calendar,
+          href: "/appointments",
+        },
+        {
+          title: "Inquiries",
+          icon: MessageSquare,
+          href: "/inquiries",
+        },
+        ...(isAdmin
+          ? [
+              {
+                title: "Sources",
+                icon: Megaphone,
+                href: "/sources",
+              },
+              {
+                title: "Campaigns",
+                icon: CircuitBoard,
+                href: "/campaigns",
+              },
+            ]
+          : []),
+        {
+          title: "Journeys",
+          icon: GitBranch,
+          href: "/journeys",
+          disabled: true,
+          badge: "Coming Soon",
+        },
+      ];
 
   const logoSrc = {
     collapsed: "/carecyclelogo.svg",
@@ -167,70 +214,83 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
         <div className="flex-1 px-2">
           <nav className="space-y-2">
-            {navigationItems.map((item) => (
-              <div key={item.href}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full relative",
-                    "hover:text-gray-900 hover:bg-white/50",
-                    "transition-colors duration-200",
-                    item.disabled && "opacity-50 pointer-events-none",
-                    "px-2 flex items-center justify-start",
-                  )}
-                  asChild={!item.disabled}
-                  title={item.title}
-                >
-                  <Link
-                    to={item.disabled ? "#" : item.href}
-                    className="flex items-center"
-                  >
-                    <div className="relative flex items-center w-[260px]">
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 absolute left-[15px]",
-                          item.disabled && "text-gray-500 opacity-50",
-                          isPathActive(item.href, location.pathname)
-                            ? "text-primary"
-                            : "text-muted-foreground",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute left-[44px] whitespace-nowrap flex items-center gap-2",
-                          "transition-all duration-300 ease-in-out",
-                          item.disabled
-                            ? isExpanded
-                              ? "opacity-50"
-                              : "opacity-0"
-                            : isExpanded
-                              ? "opacity-100"
-                              : "opacity-0",
-                          item.disabled && "text-gray-500",
-                          isPathActive(item.href, location.pathname) &&
-                            "text-primary font-medium",
-                        )}
-                      >
-                        {item.title}
-                        {item.badge && (
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              "text-[10px] px-1.5 py-0 h-4 font-normal whitespace-nowrap",
-                              item.disabled
-                                ? "bg-gray-100/50 text-gray-500"
-                                : "bg-secondary/10 text-secondary",
-                            )}
-                          >
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </span>
-                    </div>
-                  </Link>
-                </Button>
+            {/* Show loading state or navigation items */}
+            {isLoadingRole ? (
+              // Loading skeleton
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-full h-10 bg-gray-100/50 rounded-lg animate-pulse"
+                  />
+                ))}
               </div>
-            ))}
+            ) : (
+              navigationItems.map((item) => (
+                <div key={item.href}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full relative",
+                      "hover:text-gray-900 hover:bg-white/50",
+                      "transition-colors duration-200",
+                      item.disabled && "opacity-50 pointer-events-none",
+                      "px-2 flex items-center justify-start",
+                    )}
+                    asChild={!item.disabled}
+                    title={item.title}
+                  >
+                    <Link
+                      to={item.disabled ? "#" : item.href}
+                      className="flex items-center"
+                    >
+                      <div className="relative flex items-center w-[260px]">
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 absolute left-[15px]",
+                            item.disabled && "text-gray-500 opacity-50",
+                            isPathActive(item.href, location.pathname)
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute left-[44px] whitespace-nowrap flex items-center gap-2",
+                            "transition-all duration-300 ease-in-out",
+                            item.disabled
+                              ? isExpanded
+                                ? "opacity-50"
+                                : "opacity-0"
+                              : isExpanded
+                                ? "opacity-100"
+                                : "opacity-0",
+                            item.disabled && "text-gray-500",
+                            isPathActive(item.href, location.pathname) &&
+                              "text-primary font-medium",
+                          )}
+                        >
+                          {item.title}
+                          {item.badge && (
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "text-[10px] px-1.5 py-0 h-4 font-normal whitespace-nowrap",
+                                item.disabled
+                                  ? "bg-gray-100/50 text-gray-500"
+                                  : "bg-secondary/10 text-secondary",
+                              )}
+                            >
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </span>
+                      </div>
+                    </Link>
+                  </Button>
+                </div>
+              ))
+            )}
           </nav>
         </div>
 

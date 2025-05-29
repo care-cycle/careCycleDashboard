@@ -7,6 +7,11 @@ const BASE_URL =
     : "https://app.carecycle.ai";
 
 export default function SignInPage() {
+  // For agents, we'll redirect to inquiries page instead of dashboard
+  // This will be handled by the App.tsx routing logic
+  const redirectUrl =
+    import.meta.env.VITE_NODE_ENV === "development" ? `${BASE_URL}/` : "/";
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <MeshGradientBackground />
@@ -25,11 +30,7 @@ export default function SignInPage() {
               ? `${BASE_URL}/sign-up`
               : "/sign-up"
           }
-          fallbackRedirectUrl={
-            import.meta.env.VITE_NODE_ENV === "development"
-              ? `${BASE_URL}/dashboard`
-              : "/dashboard"
-          }
+          fallbackRedirectUrl={redirectUrl}
         />
       </div>
     </div>

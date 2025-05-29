@@ -47,3 +47,24 @@ export function formatCurrency(value: number): string {
     maximumFractionDigits: 2,
   }).format(value);
 }
+
+/**
+ * Transforms a recording URL to use the correct API endpoint based on environment
+ * In development: converts https://api.nodable.ai/recordings/... to http://localhost:3000/recordings/...
+ * In production: returns the URL as-is
+ */
+export function getRecordingUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+
+  const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
+
+  if (isDevelopment && url.includes("api.nodable.ai/recordings/")) {
+    // Replace the production URL with the local development URL
+    return url.replace(
+      "https://api.nodable.ai/recordings/",
+      "http://localhost:3000/recordings/",
+    );
+  }
+
+  return url;
+}

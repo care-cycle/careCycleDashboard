@@ -20,7 +20,7 @@ import {
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { Call } from "@/types/calls";
 import { toast } from "sonner";
-import { formatPhoneNumber } from "@/lib/utils";
+import { formatPhoneNumber, getRecordingUrl } from "@/lib/utils";
 import { FeedbackModule } from "./feedback-module";
 
 interface CallDetailsProps {
@@ -40,14 +40,11 @@ export const CallDetails = memo(function CallDetails({
     id: false,
     callerId: false,
   });
-  const [audioError, setAudioError] = useState(false);
   const { isAdmin } = useUserRole();
 
   // Add cleanup effect for audio
   useEffect(() => {
     const audio = audioRef.current;
-    // Reset audio error when call changes
-    setAudioError(false);
     // Cleanup function that runs when component unmounts OR when call changes
     return () => {
       if (audio) {
@@ -85,16 +82,50 @@ export const CallDetails = memo(function CallDetails({
   // Add copy function
   const copyText = useCallback(
     async (text: string, type: "id" | "callerId") => {
-      await navigator.clipboard.writeText(text);
-      setHasCopied((prev) => ({ ...prev, [type]: true }));
-      toast.success(
-        `${type === "id" ? "Call ID" : "Caller ID"} copied to clipboard`,
-      );
+      try {
+        // First try the modern Clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          setHasCopied((prev) => ({ ...prev, [type]: true }));
+          toast.success(
+            `${type === "id" ? "Call ID" : "Caller ID"} copied to clipboard`,
+          );
+          setTimeout(() => {
+            setHasCopied((prev) => ({ ...prev, [type]: false }));
+          }, 2000);
+          return;
+        }
 
-      // Reset copy state after 2 seconds
-      setTimeout(() => {
-        setHasCopied((prev) => ({ ...prev, [type]: false }));
-      }, 2000);
+        // Fallback method for older browsers or non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          setHasCopied((prev) => ({ ...prev, [type]: true }));
+          toast.success(
+            `${type === "id" ? "Call ID" : "Caller ID"} copied to clipboard`,
+          );
+          setTimeout(() => {
+            setHasCopied((prev) => ({ ...prev, [type]: false }));
+          }, 2000);
+        } else {
+          throw new Error("Copy command failed");
+        }
+      } catch (err) {
+        console.error("Copy failed:", err);
+        toast.error(
+          `Copy failed. ${type === "id" ? "Call ID" : "Caller ID"}: ${text}`,
+        );
+      }
     },
     [],
   );
@@ -166,13 +197,12 @@ export const CallDetails = memo(function CallDetails({
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            {call.recordingUrl && !audioError && (
+            {call.recordingUrl && (
               <div className="glass-panel p-0 rounded-lg">
                 <AudioPlayer
-                  url={call.recordingUrl}
+                  url={getRecordingUrl(call.recordingUrl) || ""}
                   preloadedAudio={preloadedAudio}
                   ref={audioRef}
-                  onError={() => setAudioError(true)}
                 />
               </div>
             )}

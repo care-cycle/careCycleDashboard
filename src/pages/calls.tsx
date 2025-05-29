@@ -21,6 +21,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
+import { useAuth } from "@/hooks/use-auth";
 
 interface CallsTableProps {
   calls: Call[];
@@ -91,6 +92,8 @@ const MemoizedCallDetails = memo(function MemoizedCallDetails({
 export default function CallsPage() {
   const { todayMetrics, isCallsLoading, calls, clientInfo } = useInitialData();
   const { setCallDetailsOpen } = useUI();
+  const { user } = useAuth();
+  const isAgent = user?.role === "agent";
   const {
     showTestCalls,
     setShowTestCalls,
@@ -172,7 +175,10 @@ export default function CallsPage() {
             callDate <= new Date(dateRange.to.setHours(23, 59, 59, 999))
           : true;
 
-      const testMatch = showTestCalls || !call.testFlag;
+      // For agents, never show test calls regardless of toggle
+      const testMatch = isAgent
+        ? !call.testFlag
+        : showTestCalls || !call.testFlag;
 
       // Add connected calls filtering
       const connectedMatch =
@@ -222,6 +228,7 @@ export default function CallsPage() {
     showTestCalls,
     showConnectedOnly,
     searchQuery,
+    isAgent,
   ]);
 
   // Move sorting logic before pagination
@@ -231,8 +238,16 @@ export default function CallsPage() {
     // Apply sorting if configured
     if (sortConfig.key && sortConfig.direction) {
       result = [...result].sort((a, b) => {
-        let aValue = a[sortConfig.key as keyof Call];
-        let bValue = b[sortConfig.key as keyof Call];
+        // Skip sorting for preloaded properties
+        if (
+          sortConfig.key === "preloadedWaveform" ||
+          sortConfig.key === "preloadedAudio"
+        ) {
+          return 0;
+        }
+
+        let aValue = (a as any)[sortConfig.key];
+        let bValue = (b as any)[sortConfig.key];
 
         // Handle special cases for date fields
         if (sortConfig.key === "createdAt") {
@@ -364,6 +379,7 @@ export default function CallsPage() {
               ? new Date(calls.data[calls.data.length - 1].createdAt)
               : undefined
           }
+          isAgent={isAgent}
         />
 
         <div className="mt-0">

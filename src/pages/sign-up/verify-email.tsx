@@ -1,7 +1,41 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useSignUp } from "@clerk/clerk-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export function VerifyEmail() {
-  const { isLoaded } = useAuth();
+  const { isLoaded, signUp, setActive } = useSignUp();
+  const navigate = useNavigate();
+  const [verificationCode, setVerificationCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoaded || !signUp) return;
+
+    setLoading(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({
+        code: verificationCode,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        navigate("/dashboard");
+      } else {
+        console.error("Verification failed:", result);
+        toast.error("Verification failed. Please try again.");
+      }
+    } catch (error: any) {
+      console.error("Verification error:", error);
+      toast.error(error.errors?.[0]?.message || "Failed to verify email");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isLoaded) {
     return <div>Loading...</div>;
@@ -20,9 +54,27 @@ export function VerifyEmail() {
             Verify your email
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Please check your email to continue
+            Please enter the verification code sent to your email
           </p>
         </div>
+
+        <form onSubmit={handleVerification} className="space-y-4">
+          <div>
+            <Label htmlFor="code">Verification Code</Label>
+            <Input
+              id="code"
+              type="text"
+              required
+              placeholder="Enter verification code"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Verifying..." : "Verify Email"}
+          </Button>
+        </form>
       </div>
     </div>
   );

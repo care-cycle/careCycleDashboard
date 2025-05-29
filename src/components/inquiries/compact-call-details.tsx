@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +15,10 @@ import {
   DollarSign,
   Copy,
   Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { formatDate, formatPhoneNumber } from "@/lib/utils";
+import { formatDate, formatPhoneNumber, getRecordingUrl } from "@/lib/utils";
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { toast } from "sonner";
 import { useRedaction } from "@/hooks/use-redaction";
@@ -44,13 +46,9 @@ interface CompactCallDetailsProps {
 export function CompactCallDetails({ call }: CompactCallDetailsProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
-  const [audioError, setAudioError] = useState(false);
   const { isRedacted } = useRedaction();
 
   useEffect(() => {
-    // Reset audio error when call changes
-    setAudioError(false);
-
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -69,12 +67,38 @@ export function CompactCallDetails({ call }: CompactCallDetailsProps) {
 
   const copyCallId = async () => {
     try {
-      await navigator.clipboard.writeText(call.id);
-      setHasCopied(true);
-      toast.success("Call ID copied");
-      setTimeout(() => setHasCopied(false), 2000);
+      // First try the modern Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(call.id);
+        setHasCopied(true);
+        toast.success("Call ID copied");
+        setTimeout(() => setHasCopied(false), 2000);
+        return;
+      }
+
+      // Fallback method for older browsers or non-secure contexts
+      const textArea = document.createElement("textarea");
+      textArea.value = call.id;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        setHasCopied(true);
+        toast.success("Call ID copied");
+        setTimeout(() => setHasCopied(false), 2000);
+      } else {
+        throw new Error("Copy command failed");
+      }
     } catch (err) {
-      toast.error("Failed to copy");
+      console.error("Copy failed:", err);
+      toast.error(`Copy failed. Call ID: ${call.id}`);
     }
   };
 
@@ -125,12 +149,11 @@ export function CompactCallDetails({ call }: CompactCallDetailsProps) {
       </div>
 
       {/* Audio Player */}
-      {call.recordingUrl && !audioError && (
-        <div className="rounded-lg overflow-hidden border mt-3 flex-shrink-0">
+      {call.recordingUrl && (
+        <div className="mb-4">
           <AudioPlayer
-            url={call.recordingUrl}
-            ref={audioRef}
-            onError={() => setAudioError(true)}
+            url={getRecordingUrl(call.recordingUrl) || ""}
+            className="w-full"
           />
         </div>
       )}
