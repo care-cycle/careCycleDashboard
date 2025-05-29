@@ -72,7 +72,7 @@ export default function SignUpWrapper() {
 
         if (result.status === "complete") {
           await setActive({ session: result.createdSessionId });
-          window.location.href = `${baseUrl}/dashboard`;
+          window.location.href = "/";
         } else {
           // Handle other statuses
           console.error("Signup not complete:", result);
@@ -249,7 +249,7 @@ export default function SignUpWrapper() {
           routing="path"
           path="/sign-up"
           signInUrl={`${baseUrl}/sign-in`}
-          fallbackRedirectUrl={`${baseUrl}/dashboard`}
+          fallbackRedirectUrl="/"
         />
       </div>
     </div>
