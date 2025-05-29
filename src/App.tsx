@@ -1,6 +1,6 @@
 // src/App.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { AnimatePresence } from "framer-motion";
 import { VerifyEmail } from "./pages/sign-up/verify-email";
 import SignUpPage from "./pages/sign-up";
@@ -26,6 +26,7 @@ import apiClient from "./lib/api-client";
 
 export function App() {
   const { isLoaded, isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const { isLoading: isLoadingInitialData } = useInitialData();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userNpn, setUserNpn] = useState<string | null>(null);
@@ -33,12 +34,28 @@ export function App() {
 
   // Check user role and NPN when signed in
   useEffect(() => {
-    const checkUserData = async () => {
-      console.log("[App] checkUserData called, isSignedIn:", isSignedIn);
+    const checkUserData = async (retryCount = 0) => {
+      console.log(
+        "[App] checkUserData called, isSignedIn:",
+        isSignedIn,
+        "retry:",
+        retryCount,
+      );
 
       if (!isSignedIn) {
         setCheckingUser(false);
         return;
+      }
+
+      // First check Clerk user's unsafe metadata for immediate agent detection
+      if (clerkUser?.unsafeMetadata?.role === "agent") {
+        setUserRole("agent");
+        setUserNpn((clerkUser.unsafeMetadata.npn as string) || null);
+
+        console.log("[App] Agent detected from Clerk metadata:", {
+          role: "agent",
+          npn: clerkUser.unsafeMetadata.npn,
+        });
       }
 
       try {
@@ -47,8 +64,26 @@ export function App() {
         console.log("[App] User data from /portal/me:", userData);
         setUserRole(userData.role);
         setUserNpn(userData.npn);
+
+        // If we detected an agent from Clerk but backend doesn't have NPN yet, retry
+        if (
+          clerkUser?.unsafeMetadata?.role === "agent" &&
+          userData.role === "agent" &&
+          !userData.npn &&
+          clerkUser.unsafeMetadata.npn &&
+          retryCount < 3
+        ) {
+          console.log("[App] Agent NPN not synced to backend yet, retrying...");
+          setTimeout(() => checkUserData(retryCount + 1), 1000);
+          return;
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
+        // If the backend call fails but we detected an agent from Clerk, keep that data
+        if (clerkUser?.unsafeMetadata?.role !== "agent") {
+          setUserRole(null);
+          setUserNpn(null);
+        }
       } finally {
         setCheckingUser(false);
       }
@@ -57,7 +92,7 @@ export function App() {
     if (isLoaded) {
       checkUserData();
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, clerkUser]);
 
   // Only show loading if auth is still loading
   if (!isLoaded || checkingUser) {

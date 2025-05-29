@@ -32,8 +32,8 @@ export function NpnRequired() {
       await apiClient.patch("/portal/me/update-npn", { npn });
       toast.success("NPN saved successfully!");
 
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // Redirect to inquiries for agents
+      navigate("/inquiries");
       // Force a page reload to re-check the user
       window.location.reload();
     } catch (error) {

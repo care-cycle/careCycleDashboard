@@ -72,6 +72,26 @@ export default function SignUpWrapper() {
 
         if (result.status === "complete") {
           await setActive({ session: result.createdSessionId });
+
+          // For agents, immediately save NPN to backend
+          if (isAgent && formData.npn) {
+            try {
+              // Small delay to ensure session is active
+              await new Promise((resolve) => setTimeout(resolve, 500));
+
+              // Import apiClient dynamically to avoid circular dependencies
+              const { default: apiClient } = await import("@/lib/api-client");
+              await apiClient.patch("/portal/me/update-npn", {
+                npn: formData.npn,
+              });
+              console.log("NPN saved successfully after signup");
+            } catch (error) {
+              console.error("Failed to save NPN after signup:", error);
+              // Don't block the redirect even if NPN save fails
+              // The NpnRequired screen will catch it
+            }
+          }
+
           window.location.href = "/";
         } else {
           // Handle other statuses
