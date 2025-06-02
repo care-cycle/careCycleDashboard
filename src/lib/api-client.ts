@@ -1,17 +1,7 @@
 // src/lib/api-client.ts
 import axios from "axios";
 import { intervalManager } from "@/utils/interval-manager";
-
-// Add Clerk types to window object
-declare global {
-  interface Window {
-    Clerk?: {
-      session: Promise<{
-        getToken: () => Promise<string | null>;
-      } | null>;
-    };
-  }
-}
+import { getAccessToken } from "@/providers/auth";
 
 const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
 const API_BASE_URL = isDevelopment
@@ -33,15 +23,14 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      // Get the current active session
-      const session = await window.Clerk?.session;
-      const token = await session?.getToken();
+      // Get the access token using the unified auth system
+      const token = await getAccessToken();
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.debug("[Auth] Token obtained and set in headers");
       } else {
-        console.warn("No auth token available");
+        console.debug("[Auth] No auth token available");
       }
     } catch (error) {
       console.error("Error getting auth token:", error);

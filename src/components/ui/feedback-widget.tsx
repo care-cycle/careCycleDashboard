@@ -17,16 +17,16 @@ import {
   SITE_FEEDBACK_TYPES,
   SITE_SEVERITY_LEVELS,
 } from "@/constants/feedback";
-import { useUser } from "@clerk/clerk-react";
+import { useUser } from "@/providers/auth";
 import { useLocation } from "react-router-dom";
 
 type FeedbackType = keyof typeof SITE_FEEDBACK_TYPES;
 type SeverityLevel = keyof typeof SITE_SEVERITY_LEVELS;
 
 export function FeedbackWidget() {
-  const { user } = useUser();
+  const user = useUser();
   const location = useLocation();
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<FeedbackType | "">("");
   const [severity, setSeverity] = useState<SeverityLevel | "">("");
   const [feedback, setFeedback] = useState("");
@@ -43,18 +43,18 @@ export function FeedbackWidget() {
       }
 
       if (containerRef.current && !containerRef.current.contains(target)) {
-        setOpen(false);
+        setIsOpen(false);
       }
     };
 
-    if (open) {
+    if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [open]);
+  }, [isOpen]);
 
   // Hide on sign-in and sign-up pages
   if (
@@ -71,7 +71,7 @@ export function FeedbackWidget() {
       return;
     }
 
-    if (!user?.id || !user?.primaryEmailAddress?.emailAddress) {
+    if (!user?.id || !user?.email) {
       toast.error("User information not available");
       return;
     }
@@ -84,7 +84,7 @@ export function FeedbackWidget() {
         pageUrl: window.location.href,
       });
 
-      setOpen(false);
+      setIsOpen(false);
       setType("");
       setSeverity("");
       setFeedback("");
@@ -116,7 +116,7 @@ export function FeedbackWidget() {
         variant="outline"
         size="icon"
         className="fixed bottom-4 right-8 h-12 w-12 rounded-full shadow-lg z-[9999]"
-        onClick={() => setOpen(true)}
+        onClick={() => setIsOpen(true)}
       >
         <MessageSquarePlus className="h-6 w-6" />
       </Button>
@@ -126,7 +126,7 @@ export function FeedbackWidget() {
         className={cn(
           "fixed bottom-20 right-8 w-[480px] bg-white rounded-lg shadow-lg transition-all duration-200 z-[9999]",
           "border border-gray-200",
-          open
+          isOpen
             ? "translate-y-0 opacity-100"
             : "translate-y-4 opacity-0 pointer-events-none",
         )}
@@ -137,7 +137,7 @@ export function FeedbackWidget() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setOpen(false)}
+            onClick={() => setIsOpen(false)}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -216,7 +216,7 @@ export function FeedbackWidget() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => setIsOpen(false)}
               className="px-4"
             >
               Cancel

@@ -1,5 +1,5 @@
+import { useAuth } from "@/providers/auth";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();

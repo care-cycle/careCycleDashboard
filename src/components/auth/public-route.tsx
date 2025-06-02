@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@/providers/auth";
 import { Navigate, useLocation } from "react-router-dom";
 
 interface PublicRouteProps {

@@ -1,23 +1,22 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Phone, Users, MessageSquare, Settings, LogOut } from "lucide-react";
-import { useClerk } from "@clerk/clerk-react";
+import { useLogout } from "@/providers/auth";
 import apiClient from "@/lib/api-client";
 
 interface AgentLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface AgentInfo {
   name: string;
-  email: string;
   npn: string;
 }
 
 export function AgentLayout({ children }: AgentLayoutProps) {
   const location = useLocation();
-  const { signOut } = useClerk();
+  const logout = useLogout();
   const [agentInfo, setAgentInfo] = useState<AgentInfo | null>(null);
 
   useEffect(() => {
@@ -26,7 +25,6 @@ export function AgentLayout({ children }: AgentLayoutProps) {
         const response = await apiClient.get("/portal/me");
         setAgentInfo({
           name: response.data.name,
-          email: response.data.email,
           npn: response.data.npn,
         });
       } catch (error) {
@@ -43,10 +41,6 @@ export function AgentLayout({ children }: AgentLayoutProps) {
     { name: "Calls", href: "/calls", icon: Phone },
   ];
 
-  const handleSignOut = () => {
-    signOut({ redirectUrl: "/sign-in" });
-  };
-
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-white to-emerald-50">
       {/* Sidebar Navigation */}
@@ -61,7 +55,6 @@ export function AgentLayout({ children }: AgentLayoutProps) {
           <div className="p-6 border-b border-gray-200/50">
             <div className="space-y-1">
               <h3 className="font-semibold text-gray-900">{agentInfo.name}</h3>
-              <p className="text-sm text-gray-600">{agentInfo.email}</p>
               <p className="text-xs text-gray-500">NPN: {agentInfo.npn}</p>
             </div>
           </div>
@@ -111,7 +104,7 @@ export function AgentLayout({ children }: AgentLayoutProps) {
             <span>Settings</span>
           </Link>
           <button
-            onClick={handleSignOut}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
           >
             <LogOut className="h-5 w-5" />

@@ -1,7 +1,7 @@
 import {
   UserProfile,
   OrganizationProfile,
-  useOrganization,
+  useOrganization as useClerkOrganization,
   CreateOrganization,
 } from "@clerk/clerk-react";
 import { RootLayout } from "@/components/layout/root-layout";
@@ -12,9 +12,36 @@ import { HolidayConfig } from "@/components/operating-hours/holiday-config";
 import { useUserRole } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/api-client";
+import { getAuthProviderName, useOrganization } from "@/providers/auth";
+import { TesseralUserSettings } from "@/components/tesseral-user-settings";
+import { TesseralOrganizationSettings } from "@/components/tesseral-organization-settings";
+
+// Extract operating hours tabs to avoid duplication
+const OperatingHoursTabs = () => (
+  <Tabs defaultValue="regular">
+    <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+      <TabsTrigger value="regular">Regular Hours</TabsTrigger>
+      <TabsTrigger value="special">Special Hours</TabsTrigger>
+      <TabsTrigger value="holidays">Holidays</TabsTrigger>
+    </TabsList>
+
+    <TabsContent value="regular">
+      <RegularHoursConfig />
+    </TabsContent>
+    <TabsContent value="special">
+      <SpecialHoursConfig />
+    </TabsContent>
+    <TabsContent value="holidays">
+      <HolidayConfig />
+    </TabsContent>
+  </Tabs>
+);
 
 export default function ProfilePage() {
-  const { organization } = useOrganization();
+  const authProvider = getAuthProviderName();
+  const clerkOrgData = useClerkOrganization();
+  const organization =
+    authProvider === "clerk" ? clerkOrgData?.organization : useOrganization();
   const { isAdmin } = useUserRole();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -32,7 +59,67 @@ export default function ProfilePage() {
   }, []);
 
   const isAgent = userRole === "agent";
+  const isTesseral = authProvider === "tesseral";
 
+  // Tesseral-specific view
+  if (isTesseral) {
+    return (
+      <RootLayout hideKnowledgeSearch>
+        <div className="space-y-6 relative z-20">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isAgent ? "Account Settings" : "Settings"}
+          </h1>
+
+          {isAdmin && !isAgent ? (
+            <Tabs defaultValue="profile" className="space-y-6">
+              <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+                <TabsTrigger
+                  className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
+                  value="profile"
+                >
+                  Profile
+                </TabsTrigger>
+                <TabsTrigger
+                  className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
+                  value="organization"
+                >
+                  Organization
+                </TabsTrigger>
+                <TabsTrigger
+                  className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
+                  value="operating-hours"
+                >
+                  Operating Hours
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="space-y-6 relative z-30">
+                <TesseralUserSettings />
+              </TabsContent>
+
+              <TabsContent
+                value="organization"
+                className="space-y-6 relative z-30"
+              >
+                <TesseralOrganizationSettings />
+              </TabsContent>
+
+              <TabsContent
+                value="operating-hours"
+                className="space-y-6 relative z-30"
+              >
+                <OperatingHoursTabs />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <TesseralUserSettings />
+          )}
+        </div>
+      </RootLayout>
+    );
+  }
+
+  // Clerk-specific view (existing implementation)
   return (
     <RootLayout hideKnowledgeSearch>
       <div className="space-y-6 relative z-20">
@@ -88,40 +175,7 @@ export default function ProfilePage() {
               value="operating-hours"
               className="space-y-6 relative z-30"
             >
-              <Tabs defaultValue="regular">
-                <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="regular"
-                  >
-                    Regular Hours
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="special"
-                  >
-                    Special Hours
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="holidays"
-                  >
-                    Holidays
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="regular" className="relative z-30">
-                  <RegularHoursConfig />
-                </TabsContent>
-
-                <TabsContent value="special" className="relative z-30">
-                  <SpecialHoursConfig />
-                </TabsContent>
-
-                <TabsContent value="holidays" className="relative z-30">
-                  <HolidayConfig />
-                </TabsContent>
-              </Tabs>
+              <OperatingHoursTabs />
             </TabsContent>
           </Tabs>
         ) : (

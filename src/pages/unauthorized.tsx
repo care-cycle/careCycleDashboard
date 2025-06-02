@@ -10,15 +10,17 @@ import {
 import { Mail, LogOut } from "lucide-react";
 import { useEffect } from "react";
 import { intervalManager } from "@/utils/interval-manager";
-import { useClerk } from "@clerk/clerk-react";
+import { useLogout, getAuthProviderName } from "@/providers/auth";
 import { MeshGradientBackground } from "@/components/MeshGradientBackground";
 
 const DEFAULT_SUPPORT_EMAIL = "support@carecycle.ai";
+const SIGN_IN_PATH = "/sign-in";
 
 export function UnauthorizedPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { signOut } = useClerk();
+  const logout = useLogout();
+  const authProvider = getAuthProviderName();
 
   // Try to get error details from route state first, then fallback to query params
   const errorState = location.state || {};
@@ -59,19 +61,28 @@ export function UnauthorizedPage() {
     };
   }, []);
 
+  const handleNavigation = () => {
+    // For Tesseral, we can't redirect to sign-in, so reload the page
+    // For Clerk, redirect to sign-in
+    if (authProvider === "tesseral") {
+      window.location.reload();
+    } else {
+      window.location.replace(SIGN_IN_PATH);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear any intervals first
     intervalManager.clear();
 
     try {
-      // Sign out and redirect to sign-in
-      await signOut(() => {
-        window.location.replace("/sign-in");
-      });
+      // Sign out
+      await logout();
+      handleNavigation();
     } catch (error) {
       console.error("[UnauthorizedPage] Sign out error:", error);
-      // Fallback to direct navigation if sign-out fails
-      window.location.replace("/sign-in");
+      // Fallback navigation
+      handleNavigation();
     }
   };
 

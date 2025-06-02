@@ -1,38 +1,52 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, getAuthProviderName } from "@/providers/auth";
 import { intervalManager } from "@/utils/interval-manager";
+import { useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function ProtectedRoute() {
-  const { isLoaded, isSignedIn } = useUser();
-  const { user, loading: isValidating } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
+  const authProvider = getAuthProviderName();
   const location = useLocation();
 
-  // Not loaded yet - show loading spinner
-  if (!isLoaded || isValidating) {
+  // Clear intervals when user is not authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      intervalManager.clear();
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // Special handling for Tesseral - if not loaded, show minimal loading
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-gray-400 border-t-transparent rounded-full">
-          <span className="sr-only">Loading...</span>
+        <div className="glass-panel p-6 rounded-lg">
+          <div className="animate-pulse">
+            {authProvider === "tesseral"
+              ? "Checking authentication..."
+              : "Loading..."}
+          </div>
         </div>
       </div>
     );
   }
 
-  // Not signed in with Clerk - go to sign in
+  // Not signed in
   if (!isSignedIn) {
     // Don't redirect to sign-in if we're already on the unauthorized page
     if (location.pathname === "/unauthorized") {
       return null;
     }
-    return <Navigate to="/sign-in" replace />;
-  }
 
-  // Not authorized with backend
-  if (!isValidating && !user) {
-    // Clear any background tasks when unauthorized
-    intervalManager.clear();
-    return <Navigate to="/unauthorized" replace />;
+    // Handle authentication based on provider
+    if (authProvider === "tesseral") {
+      // For Tesseral, redirect to home and let TesseralProvider handle the auth redirect
+      return <Navigate to="/" replace />;
+    } else {
+      // For Clerk, redirect to sign-in page
+      return <Navigate to="/sign-in" replace />;
+    }
   }
 
   return <Outlet />;
