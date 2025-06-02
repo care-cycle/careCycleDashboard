@@ -32,10 +32,20 @@ function ClerkTokenSync({ children }: { children: React.ReactNode }) {
     const syncToken = async () => {
       try {
         const token = await getToken();
+
+        // Debug logging for production
+        console.log("[ClerkTokenSync] Token sync result:", {
+          tokenExists: !!token,
+          tokenLength: token?.length,
+          isSignedIn,
+          environment: import.meta.env.PROD ? "production" : "development",
+        });
+
         // Only update if token actually changed
         if (token !== lastTokenRef.current) {
           lastTokenRef.current = token;
           tokenStore.setToken(token, "clerk");
+          console.log("[ClerkTokenSync] Token updated in store");
         }
       } catch (error) {
         console.error("Error syncing Clerk token:", error);

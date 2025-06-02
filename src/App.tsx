@@ -77,8 +77,37 @@ export function App() {
     );
   }
 
-  // Check if user is an agent without NPN - do this before loading initial data
-  const isAgentWithoutNpn = isSignedIn && userRole === "agent" && !userNpn;
+  // Debug logging for production
+  if (import.meta.env.PROD) {
+    console.log("[App] Production Debug:", {
+      isSignedIn,
+      userRole,
+      userNpn,
+      userData,
+      isLoadingUserData,
+    });
+  }
+
+  // IMPORTANT: Only check role if we have userData loaded
+  // In production, don't make role decisions until userData is available
+  if (isSignedIn && !userData && !isLoadingUserData) {
+    console.error(
+      "[App] Signed in but no userData available - this should not happen",
+    );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass-panel p-6 rounded-lg">
+          <div className="text-red-500">
+            Error loading user data. Please refresh.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is an agent without NPN - ONLY after userData is loaded
+  const isAgentWithoutNpn =
+    isSignedIn && userData && userRole === "agent" && !userNpn;
 
   // If user is signed in as an agent without NPN, show NPN required page immediately
   if (isAgentWithoutNpn) {
@@ -122,8 +151,19 @@ export function App() {
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
-            {/* Handle agent redirects */}
-            {isAgent ? (
+            {/* Wait for userData before making routing decisions */}
+            {!userData ? (
+              <Route
+                path="*"
+                element={
+                  <div className="min-h-screen flex items-center justify-center">
+                    <div className="glass-panel p-6 rounded-lg">
+                      <div className="animate-pulse">Loading user data...</div>
+                    </div>
+                  </div>
+                }
+              />
+            ) : isAgent ? (
               <>
                 <Route
                   path="/"
