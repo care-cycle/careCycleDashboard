@@ -4,39 +4,58 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useUser, useLogout } from "@/providers/auth";
 import { useUserRole } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
+import { Settings } from "lucide-react";
 
 interface UserProfileProps {
   isRedacted: boolean;
   className?: string;
   isParentExpanded?: boolean;
+  variant?: "default" | "minimal";
+  minimal?: boolean;
 }
 
 export function UserProfile({
   isRedacted,
   className,
   isParentExpanded = false,
+  variant = "default",
+  minimal = false,
 }: UserProfileProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const user = useUser();
+  const logout = useLogout();
   const { isAdmin } = useUserRole();
 
-  const userData = {
-    fullName: isRedacted ? "***" : user?.fullName,
-    email: isRedacted ? "***" : user?.primaryEmailAddress?.emailAddress,
-    imageUrl:
-      user?.imageUrl ||
+  const userDetails = {
+    name:
+      user?.name ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+      "User",
+    email: user?.email || "",
+    role: isAdmin ? "Admin" : "Member",
+    avatar:
       "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b20fb2f3fb0483a2b834_careCycle%20Emblem%20Profile%20Picture%20-%20Color%201%20(on%20white).png",
+  };
+
+  const handleSignOut = () => {
+    logout();
   };
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await handleSignOut();
       setIsExpanded(false);
       toast({
         title: "Logged out successfully",
@@ -150,8 +169,8 @@ export function UserProfile({
             )}
           >
             <img
-              src={userData.imageUrl}
-              alt={userData.fullName || ""}
+              src={userDetails.avatar}
+              alt={userDetails.name}
               className="w-6 h-6 rounded-md"
             />
           </div>
@@ -163,10 +182,10 @@ export function UserProfile({
             )}
           >
             <div className="text-sm font-medium text-gray-900 truncate">
-              {userData.fullName}
+              {userDetails.name}
             </div>
             <div className="text-xs text-gray-500 truncate">
-              {userData.email}
+              {userDetails.email}
             </div>
           </div>
           <div

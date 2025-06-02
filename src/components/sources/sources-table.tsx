@@ -19,17 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-// Add Clerk types to window object
-declare global {
-  interface Window {
-    Clerk?: {
-      session: Promise<{
-        getToken: () => Promise<string | null>;
-      } | null>;
-    };
-  }
-}
+import { getAccessToken } from "@/providers/auth";
 
 interface Source {
   sourceId: string;
@@ -141,9 +131,8 @@ export function SourcesTable({ sources: initialSources }: SourcesTableProps) {
       // Use toast.promise instead of toast.info to show loading state until promise resolves
       await toast.promise(
         (async () => {
-          // Get the current active session and token
-          const session = await window.Clerk?.session;
-          const token = await session?.getToken();
+          // Get the auth token using our unified auth system
+          const token = await getAccessToken();
 
           if (!token) {
             console.error("No auth token available for documentation download");

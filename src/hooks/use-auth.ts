@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useAuth as useUnifiedAuth } from "@/providers/auth";
 import apiClient from "@/lib/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -25,12 +25,13 @@ interface UseAuthApiOptions<T> {
 
 // Main auth hook for user data
 export function useAuth() {
-  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const { isLoaded, isSignedIn } = useUnifiedAuth();
+  const user = useUser();
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["auth", clerkUser?.id],
+  const { data: apiUser, isLoading } = useQuery({
+    queryKey: ["auth", user?.id],
     queryFn: async () => {
-      if (!clerkLoaded || !clerkUser) {
+      if (!isLoaded || !user) {
         return null;
       }
 
@@ -43,14 +44,14 @@ export function useAuth() {
 
       return data as User;
     },
-    enabled: clerkLoaded && !!clerkUser,
+    enabled: isLoaded && !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep data in cache for 10 minutes
   });
 
   return {
-    user: user || null,
-    loading: !clerkLoaded || isLoading,
+    user: apiUser || null,
+    loading: !isLoaded || isLoading,
   };
 }
 
@@ -118,3 +119,5 @@ export function useAuthApi<T>(
     refetch: clearCache,
   };
 }
+
+export { useUser };

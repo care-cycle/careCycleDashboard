@@ -19,7 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { AnimatedOrbs } from "@/components/ui/animated-orbs";
 import { useUserRole } from "@/hooks/use-auth";
-import apiClient from "@/lib/api-client";
+import { useUserData } from "@/providers/user-context";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -58,26 +58,9 @@ export function Sidebar({ className }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useSidebarState();
   const location = useLocation();
   const { isAdmin } = useUserRole();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [isLoadingRole, setIsLoadingRole] = useState(true);
+  const { userData, isLoading: isLoadingRole } = useUserData();
 
-  // Fetch user role
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const response = await apiClient.get("/portal/me");
-        setUserRole(response.data.role);
-      } catch (error) {
-        console.error("Error fetching user role:", error);
-      } finally {
-        setIsLoadingRole(false);
-      }
-    };
-
-    fetchUserRole();
-  }, []);
-
-  const isAgent = userRole === "agent";
+  const isAgent = userData?.role === "agent";
 
   // Define navigation items based on user role
   const navigationItems = isAgent
