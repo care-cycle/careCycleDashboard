@@ -169,17 +169,61 @@ export class TesseralAuthProvider extends BaseAuthProvider {
         const user = useTesseralUser();
         if (!user) return null;
 
-        // Extract name parts from email if not provided
-        const nameParts = user.email.split("@")[0].split(".");
-        const firstName = nameParts[0];
-        const lastName = nameParts[1] || "";
+        // More robust name extraction from email
+        // Try to extract meaningful names from email local part
+        const extractNameFromEmail = (email: string) => {
+          const localPart = email.split("@")[0];
+
+          // Handle common email patterns:
+          // - first.last@domain.com
+          // - firstname.lastname@domain.com
+          // - john.doe@domain.com
+          // - j.smith@domain.com
+
+          if (localPart.includes(".")) {
+            const parts = localPart.split(".");
+            return {
+              firstName: capitalizeFirst(parts[0]),
+              lastName:
+                parts.length > 1
+                  ? capitalizeFirst(parts[parts.length - 1])
+                  : "",
+            };
+          }
+
+          // Handle names with underscores or hyphens
+          if (localPart.includes("_") || localPart.includes("-")) {
+            const separator = localPart.includes("_") ? "_" : "-";
+            const parts = localPart.split(separator);
+            return {
+              firstName: capitalizeFirst(parts[0]),
+              lastName:
+                parts.length > 1
+                  ? capitalizeFirst(parts[parts.length - 1])
+                  : "",
+            };
+          }
+
+          // For simple emails like "john@domain.com", use the whole local part as first name
+          return {
+            firstName: capitalizeFirst(localPart),
+            lastName: "",
+          };
+        };
+
+        const capitalizeFirst = (str: string) => {
+          return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        };
+
+        // Try to get name from API first, fallback to email parsing
+        const { firstName, lastName } = extractNameFromEmail(user.email);
 
         return {
           id: user.id,
           email: user.email,
           firstName,
           lastName,
-          name: `${firstName} ${lastName}`.trim(),
+          name: `${firstName} ${lastName}`.trim() || user.email.split("@")[0],
           // TODO: Tesseral doesn't provide role/npn in the same way as Clerk
           // These might come from your backend after user is synced
           role: undefined,
@@ -201,7 +245,10 @@ export class TesseralAuthProvider extends BaseAuthProvider {
       },
 
       useLogout: () => {
-        return useTesseralLogout();
+        const tesseralLogout = useTesseralLogout();
+        return async () => {
+          tesseralLogout();
+        };
       },
 
       useUserSettingsUrl: () => {

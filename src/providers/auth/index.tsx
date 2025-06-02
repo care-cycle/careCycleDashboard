@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { BaseAuthProvider, AuthHooks } from "./base";
 import { ClerkAuthProvider } from "./clerk";
 import { TesseralAuthProvider } from "./tesseral";
@@ -17,10 +17,6 @@ function getAuthProvider(): BaseAuthProvider {
   }
 }
 
-// Create singleton instance
-const authProvider = getAuthProvider();
-const AuthProvider = authProvider.getProvider();
-
 // Create context for auth provider instance
 const AuthProviderContext = createContext<BaseAuthProvider | null>(null);
 
@@ -30,6 +26,13 @@ export function UnifiedAuthProvider({
 }: {
   children: React.ReactNode;
 }) {
+  // Create provider instance inside component to avoid singleton issues in tests
+  const authProvider = useMemo(() => getAuthProvider(), []);
+  const AuthProvider = useMemo(
+    () => authProvider.getProvider(),
+    [authProvider],
+  );
+
   return (
     <AuthProvider>
       <AuthProviderContext.Provider value={authProvider}>
@@ -51,31 +54,31 @@ function useAuthProvider(): BaseAuthProvider {
 // Export unified hooks that work with any provider
 export function useAuth() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   return hooks.useAuth();
 }
 
 export function useUser() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   return hooks.useUser();
 }
 
 export function useOrganization() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   return hooks.useOrganization();
 }
 
 export function useLogout() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   return hooks.useLogout();
 }
 
 export function useUserSettingsUrl() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   if (!hooks.useUserSettingsUrl) {
     // Return a fallback for providers that don't support this
     return "/user/profile";
@@ -85,7 +88,7 @@ export function useUserSettingsUrl() {
 
 export function useOrganizationSettingsUrl() {
   const provider = useAuthProvider();
-  const hooks = provider.getHooks();
+  const hooks = useMemo(() => provider.getHooks(), [provider]);
   if (!hooks.useOrganizationSettingsUrl) {
     // Return a fallback for providers that don't support this
     return "/organization/settings";
@@ -101,8 +104,13 @@ export function getAuthProviderName(): string {
 // Export types
 export type { User, Organization } from "./base";
 
-// Export getAccessToken function
-export const getAccessToken = () => authProvider.getAccessToken();
+// Export getAccessToken as a named function
+export async function getAccessToken(): Promise<string | null> {
+  // We need to get the provider instance from context, but since this is outside a component,
+  // we'll create a temporary instance for this specific call
+  const provider = getAuthProvider();
+  return provider.getAccessToken();
+}
 
 // Export the provider name for components that need it
 export const authProviderName = AUTH_PROVIDER;

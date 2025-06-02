@@ -14,6 +14,7 @@ import { useLogout, getAuthProviderName } from "@/providers/auth";
 import { MeshGradientBackground } from "@/components/MeshGradientBackground";
 
 const DEFAULT_SUPPORT_EMAIL = "support@carecycle.ai";
+const SIGN_IN_PATH = "/sign-in";
 
 export function UnauthorizedPage() {
   const [searchParams] = useSearchParams();
@@ -60,6 +61,16 @@ export function UnauthorizedPage() {
     };
   }, []);
 
+  const handleNavigation = () => {
+    // For Tesseral, we can't redirect to sign-in, so reload the page
+    // For Clerk, redirect to sign-in
+    if (authProvider === "tesseral") {
+      window.location.reload();
+    } else {
+      window.location.replace(SIGN_IN_PATH);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear any intervals first
     intervalManager.clear();
@@ -67,22 +78,11 @@ export function UnauthorizedPage() {
     try {
       // Sign out
       await logout();
-
-      // For Tesseral, we can't redirect to sign-in, so reload the page
-      // For Clerk, redirect to sign-in
-      if (authProvider === "tesseral") {
-        window.location.reload();
-      } else {
-        window.location.replace("/sign-in");
-      }
+      handleNavigation();
     } catch (error) {
       console.error("[UnauthorizedPage] Sign out error:", error);
       // Fallback navigation
-      if (authProvider === "tesseral") {
-        window.location.reload();
-      } else {
-        window.location.replace("/sign-in");
-      }
+      handleNavigation();
     }
   };
 

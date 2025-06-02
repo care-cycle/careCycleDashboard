@@ -14,60 +14,6 @@
       window.amplitude.add(window.sessionReplay.plugin({sampleRate: 1}));
       window.amplitude.init('e782f0c17c04f58a829bfdb0a555e831', {"autocapture":{"elementInteractions":true}});
     </script>
-    <script>
-      // Emergency Tesseral loop stopper
-      (function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const stopLoop = urlParams.get('stop_loop');
-        
-        if (stopLoop === 'true') {
-          localStorage.setItem('tesseral_debug_loop_detected', 'true');
-          localStorage.setItem('EMERGENCY_STOP', 'true');
-          console.log('🛑 EMERGENCY STOP ACTIVATED - Loop prevention enabled');
-        }
-        
-        // If we're in a loop, stop everything
-        const loopDetected = localStorage.getItem('tesseral_debug_loop_detected') === 'true';
-        const emergencyStop = localStorage.getItem('EMERGENCY_STOP') === 'true';
-        
-        if (loopDetected || emergencyStop) {
-          console.warn('🚨 Loop detected - Stopping app initialization');
-          document.addEventListener('DOMContentLoaded', function() {
-            document.body.innerHTML = '<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f3f4f6;">' +
-              '<div style="max-width: 600px; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">' +
-              '<h1 style="color: #dc2626; margin-bottom: 1rem;">Tesseral Authentication Loop Stopped</h1>' +
-              '<p style="margin-bottom: 1rem;">The app was stuck in a redirect loop with Tesseral authentication.</p>' +
-              '<div style="background: #f9fafb; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">' +
-              '<p style="font-weight: bold; margin-bottom: 0.5rem;">Quick Fix - Switch to Clerk:</p>' +
-              '<ol style="margin-left: 1.5rem;">' +
-              '<li>Edit <code>.env.local</code></li>' +
-              '<li>Change <code>VITE_AUTH_PROVIDER=tesseral</code> to <code>VITE_AUTH_PROVIDER=clerk</code></li>' +
-              '<li>Restart your dev server</li>' +
-              '</ol>' +
-              '</div>' +
-              '<div style="display: flex; gap: 0.5rem; margin-top: 1rem;">' +
-              '<button onclick="clearAndReload()" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear All & Retry Tesseral</button>' +
-              '<button onclick="copyClerkCommand()" style="padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy Clerk Switch Command</button>' +
-              '</div>' +
-              '</div>' +
-              '</div>';
-              
-            window.clearAndReload = function() {
-              localStorage.clear();
-              sessionStorage.clear();
-              window.location.href = window.location.origin;
-            };
-            
-            window.copyClerkCommand = function() {
-              const command = 'sed -i "" "s/VITE_AUTH_PROVIDER=tesseral/VITE_AUTH_PROVIDER=clerk/" .env.local';
-              navigator.clipboard.writeText(command);
-              alert('Command copied! Run this in your terminal from the careCycleDashboard directory.');
-            };
-          });
-          return; // Stop execution
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

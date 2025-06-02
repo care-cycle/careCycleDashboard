@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth, useUser, getAuthProviderName } from "@/providers/auth";
+import { useAuth, getAuthProviderName } from "@/providers/auth";
 import { intervalManager } from "@/utils/interval-manager";
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
@@ -7,7 +7,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function ProtectedRoute() {
   const { isLoaded, isSignedIn } = useAuth();
-  const user = useUser();
   const authProvider = getAuthProviderName();
   const location = useLocation();
 
@@ -40,8 +39,14 @@ export function ProtectedRoute() {
       return null;
     }
 
-    // For Clerk, redirect to sign-in
-    return <Navigate to="/sign-in" replace />;
+    // Handle authentication based on provider
+    if (authProvider === "tesseral") {
+      // For Tesseral, redirect to home and let TesseralProvider handle the auth redirect
+      return <Navigate to="/" replace />;
+    } else {
+      // For Clerk, redirect to sign-in page
+      return <Navigate to="/sign-in" replace />;
+    }
   }
 
   return <Outlet />;

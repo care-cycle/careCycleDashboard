@@ -16,12 +16,32 @@ import { getAuthProviderName, useOrganization } from "@/providers/auth";
 import { TesseralUserSettings } from "@/components/tesseral-user-settings";
 import { TesseralOrganizationSettings } from "@/components/tesseral-organization-settings";
 
+// Extract operating hours tabs to avoid duplication
+const OperatingHoursTabs = () => (
+  <Tabs defaultValue="regular">
+    <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
+      <TabsTrigger value="regular">Regular Hours</TabsTrigger>
+      <TabsTrigger value="special">Special Hours</TabsTrigger>
+      <TabsTrigger value="holidays">Holidays</TabsTrigger>
+    </TabsList>
+
+    <TabsContent value="regular">
+      <RegularHoursConfig />
+    </TabsContent>
+    <TabsContent value="special">
+      <SpecialHoursConfig />
+    </TabsContent>
+    <TabsContent value="holidays">
+      <HolidayConfig />
+    </TabsContent>
+  </Tabs>
+);
+
 export default function ProfilePage() {
   const authProvider = getAuthProviderName();
+  const clerkOrgData = useClerkOrganization();
   const organization =
-    authProvider === "clerk"
-      ? useClerkOrganization().organization
-      : useOrganization();
+    authProvider === "clerk" ? clerkOrgData?.organization : useOrganization();
   const { isAdmin } = useUserRole();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -88,23 +108,7 @@ export default function ProfilePage() {
                 value="operating-hours"
                 className="space-y-6 relative z-30"
               >
-                <Tabs defaultValue="regular">
-                  <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
-                    <TabsTrigger value="regular">Regular Hours</TabsTrigger>
-                    <TabsTrigger value="special">Special Hours</TabsTrigger>
-                    <TabsTrigger value="holidays">Holidays</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="regular">
-                    <RegularHoursConfig />
-                  </TabsContent>
-                  <TabsContent value="special">
-                    <SpecialHoursConfig />
-                  </TabsContent>
-                  <TabsContent value="holidays">
-                    <HolidayConfig />
-                  </TabsContent>
-                </Tabs>
+                <OperatingHoursTabs />
               </TabsContent>
             </Tabs>
           ) : (
@@ -171,40 +175,7 @@ export default function ProfilePage() {
               value="operating-hours"
               className="space-y-6 relative z-30"
             >
-              <Tabs defaultValue="regular">
-                <TabsList className="relative bg-white/50 backdrop-blur-sm z-50">
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="regular"
-                  >
-                    Regular Hours
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="special"
-                  >
-                    Special Hours
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className="relative data-[state=active]:bg-white/80 hover:bg-white/60"
-                    value="holidays"
-                  >
-                    Holidays
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="regular" className="relative z-30">
-                  <RegularHoursConfig />
-                </TabsContent>
-
-                <TabsContent value="special" className="relative z-30">
-                  <SpecialHoursConfig />
-                </TabsContent>
-
-                <TabsContent value="holidays" className="relative z-30">
-                  <HolidayConfig />
-                </TabsContent>
-              </Tabs>
+              <OperatingHoursTabs />
             </TabsContent>
           </Tabs>
         ) : (

@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import apiClient from "@/lib/api-client";
@@ -32,7 +33,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const authProvider = getAuthProviderName();
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!isSignedIn) {
       setUserData(null);
       setIsLoading(false);
@@ -69,13 +70,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSignedIn, authProvider]);
 
   useEffect(() => {
     if (isLoaded) {
       fetchUserData();
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, authProvider, fetchUserData]);
 
   const value = {
     userData,

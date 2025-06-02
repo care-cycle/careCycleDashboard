@@ -3,7 +3,6 @@ import { Link, useLocation, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Phone, Users, MessageSquare, Settings, LogOut } from "lucide-react";
 import { useLogout } from "@/providers/auth";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import apiClient from "@/lib/api-client";
 
 interface AgentLayoutProps {
@@ -41,10 +40,6 @@ export function AgentLayout({ children }: AgentLayoutProps) {
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Calls", href: "/calls", icon: Phone },
   ];
-
-  const handleSignOut = () => {
-    logout();
-  };
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-white to-emerald-50">
@@ -109,7 +104,7 @@ export function AgentLayout({ children }: AgentLayoutProps) {
             <span>Settings</span>
           </Link>
           <button
-            onClick={handleSignOut}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
           >
             <LogOut className="h-5 w-5" />

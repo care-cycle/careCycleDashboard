@@ -103,12 +103,8 @@ export class ClerkAuthProvider extends BaseAuthProvider {
           firstName: user.firstName || undefined,
           lastName: user.lastName || undefined,
           name: user.fullName || undefined,
-          role: (user.publicMetadata?.role || user.unsafeMetadata?.role) as
-            | string
-            | undefined,
-          npn: (user.publicMetadata?.npn || user.unsafeMetadata?.npn) as
-            | string
-            | undefined,
+          role: user.publicMetadata?.role as string | undefined,
+          npn: user.publicMetadata?.npn as string | undefined,
           unsafeMetadata: user.unsafeMetadata || {},
         };
       },
@@ -127,7 +123,9 @@ export class ClerkAuthProvider extends BaseAuthProvider {
 
       useLogout: () => {
         const { signOut } = useClerk();
-        return () => signOut({ redirectUrl: "/sign-in" });
+        return async () => {
+          await signOut({ redirectUrl: "/sign-in" });
+        };
       },
 
       // Clerk doesn't have direct hooks for these URLs
@@ -141,7 +139,10 @@ export class ClerkAuthProvider extends BaseAuthProvider {
   }
 
   async getAccessToken(): Promise<string | null> {
-    // Return the token from our store
-    return tokenStore.getToken();
+    // Only return token if it's from Clerk provider
+    if (tokenStore.getProvider() === "clerk") {
+      return tokenStore.getToken();
+    }
+    return null;
   }
 }

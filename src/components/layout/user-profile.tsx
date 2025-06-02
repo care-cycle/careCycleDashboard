@@ -6,29 +6,17 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useLogout } from "@/providers/auth";
 import { useUserRole } from "@/hooks/use-auth";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
-import { Settings } from "lucide-react";
 
 interface UserProfileProps {
   isRedacted: boolean;
   className?: string;
   isParentExpanded?: boolean;
-  variant?: "default" | "minimal";
-  minimal?: boolean;
 }
 
 export function UserProfile({
   isRedacted,
   className,
   isParentExpanded = false,
-  variant = "default",
-  minimal = false,
 }: UserProfileProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,13 +37,9 @@ export function UserProfile({
       "https://cdn.prod.website-files.com/669ed0783d780b8512f370a5/67e0b20fb2f3fb0483a2b834_careCycle%20Emblem%20Profile%20Picture%20-%20Color%201%20(on%20white).png",
   };
 
-  const handleSignOut = () => {
-    logout();
-  };
-
   const handleLogout = async () => {
     try {
-      await handleSignOut();
+      await logout();
       setIsExpanded(false);
       toast({
         title: "Logged out successfully",

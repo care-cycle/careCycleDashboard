@@ -26,7 +26,7 @@ export interface AuthHooks {
   };
   useUser: () => User | null;
   useOrganization: () => Organization | null;
-  useLogout: () => () => void;
+  useLogout: () => () => Promise<void>;
   useUserSettingsUrl?: () => string;
   useOrganizationSettingsUrl?: () => string;
 }

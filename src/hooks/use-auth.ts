@@ -25,7 +25,7 @@ interface UseAuthApiOptions<T> {
 
 // Main auth hook for user data
 export function useAuth() {
-  const { isLoaded, isSignedIn } = useUnifiedAuth();
+  const { isLoaded } = useUnifiedAuth();
   const user = useUser();
 
   const { data: apiUser, isLoading } = useQuery({

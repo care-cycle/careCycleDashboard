@@ -98,8 +98,11 @@ export function TesseralUserSettings() {
     try {
       // TODO: Call the appropriate API to update the user's name
       // await frontendApiClient.me.updateProfile({ name });
-      toast.success("Profile updated successfully");
-      setHasNameChanged(false);
+
+      // Don't show success toast until the API is actually implemented
+      toast.error("Profile updates are not yet supported");
+      // TODO: Once API is implemented, change to: toast.success("Profile updated successfully");
+      // setHasNameChanged(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -120,6 +123,8 @@ export function TesseralUserSettings() {
 
     setLoading(true);
     try {
+      // Note: This API currently doesn't validate the current password
+      // This is a security concern that should be addressed
       await frontendApiClient.me.setPassword({
         password: newPassword,
       });

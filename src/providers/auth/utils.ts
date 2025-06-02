@@ -1,10 +1,35 @@
 import { getAuthProviderName } from "./index";
 
-// Add Clerk types to window for auth provider check
+// Define session interface for better type safety
+interface ClerkSession {
+  id: string;
+  status: string;
+  expireAt: number;
+  lastActiveAt: number;
+  user?: {
+    id: string;
+    email: string;
+  };
+}
+
+interface TesseralSession {
+  // Define based on actual Tesseral session structure
+  // For now, keeping it minimal
+  user?: {
+    id: string;
+    email: string;
+  };
+}
+
+// Add proper types to window for auth providers
 declare global {
   interface Window {
     Clerk?: {
-      session: any;
+      session: ClerkSession | null;
+    };
+    tesseral?: {
+      session: TesseralSession | null;
+      // Add other Tesseral properties as needed
     };
   }
 }
@@ -13,15 +38,17 @@ declare global {
  * Get session from the current auth provider
  * Used to replace direct window.Clerk.session access
  */
-export async function getAuthSession() {
+export async function getAuthSession(): Promise<
+  ClerkSession | TesseralSession | null
+> {
   const provider = getAuthProviderName();
 
   if (provider === "clerk" && window.Clerk) {
     return window.Clerk.session;
-  } else if (provider === "tesseral" && (window as any).tesseral) {
+  } else if (provider === "tesseral" && window.tesseral) {
     // Tesseral might provide session differently
     // For now, return null as Tesseral uses different auth mechanism
-    return null;
+    return window.tesseral.session;
   }
 
   return null;

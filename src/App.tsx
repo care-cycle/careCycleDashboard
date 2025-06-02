@@ -30,9 +30,29 @@ export function App() {
   const { isLoading: isLoadingInitialData } = useInitialData();
   const authProvider = getAuthProviderName();
 
-  // Get user role and NPN from cached data
+  // Get user role and NPN with proper prioritization
+  // Priority: userData > user (since userData is from backend and more authoritative)
   const userRole = userData?.role || user?.role || null;
   const userNpn = userData?.npn || user?.npn || null;
+
+  // Log warning if there's a mismatch between sources
+  if (import.meta.env.DEV && userData && user) {
+    if (userData.role && user.role && userData.role !== user.role) {
+      console.warn("Role mismatch detected:", {
+        userData: userData.role,
+        authProvider: user.role,
+        using: userRole,
+      });
+    }
+    if (userData.npn && user.npn && userData.npn !== user.npn) {
+      console.warn("NPN mismatch detected:", {
+        userData: userData.npn,
+        authProvider: user.npn,
+        using: userNpn,
+      });
+    }
+  }
+
   const isAgent = userRole === "agent";
 
   // Special handling for Tesseral - show minimal loading while it determines auth
@@ -57,6 +77,14 @@ export function App() {
     );
   }
 
+  // Check if user is an agent without NPN - do this before loading initial data
+  const isAgentWithoutNpn = isSignedIn && userRole === "agent" && !userNpn;
+
+  // If user is signed in as an agent without NPN, show NPN required page immediately
+  if (isAgentWithoutNpn) {
+    return <NpnRequired />;
+  }
+
   // If we're signed in and loading initial data, show loading
   if (isSignedIn && isLoadingInitialData) {
     return (
@@ -66,14 +94,6 @@ export function App() {
         </div>
       </div>
     );
-  }
-
-  // Check if user is an agent without NPN
-  const isAgentWithoutNpn = isSignedIn && userRole === "agent" && !userNpn;
-
-  // If user is signed in as an agent without NPN, show NPN required page for ALL routes
-  if (isAgentWithoutNpn) {
-    return <NpnRequired />;
   }
 
   return (

@@ -24,13 +24,38 @@ import { useTesseral } from "@/providers/auth/tesseral";
 import { useOrganization } from "@/providers/auth";
 import { toast } from "sonner";
 
+// Define proper types for the API responses
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+  status?: string;
+}
+
+interface Invite {
+  id: string;
+  email?: string;
+  inviteEmail?: string;
+  role?: string;
+  inviteRole?: string;
+  status?: string;
+}
+
+interface CreateInvitePayload {
+  body: {
+    email: string;
+    role: "admin" | "member";
+  };
+}
+
 export function TesseralOrganizationSettings() {
   const { frontendApiClient } = useTesseral();
   const organization = useOrganization();
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [invites, setInvites] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
 
   // Invite form state
   const [inviteEmails, setInviteEmails] = useState("");
@@ -81,7 +106,7 @@ export function TesseralOrganizationSettings() {
     };
 
     loadData();
-  }, [organization, dataLoaded]); // Include dataLoaded to prevent re-runs
+  }, [organization, frontendApiClient, dataLoaded]); // Added frontendApiClient dependency
 
   // Refresh function to reload data
   const refreshData = async () => {
@@ -132,10 +157,13 @@ export function TesseralOrganizationSettings() {
     // Send invites one by one
     for (const email of emailList) {
       try {
-        await frontendApiClient.userInvites.createUserInvite({
-          email: email,
-          role: inviteRole,
-        } as any);
+        const payload: CreateInvitePayload = {
+          body: {
+            email: email,
+            role: inviteRole,
+          },
+        };
+        await frontendApiClient.userInvites.createUserInvite(payload);
         successfulInvites.push(email);
       } catch (error: any) {
         failedInvites.push({
