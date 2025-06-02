@@ -106,10 +106,22 @@ export type { User, Organization } from "./base";
 
 // Export getAccessToken as a named function
 export async function getAccessToken(): Promise<string | null> {
-  // We need to get the provider instance from context, but since this is outside a component,
-  // we'll create a temporary instance for this specific call
-  const provider = getAuthProvider();
-  return provider.getAccessToken();
+  // Import the token store directly instead of creating a new provider instance
+  const { tokenStore } = await import("./token-store");
+
+  const token = tokenStore.getToken();
+  const provider = tokenStore.getProvider();
+
+  console.log("[getAccessToken] Token store debug:", {
+    hasToken: !!token,
+    provider: provider,
+    expectedProvider: AUTH_PROVIDER,
+    tokenLength: token?.length,
+    providersMatch: provider === AUTH_PROVIDER,
+  });
+
+  // Return token if it exists (simplified for debugging)
+  return token;
 }
 
 // Export the provider name for components that need it
