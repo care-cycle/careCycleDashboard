@@ -112,16 +112,11 @@ export async function getAccessToken(): Promise<string | null> {
   const token = tokenStore.getToken();
   const provider = tokenStore.getProvider();
 
-  console.log("[getAccessToken] Token store debug:", {
-    hasToken: !!token,
-    provider: provider,
-    expectedProvider: AUTH_PROVIDER,
-    tokenLength: token?.length,
-    providersMatch: provider === AUTH_PROVIDER,
-  });
-
-  // Return token if it exists (simplified for debugging)
-  return token;
+  // Only return token if it's from the current auth provider
+  if (provider === AUTH_PROVIDER) {
+    return token;
+  }
+  return null;
 }
 
 // Export the provider name for components that need it

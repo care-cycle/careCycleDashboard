@@ -26,13 +26,6 @@ apiClient.interceptors.request.use(
       // Get the access token using the unified auth system
       const token = await getAccessToken();
 
-      console.log("[API Client] Token retrieval debug:", {
-        tokenExists: !!token,
-        tokenLength: token?.length,
-        url: config.url,
-        method: config.method,
-      });
-
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.debug("[Auth] Token obtained and set in headers");
@@ -46,13 +39,6 @@ apiClient.interceptors.request.use(
     if (isDevelopment) {
       console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
       console.debug("[Auth] Request headers:", config.headers);
-    } else {
-      // Also log in production for debugging
-      console.log("[API Client] Request being sent:", {
-        method: config.method?.toUpperCase(),
-        url: config.url,
-        hasAuth: !!config.headers.Authorization,
-      });
     }
     return config;
   },
