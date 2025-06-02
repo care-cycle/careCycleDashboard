@@ -21,7 +21,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { subDays } from "date-fns";
 import { getTopMetrics } from "@/lib/metrics";
-import { useAuth } from "@/hooks/use-auth";
+import { useUserData } from "@/providers/user-context";
 
 interface CallsTableProps {
   calls: Call[];
@@ -92,8 +92,8 @@ const MemoizedCallDetails = memo(function MemoizedCallDetails({
 export default function CallsPage() {
   const { todayMetrics, isCallsLoading, calls, clientInfo } = useInitialData();
   const { setCallDetailsOpen } = useUI();
-  const { user } = useAuth();
-  const isAgent = user?.role === "agent";
+  const { userData } = useUserData();
+  const isAgent = userData?.role === "agent";
   const {
     showTestCalls,
     setShowTestCalls,

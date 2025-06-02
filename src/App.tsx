@@ -30,24 +30,24 @@ export function App() {
   const { isLoading: isLoadingInitialData } = useInitialData();
   const authProvider = getAuthProviderName();
 
-  // Get user role and NPN with proper prioritization
-  // Priority: userData > user (since userData is from backend and more authoritative)
-  const userRole = userData?.role || user?.role || null;
-  const userNpn = userData?.npn || user?.npn || null;
+  // Get user role and NPN from backend database ONLY
+  // We don't care about Clerk's metadata - only what's in our database
+  const userRole = userData?.role || null;
+  const userNpn = userData?.npn || null;
 
-  // Log warning if there's a mismatch between sources
+  // Log if Clerk has different data (for debugging)
   if (import.meta.env.DEV && userData && user) {
-    if (userData.role && user.role && userData.role !== user.role) {
-      console.warn("Role mismatch detected:", {
-        userData: userData.role,
-        authProvider: user.role,
+    if (user.role && userData.role !== user.role) {
+      console.warn("Clerk has different role than database:", {
+        database: userData.role,
+        clerk: user.role,
         using: userRole,
       });
     }
-    if (userData.npn && user.npn && userData.npn !== user.npn) {
-      console.warn("NPN mismatch detected:", {
-        userData: userData.npn,
-        authProvider: user.npn,
+    if (user.npn && userData.npn !== user.npn) {
+      console.warn("Clerk has different NPN than database:", {
+        database: userData.npn,
+        clerk: user.npn,
         using: userNpn,
       });
     }
