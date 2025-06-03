@@ -518,7 +518,6 @@ export function SmsConfigPanel({
             </span>
           </div>
         ),
-        className: "border-emerald-500/20 bg-emerald-50",
       });
     } catch (error) {
       toast({
@@ -532,7 +531,7 @@ export function SmsConfigPanel({
             </span>
           </div>
         ),
-        className: "border-red-500/20 bg-red-50",
+        variant: "destructive",
       });
       console.error("Error saving SMS configuration:", error);
     }

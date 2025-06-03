@@ -215,7 +215,7 @@ export default function CampaignsPage() {
 
     setIsSaving(true);
     try {
-      const response = await apiClient.put(
+      const response = await apiClient.patch(
         `/portal/client/campaigns/${selectedCampaign.id}`,
         { [editingField]: editValue },
       );
@@ -277,7 +277,7 @@ export default function CampaignsPage() {
         smsUpdateData.smsTypes = { ...updateData.smsTypes };
       }
 
-      const response = await apiClient.put(
+      const response = await apiClient.patch(
         `/portal/client/campaigns/${campaignId}`,
         smsUpdateData,
       );
@@ -288,18 +288,10 @@ export default function CampaignsPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 
-      toast({
-        title: "Success",
-        description: "SMS configuration updated successfully",
-      });
       setPendingChanges({});
     } catch (error) {
       console.error("[Campaign Update - SMS] Error details:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update SMS configuration",
-        variant: "destructive",
-      });
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -343,7 +335,7 @@ export default function CampaignsPage() {
         },
       };
 
-      const response = await apiClient.put(
+      const response = await apiClient.patch(
         `/portal/client/campaigns/${campaignId}`,
         retryUpdateData,
       );
@@ -355,32 +347,8 @@ export default function CampaignsPage() {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       setPendingChanges({});
       setShowTcpaDialog(false);
-
-      toast({
-        title: "Retry Configuration Saved",
-        description: (
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-500" />
-            <span>Your retry settings have been updated successfully.</span>
-          </div>
-        ),
-        className: "border-emerald-500/20 bg-emerald-50",
-      });
     } catch (error) {
       console.error("[Campaign Update - Retry] Error details:", error);
-      toast({
-        title: "Failed to Save",
-        description: (
-          <div className="flex items-center gap-2">
-            <XCircle className="w-4 h-4 text-red-500" />
-            <span>
-              There was an error saving your retry configuration. Please try
-              again.
-            </span>
-          </div>
-        ),
-        className: "border-red-500/20 bg-red-50",
-      });
       throw error;
     } finally {
       setIsSaving(false);
