@@ -24,7 +24,12 @@ export function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-export function formatPhoneNumber(phoneNumber: string): string {
+export function formatPhoneNumber(
+  phoneNumber: string | null | undefined,
+): string {
+  // Handle null, undefined, or empty string
+  if (!phoneNumber) return "-";
+
   // Remove any non-digit characters
   const cleaned = phoneNumber.replace(/\D/g, "");
 

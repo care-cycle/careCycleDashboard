@@ -468,12 +468,21 @@ export function SmsConfigPanel({
   };
 
   const handleContentChange = (key: keyof SmsContent, value: string) => {
-    // Clean up any double commas or spaces that might occur from variable deletion
-    const cleanedValue = value
-      .replace(/,\s*,/g, ",") // Replace double commas with single comma
-      .replace(/\s+/g, " ") // Replace multiple spaces with single space
-      .replace(/,\s*\./g, ".") // Replace ", ." with just "."
-      .trim();
+    // Don't clean if the user is just adding a space at the end
+    const isAddingSpace =
+      value.length > currentContent[key].length &&
+      value.endsWith(" ") &&
+      value.slice(0, -1) === currentContent[key];
+
+    let cleanedValue = value;
+
+    // Only clean up if we're not in the middle of typing a space
+    if (!isAddingSpace) {
+      cleanedValue = value
+        .replace(/,\s*,/g, ",") // Replace double commas with single comma
+        .replace(/\s{2,}/g, " ") // Replace multiple spaces (2 or more) with single space
+        .replace(/,\s*\./g, "."); // Replace ", ." with just "."
+    }
 
     setPendingChanges((prev) => ({
       ...prev,

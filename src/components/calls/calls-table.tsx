@@ -297,13 +297,15 @@ export function CallsTable({
                         : formatPhoneNumber(call.callerId))}
                     {column === "Assistant Type" &&
                       (assistantTypeLabels[call.assistantType] ||
-                        call.assistantType
-                          .split("_")
-                          .map(
-                            (word) =>
-                              word.charAt(0).toUpperCase() + word.slice(1),
-                          )
-                          .join(" "))}
+                        (call.assistantType
+                          ? call.assistantType
+                              .split("_")
+                              .map(
+                                (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1),
+                              )
+                              .join(" ")
+                          : "-"))}
                     {column === "Direction" &&
                       call.direction.charAt(0).toUpperCase() +
                         call.direction.slice(1)}
