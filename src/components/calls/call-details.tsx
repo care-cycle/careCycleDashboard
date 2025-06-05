@@ -228,6 +228,7 @@ export const CallDetails = memo(function CallDetails({
                       {/* Temporary debug panel */}
                       <div className="absolute top-2 left-2 z-10">
                         <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-sm">
+                          <div>ID: {call.id.substring(0, 8)}...</div>
                           <div>Mobius: {isMobiusCall ? "Yes" : "No"}</div>
                           <div>Stereo: {enableStereoMode ? "Yes" : "No"}</div>
                           <div>
@@ -237,6 +238,8 @@ export const CallDetails = memo(function CallDetails({
                             stereoUrl:{" "}
                             {call.stereoRecordingUrl ? "Present" : "Missing"}
                           </div>
+                          <div>Assistant: {call.assistantType}</div>
+                          <div>Duration: {call.duration}</div>
                         </div>
                       </div>
 
