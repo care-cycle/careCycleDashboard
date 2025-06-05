@@ -23,6 +23,9 @@ interface CallsResponse {
       co: number;
       tf: boolean;
       s?: string | null;
+      ts?: string | null; // twilioSid
+      nr?: string | null; // nodableRecordingUrl
+      sr?: string | null; // stereoRecordingUrl
     }>;
     hasSourceTracking: boolean;
   };
@@ -290,6 +293,9 @@ interface CallData {
   co: number;
   tf: boolean;
   s?: string | null;
+  ts?: string | null; // twilioSid
+  nr?: string | null; // nodableRecordingUrl
+  sr?: string | null; // stereoRecordingUrl
 }
 
 export function useInitialData() {

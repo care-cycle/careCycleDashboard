@@ -16,10 +16,25 @@ interface AudioPlayerProps {
   className?: string;
   preloadedAudio?: HTMLAudioElement | null;
   onError?: () => void;
+  // Future stereo visualization properties
+  isStereo?: boolean;
+  leftChannelLabel?: string; // e.g., "AI Assistant"
+  rightChannelLabel?: string; // e.g., "Customer"
 }
 
 export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
-  ({ url, className, preloadedAudio, onError }, ref) => {
+  (
+    {
+      url,
+      className,
+      preloadedAudio,
+      onError,
+      isStereo,
+      leftChannelLabel,
+      rightChannelLabel,
+    },
+    ref,
+  ) => {
     const instanceId = useRef(
       Math.random().toString(36).substring(2, 8),
     ).current; // Unique ID for logging
@@ -124,6 +139,9 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             return;
           }
 
+          // Future enhancement: For stereo recordings, we could initialize
+          // separate waveform visualizations for left/right channels
+          // and display them stacked with labels to show who is speaking
           const wavesurfer = WaveSurfer.create({
             container: waveformRef.current!,
             waveColor: "rgba(116, 224, 187, 0.7)",
@@ -141,6 +159,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             autoplay: false,
             interact: true,
             dragToSeek: true,
+            // Future: Could add splitChannels: true for stereo visualization
           });
 
           wavesurfer.on("ready", () => {

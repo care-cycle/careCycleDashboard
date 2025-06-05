@@ -18,4 +18,9 @@ export interface Call {
   source?: string | null;
   preloadedWaveform?: WaveSurfer;
   preloadedAudio?: HTMLAudioElement | null;
+  // Call system identification (vapiUuid is NOT exposed to frontend for security)
+  twilioSid?: string;
+  // Additional recording URLs (filtered to exclude vapi URLs)
+  nodableRecordingUrl?: string;
+  stereoRecordingUrl?: string;
 }

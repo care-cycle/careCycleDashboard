@@ -31,6 +31,10 @@ import {
   Check,
 } from "lucide-react";
 import { formatDate, formatPhoneNumber } from "@/lib/utils";
+import {
+  transformApiCallToCall,
+  parseDurationToMs,
+} from "@/lib/data-transformers";
 import apiClient from "@/lib/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -119,6 +123,10 @@ interface CallData {
   direction?: string;
   cost?: number;
   successEvaluation?: string;
+  // Call system identification and additional recording URLs
+  twilioSid?: string;
+  nodableRecordingUrl?: string;
+  stereoRecordingUrl?: string;
 }
 
 export default function InquiryDetailPage() {
@@ -189,25 +197,12 @@ export default function InquiryDetailPage() {
         const result = await apiClient.get("/portal/client/calls");
         const callsData = result.data?.d?.c || [];
 
-        // Filter calls by phone number
+        // Filter calls by phone number and transform using utility
         return callsData
           .filter((call: any) => call.ca === phoneNumber)
           .map((call: any) => ({
-            id: call.i,
-            createdAt: call.cr,
-            disposition: call.d,
-            durationMs: call.du
-              ? (() => {
-                  const match = call.du.match(/(\d+)m\s*(\d+)s/);
-                  if (match) {
-                    const minutes = parseInt(match[1]);
-                    const seconds = parseInt(match[2]);
-                    return (minutes * 60 + seconds) * 1000;
-                  }
-                  return 0;
-                })()
-              : 0,
-            direction: call.di === "i" ? "inbound" : "outbound",
+            ...transformApiCallToCall(call),
+            durationMs: parseDurationToMs(call.du),
             type: "call" as const,
           }));
       },
@@ -256,30 +251,11 @@ export default function InquiryDetailPage() {
 
       if (!call) return null;
 
-      // Transform the API response to match our CallData interface
+      // Transform the API response using the utility function
+      const transformedCall = transformApiCallToCall(call);
       return {
-        id: call.i,
-        callerId: call.ca,
-        createdAt: call.cr,
-        disposition: call.d,
-        durationMs: call.du
-          ? (() => {
-              const match = call.du.match(/(\d+)m\s*(\d+)s/);
-              if (match) {
-                const minutes = parseInt(match[1]);
-                const seconds = parseInt(match[2]);
-                return (minutes * 60 + seconds) * 1000;
-              }
-              return 0;
-            })()
-          : undefined,
-        assistantType: call.at,
-        summary: call.su,
-        transcript: call.tr,
-        recordingUrl: call.r,
-        direction: call.di === "i" ? "inbound" : "outbound",
-        cost: call.co,
-        successEvaluation: call.se,
+        ...transformedCall,
+        durationMs: parseDurationToMs(call.du),
       } as CallData;
     },
     enabled: !!selectedCallId,

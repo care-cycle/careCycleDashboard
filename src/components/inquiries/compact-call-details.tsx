@@ -18,7 +18,11 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { formatDate, formatPhoneNumber, getRecordingUrl } from "@/lib/utils";
+import {
+  formatDate,
+  formatPhoneNumber,
+  getBestRecordingUrl,
+} from "@/lib/utils";
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { toast } from "sonner";
 import { useRedaction } from "@/hooks/use-redaction";
@@ -37,6 +41,11 @@ interface CallData {
   direction?: string;
   cost?: number;
   successEvaluation?: string;
+  // Call system identification (vapiUuid is NOT exposed to frontend for security)
+  twilioSid?: string;
+  // Additional recording URLs (filtered to exclude vapi URLs)
+  nodableRecordingUrl?: string;
+  stereoRecordingUrl?: string;
 }
 
 interface CompactCallDetailsProps {
@@ -152,7 +161,7 @@ export function CompactCallDetails({ call }: CompactCallDetailsProps) {
       {call.recordingUrl && (
         <div className="mb-4">
           <AudioPlayer
-            url={getRecordingUrl(call.recordingUrl) || ""}
+            url={getBestRecordingUrl(call) || ""}
             className="w-full"
           />
         </div>

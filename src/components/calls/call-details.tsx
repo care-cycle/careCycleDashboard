@@ -20,7 +20,7 @@ import {
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { Call } from "@/types/calls";
 import { toast } from "sonner";
-import { formatPhoneNumber, getRecordingUrl } from "@/lib/utils";
+import { formatPhoneNumber, getBestRecordingUrl } from "@/lib/utils";
 import { FeedbackModule } from "./feedback-module";
 
 interface CallDetailsProps {
@@ -200,7 +200,7 @@ export const CallDetails = memo(function CallDetails({
             {call.recordingUrl && (
               <div className="glass-panel p-0 rounded-lg">
                 <AudioPlayer
-                  url={getRecordingUrl(call.recordingUrl) || ""}
+                  url={getBestRecordingUrl(call) || ""}
                   preloadedAudio={preloadedAudio}
                   ref={audioRef}
                 />
