@@ -210,6 +210,9 @@ interface TransformedCallsData {
     cost: number;
     testFlag: boolean;
     source: string | null;
+    twilioSid?: string;
+    nodableRecordingUrl?: string;
+    stereoRecordingUrl?: string;
   }>;
   hasSourceTracking: boolean;
 }
@@ -384,6 +387,9 @@ export function useInitialData() {
             cost: call.co,
             testFlag: call.tf,
             source: call.s ?? null,
+            twilioSid: call.ts ?? undefined,
+            nodableRecordingUrl: call.nr ?? undefined,
+            stereoRecordingUrl: call.sr ?? undefined,
           })),
           hasSourceTracking: response.data.d.hasSourceTracking,
         };
