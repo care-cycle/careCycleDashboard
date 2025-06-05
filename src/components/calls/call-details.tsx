@@ -209,47 +209,8 @@ export const CallDetails = memo(function CallDetails({
                   const stereoUrl = getStereoRecordingUrl(call);
                   const enableStereoMode = isMobiusCall && !!stereoUrl;
 
-                  // Debug logging
-                  console.log("Call Details Audio Debug:", {
-                    callId: call.id,
-                    hasTwilioSid: !!call.twilioSid,
-                    twilioSid: call.twilioSid,
-                    hasRawStereoUrl: !!call.stereoRecordingUrl,
-                    rawStereoUrl: call.stereoRecordingUrl,
-                    processedStereoUrl: stereoUrl,
-                    isMobiusCall,
-                    enableStereoMode,
-                    recordingUrl: call.recordingUrl,
-                    nodableRecordingUrl: call.nodableRecordingUrl,
-                  });
-
                   return (
                     <div className="relative">
-                      {/* Temporary debug panel */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-sm">
-                          <div>ID: {call.id.substring(0, 8)}...</div>
-                          <div>Mobius: {isMobiusCall ? "Yes" : "No"}</div>
-                          <div>Stereo: {enableStereoMode ? "Yes" : "No"}</div>
-                          <div>
-                            twilioSid: {call.twilioSid ? "Present" : "Missing"}
-                          </div>
-                          <div>
-                            stereoUrl:{" "}
-                            {call.stereoRecordingUrl ? "Present" : "Missing"}
-                          </div>
-                          <div>Assistant: {call.assistantType}</div>
-                          <div>Duration: {call.duration}</div>
-                        </div>
-                      </div>
-
-                      {enableStereoMode && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <div className="bg-gradient-to-r from-green-500 to-red-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
-                            Stereo View
-                          </div>
-                        </div>
-                      )}
                       <AudioPlayer
                         url={getBestRecordingUrl(call) || ""}
                         preloadedAudio={preloadedAudio}

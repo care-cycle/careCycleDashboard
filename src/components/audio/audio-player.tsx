@@ -65,19 +65,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     // Forward the ref
     useImperativeHandle(ref, () => audioRef.current as HTMLAudioElement);
 
-    // Debug effect to track stereo props
-    useEffect(() => {
-      console.log("AudioPlayer props changed:", {
-        url,
-        isStereo,
-        stereoUrl,
-        leftChannelLabel,
-        rightChannelLabel,
-        hasLeftRef: !!leftChannelRef.current,
-        hasRightRef: !!rightChannelRef.current,
-      });
-    }, [url, isStereo, stereoUrl, leftChannelLabel, rightChannelLabel]);
-
     // Initialize WaveSurfer
     useEffect(() => {
       if (!waveformRef.current || !url) return;
@@ -192,13 +179,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             leftChannelRef.current &&
             rightChannelRef.current
           ) {
-            console.log("AudioPlayer: Creating stereo waveforms", {
-              isStereo,
-              stereoUrl,
-              hasLeftRef: !!leftChannelRef.current,
-              hasRightRef: !!rightChannelRef.current,
-            });
-
             const leftWavesurfer = WaveSurfer.create({
               container: leftChannelRef.current,
               waveColor: "rgba(34, 197, 94, 0.7)", // Green for left channel
@@ -250,15 +230,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
 
             leftWavesurferRef.current = leftWavesurfer;
             rightWavesurferRef.current = rightWavesurfer;
-
-            console.log("AudioPlayer: Stereo waveforms created successfully");
-          } else {
-            console.log("AudioPlayer: Skipping stereo waveforms", {
-              isStereo,
-              hasStereoUrl: !!stereoUrl,
-              hasLeftRef: !!leftChannelRef.current,
-              hasRightRef: !!rightChannelRef.current,
-            });
           }
 
           wavesurfer.on("ready", () => {
@@ -279,7 +250,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
                 .then(() => {
                   if (isDestroyed) return;
                   setIsStereoReady(true);
-                  console.log(`Stereo waveforms ready for visualization`);
                 })
                 .catch((error) => {
                   console.warn("Failed to load stereo visualization:", error);
