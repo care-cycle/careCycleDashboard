@@ -75,9 +75,9 @@ export function getRecordingUrl(url: string | undefined): string | undefined {
 }
 
 /**
- * Determines the best recording URL to use based on call type and available recordings
- * Prioritizes stereo recordings for Mobius system (twilioSid present) when available
- * Falls back to mono recordings for compatibility
+ * Determines the best recording URL to use for PLAYBACK (mono recording preferred)
+ * Always prioritizes mono recordings for actual audio playback
+ * Stereo recordings should only be used for visualization via getStereoRecordingUrl()
  *
  * Note: Backend handles primary URL transformation and security filtering,
  * but we keep frontend filtering as defense in depth
@@ -91,29 +91,17 @@ export function getBestRecordingUrl(call: {
   // Security filter: Defense in depth - backend should handle this but keep as backup
   const isSecureUrl = (url?: string) => url && !url.includes("vapi");
 
-  // Determine call system type
-  const isMobiusSystem = !!call.twilioSid;
-
-  // For Mobius system, prefer stereo recording if available and secure
-  if (
-    isMobiusSystem &&
-    call.stereoRecordingUrl &&
-    isSecureUrl(call.stereoRecordingUrl)
-  ) {
-    return getRecordingUrl(call.stereoRecordingUrl);
-  }
-
-  // Prefer nodable URL (should be available for all calls now)
+  // Always prefer mono recordings for playback (nodable URL is typically mono)
   if (call.nodableRecordingUrl && isSecureUrl(call.nodableRecordingUrl)) {
     return getRecordingUrl(call.nodableRecordingUrl);
   }
 
-  // Fallback to main recording URL if secure
+  // Fallback to main recording URL if secure (typically mono)
   if (call.recordingUrl && isSecureUrl(call.recordingUrl)) {
     return getRecordingUrl(call.recordingUrl);
   }
 
-  // No secure recording URL available
+  // No secure mono recording URL available
   return undefined;
 }
 

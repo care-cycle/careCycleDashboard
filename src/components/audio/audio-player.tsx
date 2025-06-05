@@ -195,12 +195,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               mediaControls: false,
               autoplay: false,
               interact: false, // Disable interaction on channel views
-              splitChannels: [
-                {
-                  waveColor: "rgba(34, 197, 94, 0.7)",
-                  progressColor: "rgba(34, 197, 94, 0.9)",
-                },
-              ],
             });
 
             const rightWavesurfer = WaveSurfer.create({
@@ -219,13 +213,6 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               mediaControls: false,
               autoplay: false,
               interact: false,
-              splitChannels: [
-                {},
-                {
-                  waveColor: "rgba(239, 68, 68, 0.7)",
-                  progressColor: "rgba(239, 68, 68, 0.9)",
-                },
-              ],
             });
 
             leftWavesurferRef.current = leftWavesurfer;
