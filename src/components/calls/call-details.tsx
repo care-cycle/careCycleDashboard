@@ -20,7 +20,11 @@ import {
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { Call } from "@/types/calls";
 import { toast } from "sonner";
-import { formatPhoneNumber, getBestRecordingUrl } from "@/lib/utils";
+import {
+  formatPhoneNumber,
+  getBestRecordingUrl,
+  getStereoRecordingUrl,
+} from "@/lib/utils";
 import { FeedbackModule } from "./feedback-module";
 
 interface CallDetailsProps {
@@ -199,11 +203,33 @@ export const CallDetails = memo(function CallDetails({
           <div className="flex-1 overflow-auto p-4 space-y-6">
             {call.recordingUrl && (
               <div className="glass-panel p-0 rounded-lg">
-                <AudioPlayer
-                  url={getBestRecordingUrl(call) || ""}
-                  preloadedAudio={preloadedAudio}
-                  ref={audioRef}
-                />
+                {(() => {
+                  // Determine if this is a Mobius call with stereo capabilities
+                  const isMobiusCall = !!call.twilioSid;
+                  const stereoUrl = getStereoRecordingUrl(call);
+                  const enableStereoMode = isMobiusCall && !!stereoUrl;
+
+                  return (
+                    <div className="relative">
+                      {enableStereoMode && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <div className="bg-gradient-to-r from-green-500 to-red-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
+                            Stereo View
+                          </div>
+                        </div>
+                      )}
+                      <AudioPlayer
+                        url={getBestRecordingUrl(call) || ""}
+                        preloadedAudio={preloadedAudio}
+                        ref={audioRef}
+                        isStereo={enableStereoMode}
+                        stereoUrl={stereoUrl}
+                        leftChannelLabel="AI Assistant"
+                        rightChannelLabel="Customer"
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

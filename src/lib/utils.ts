@@ -116,3 +116,25 @@ export function getBestRecordingUrl(call: {
   // No secure recording URL available
   return undefined;
 }
+
+/**
+ * Gets the stereo recording URL with proper environment transformation
+ */
+export function getStereoRecordingUrl(call: {
+  stereoRecordingUrl?: string;
+  twilioSid?: string;
+}): string | undefined {
+  // Only return stereo URL for Mobius calls (have twilioSid)
+  if (!call.twilioSid || !call.stereoRecordingUrl) {
+    return undefined;
+  }
+
+  // Security filter and environment transformation
+  const isSecureUrl = (url?: string) => url && !url.includes("vapi");
+
+  if (isSecureUrl(call.stereoRecordingUrl)) {
+    return getRecordingUrl(call.stereoRecordingUrl);
+  }
+
+  return undefined;
+}

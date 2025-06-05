@@ -16,8 +16,9 @@ interface AudioPlayerProps {
   className?: string;
   preloadedAudio?: HTMLAudioElement | null;
   onError?: () => void;
-  // Future stereo visualization properties
+  // Stereo visualization properties
   isStereo?: boolean;
+  stereoUrl?: string; // URL for stereo recording (used for visualization only)
   leftChannelLabel?: string; // e.g., "AI Assistant"
   rightChannelLabel?: string; // e.g., "Customer"
 }
@@ -30,6 +31,7 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       preloadedAudio,
       onError,
       isStereo,
+      stereoUrl,
       leftChannelLabel,
       rightChannelLabel,
     },
@@ -39,8 +41,13 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       Math.random().toString(36).substring(2, 8),
     ).current; // Unique ID for logging
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const stereoAudioRef = useRef<HTMLAudioElement | null>(null); // For stereo analysis only
     const waveformRef = useRef<HTMLDivElement>(null);
+    const leftChannelRef = useRef<HTMLDivElement>(null);
+    const rightChannelRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
+    const leftWavesurferRef = useRef<WaveSurfer | null>(null);
+    const rightWavesurferRef = useRef<WaveSurfer | null>(null);
     const isReadyRef = useRef(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -48,8 +55,12 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     const [isMuted, setIsMuted] = useState(false);
     const [volume, setVolume] = useState(1);
     const [isWaveformReady, setIsWaveformReady] = useState(false);
+    const [isStereoReady, setIsStereoReady] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [speakerActivity, setSpeakerActivity] = useState<
+      "left" | "right" | "both" | "none"
+    >("none");
 
     // Forward the ref
     useImperativeHandle(ref, () => audioRef.current as HTMLAudioElement);
@@ -139,19 +150,19 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             return;
           }
 
-          // Future enhancement: For stereo recordings, we could initialize
-          // separate waveform visualizations for left/right channels
-          // and display them stacked with labels to show who is speaking
+          // Create main waveform (for mono playback)
           const wavesurfer = WaveSurfer.create({
             container: waveformRef.current!,
-            waveColor: "rgba(116, 224, 187, 0.7)",
+            waveColor: isStereo
+              ? "rgba(156, 163, 175, 0.4)"
+              : "rgba(116, 224, 187, 0.7)",
             progressColor: "rgba(41, 58, 249, 0.6)",
             cursorColor: "rgba(41, 58, 249, 0.8)",
             cursorWidth: 2,
             barWidth: 2,
             barGap: 0,
             barRadius: 2,
-            height: 96,
+            height: isStereo ? 48 : 96,
             barHeight: 1,
             normalize: true,
             backend: "MediaElement",
@@ -159,12 +170,95 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             autoplay: false,
             interact: true,
             dragToSeek: true,
-            // Future: Could add splitChannels: true for stereo visualization
           });
+
+          // Create stereo channel visualizations if stereo URL is provided
+          if (
+            isStereo &&
+            stereoUrl &&
+            leftChannelRef.current &&
+            rightChannelRef.current
+          ) {
+            const leftWavesurfer = WaveSurfer.create({
+              container: leftChannelRef.current,
+              waveColor: "rgba(34, 197, 94, 0.7)", // Green for left channel
+              progressColor: "rgba(34, 197, 94, 0.9)",
+              cursorColor: "rgba(41, 58, 249, 0.8)",
+              cursorWidth: 2,
+              barWidth: 2,
+              barGap: 0,
+              barRadius: 2,
+              height: 64,
+              barHeight: 1,
+              normalize: true,
+              backend: "MediaElement",
+              mediaControls: false,
+              autoplay: false,
+              interact: false, // Disable interaction on channel views
+              splitChannels: [
+                {
+                  waveColor: "rgba(34, 197, 94, 0.7)",
+                  progressColor: "rgba(34, 197, 94, 0.9)",
+                },
+              ],
+            });
+
+            const rightWavesurfer = WaveSurfer.create({
+              container: rightChannelRef.current,
+              waveColor: "rgba(239, 68, 68, 0.7)", // Red for right channel
+              progressColor: "rgba(239, 68, 68, 0.9)",
+              cursorColor: "rgba(41, 58, 249, 0.8)",
+              cursorWidth: 2,
+              barWidth: 2,
+              barGap: 0,
+              barRadius: 2,
+              height: 64,
+              barHeight: 1,
+              normalize: true,
+              backend: "MediaElement",
+              mediaControls: false,
+              autoplay: false,
+              interact: false,
+              splitChannels: [
+                {},
+                {
+                  waveColor: "rgba(239, 68, 68, 0.7)",
+                  progressColor: "rgba(239, 68, 68, 0.9)",
+                },
+              ],
+            });
+
+            leftWavesurferRef.current = leftWavesurfer;
+            rightWavesurferRef.current = rightWavesurfer;
+          }
 
           wavesurfer.on("ready", () => {
             if (isDestroyed) return;
             console.log(`Attempt ${retryCount + 1}: WaveSurfer ready.`);
+
+            // Load stereo waveforms if available
+            if (
+              isStereo &&
+              stereoUrl &&
+              leftWavesurferRef.current &&
+              rightWavesurferRef.current
+            ) {
+              Promise.all([
+                leftWavesurferRef.current.load(stereoUrl),
+                rightWavesurferRef.current.load(stereoUrl),
+              ])
+                .then(() => {
+                  if (isDestroyed) return;
+                  setIsStereoReady(true);
+                  console.log(`Stereo waveforms ready for visualization`);
+                })
+                .catch((error) => {
+                  console.warn("Failed to load stereo visualization:", error);
+                  // Continue with mono-only mode
+                  setIsStereoReady(false);
+                });
+            }
+
             isReadyRef.current = true;
             setIsWaveformReady(true);
             setIsLoading(false);
@@ -271,8 +365,27 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           }
           wavesurferRef.current = null;
         }
+
+        // Cleanup stereo waveforms
+        if (leftWavesurferRef.current) {
+          try {
+            leftWavesurferRef.current.destroy();
+          } catch (error) {
+            console.error("Error during left WaveSurfer cleanup:", error);
+          }
+          leftWavesurferRef.current = null;
+        }
+
+        if (rightWavesurferRef.current) {
+          try {
+            rightWavesurferRef.current.destroy();
+          } catch (error) {
+            console.error("Error during right WaveSurfer cleanup:", error);
+          }
+          rightWavesurferRef.current = null;
+        }
       };
-    }, [url]);
+    }, [url, isStereo, stereoUrl]);
 
     // Handle audio element
     useEffect(() => {
@@ -339,6 +452,8 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     // Sync audio element state with wavesurfer and UI
     useEffect(() => {
       const wavesurfer = wavesurferRef.current;
+      const leftWavesurfer = leftWavesurferRef.current;
+      const rightWavesurfer = rightWavesurferRef.current;
       const audio = audioRef.current;
 
       if (!wavesurfer || !audio || !isWaveformReady) return;
@@ -346,6 +461,17 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       // Use WaveSurfer's event for time updates
       const handleWsAudioprocess = (time: number) => {
         setCurrentTime(time);
+
+        // Sync stereo waveforms with main playback
+        if (isStereo && isStereoReady && leftWavesurfer && rightWavesurfer) {
+          const progress = time / (wavesurfer.getDuration() || 1);
+          try {
+            leftWavesurfer.seekTo(progress);
+            rightWavesurfer.seekTo(progress);
+          } catch (error) {
+            console.warn("Error syncing stereo waveforms:", error);
+          }
+        }
       };
 
       // Keep listening to the audio element for metadata and end events
@@ -354,8 +480,15 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       };
       const handleEnded = () => {
         setIsPlaying(false);
-        // No need to manually setTime(0) on wavesurfer here,
-        // as playing again will start from 0 or user can seek.
+        // Reset stereo waveforms too
+        if (isStereo && leftWavesurfer && rightWavesurfer) {
+          try {
+            leftWavesurfer.seekTo(0);
+            rightWavesurfer.seekTo(0);
+          } catch (error) {
+            console.warn("Error resetting stereo waveforms:", error);
+          }
+        }
       };
 
       wavesurfer.on("audioprocess", handleWsAudioprocess);
@@ -368,8 +501,8 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
         audio.removeEventListener("ended", handleEnded);
       };
-      // Depend on isWaveformReady to ensure wavesurfer is initialized
-    }, [isWaveformReady]);
+      // Depend on isWaveformReady and isStereoReady to ensure wavesurfer is initialized
+    }, [isWaveformReady, isStereo, isStereoReady]);
 
     const togglePlay = () => {
       // Only use wavesurfer to control playback
@@ -457,9 +590,13 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
             </div>
           )}
 
+          {/* Main waveform (mono playback control) */}
           <div
             ref={waveformRef}
-            className="w-full h-[96px]"
+            className={cn(
+              "w-full",
+              isStereo ? "h-[48px] opacity-50" : "h-[96px]",
+            )}
             onClick={(e) => {
               if (!isWaveformReady || !wavesurferRef.current) return;
               const rect = e.currentTarget.getBoundingClientRect();
@@ -468,6 +605,39 @@ export const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               handleSeek([newTime]);
             }}
           />
+
+          {/* Stereo channel visualizations */}
+          {isStereo && (
+            <div className="mt-2 space-y-3">
+              {/* Left Channel (typically AI) */}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-green-600">
+                    {leftChannelLabel || "Left Channel"}
+                  </span>
+                  <span className="text-xs text-gray-400">AI Assistant</span>
+                </div>
+                <div
+                  ref={leftChannelRef}
+                  className="w-full h-[64px] bg-green-50 rounded"
+                />
+              </div>
+
+              {/* Right Channel (typically Customer) */}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-red-600">
+                    {rightChannelLabel || "Right Channel"}
+                  </span>
+                  <span className="text-xs text-gray-400">Customer</span>
+                </div>
+                <div
+                  ref={rightChannelRef}
+                  className="w-full h-[64px] bg-red-50 rounded"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Controls */}
