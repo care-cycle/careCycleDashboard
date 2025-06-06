@@ -249,19 +249,41 @@ export function ContactRateChart({
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <CardTitle className="text-gray-900">Contact Rate</CardTitle>
-          <TooltipProvider>
+          <TooltipProvider delayDuration={0}>
             <UITooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-accent hover:text-accent-foreground transition-colors"
+                  aria-label="Help information about contact rate metrics"
+                >
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </button>
               </TooltipTrigger>
-              <TooltipContent className="max-w-sm glass-panel bg-white/95 backdrop-blur-xl p-3 rounded-lg border border-white/20 shadow-lg">
-                <p className="font-medium">Contact Rate Metrics</p>
-                <ul className="mt-2 list-disc list-inside space-y-1">
+              <TooltipContent
+                side="right"
+                align="start"
+                sideOffset={5}
+                className="max-w-sm"
+                style={{
+                  zIndex: 9999,
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  boxShadow:
+                    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                }}
+              >
+                <p className="font-medium text-gray-900 mb-2">
+                  Contact Rate Metrics
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
                   <li>
                     <span className="font-medium">30-Day Per-Dial Rate:</span>{" "}
                     {METRIC_DESCRIPTIONS.perDialRate.description}
                   </li>
-                  <li>
+                  <li className="mt-2">
                     <span className="font-medium">Contact Rate:</span>{" "}
                     {METRIC_DESCRIPTIONS.movingAverageRate.description}
                   </li>
